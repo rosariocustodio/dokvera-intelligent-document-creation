@@ -10,7 +10,6 @@ import {
   LogOut,
   Menu,
   Settings,
-  X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -166,11 +165,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           Dokvera by Ruqzora
         </footer>
       </div>
-
-      {/* keeps the X icon import meaningful for the mobile sheet close affordance */}
-      <span className="hidden">
-        <X className="size-0" />
-      </span>
     </div>
   );
 }
