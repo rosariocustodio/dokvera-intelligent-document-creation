@@ -37,7 +37,7 @@ export type DocumentTypeDef = {
   id: DocumentTypeId;
   label: string;
   description: string;
-  /** Cost in credits — controlled by code/backend, never by AI. */
+  /** Base cost in credits — controlled by code/backend, never by AI. */
   cost: number;
   icon: string;
 };
@@ -48,7 +48,7 @@ export const DOCUMENT_TYPES: DocumentTypeDef[] = [
     id: "academic",
     label: "Trabalho Académico",
     description: "Monografias e trabalhos universitários com estrutura formal.",
-    cost: 8,
+    cost: 5, // Base para 10-15 páginas
     icon: "GraduationCap",
   },
   {
@@ -94,6 +94,39 @@ export const DOCUMENT_TYPES: DocumentTypeDef[] = [
     icon: "FilePlus2",
   },
 ];
+
+/** Page ranges options and their respective credit costs for academic/school works */
+export type PageRangeOption = {
+  id: string;
+  label: string;
+  minPages: number;
+  maxPages: number;
+  cost: number;
+};
+
+export const PAGE_RANGES: PageRangeOption[] = [
+  { id: "10-15", label: "10–15 páginas", minPages: 10, maxPages: 15, cost: 5 },
+  { id: "16-20", label: "16–20 páginas", minPages: 16, maxPages: 20, cost: 7 },
+];
+
+/** 
+ * Calculates additional cost based on the number of students.
+ * Up to 4 students are included in the base cost. 
+ * Each additional student above 4 adds 0.39 credits.
+ */
+export function calculateStudentExtraCost(totalStudents: number): { additionalStudents: number; extraCost: number } {
+  const includedStudents = 4;
+  const additionalStudents = Math.max(0, totalStudents - includedStudents);
+  const extraCost = Number((additionalStudents * 0.39).toFixed(2));
+  return { additionalStudents, extraCost };
+}
+
+/** Total document cost calculation incorporating page range and extra students */
+export function calculateTotalDocumentCost(baseCost: number, numberOfStudents: number): number {
+  const { extraCost } = calculateStudentExtraCost(numberOfStudents);
+  // Returns total with precision handling
+  return Number((baseCost + extraCost).toFixed(2));
+}
 
 export function getDocumentType(id: string): DocumentTypeDef | undefined {
   return DOCUMENT_TYPES.find((t) => t.id === id);
