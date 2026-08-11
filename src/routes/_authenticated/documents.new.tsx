@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Icons from "lucide-react";
-import { AlertTriangle, Check, Coins, Loader2 } from "lucide-react";
+import { AlertTriangle, Check, Coins, Loader2, Users, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,10 +23,14 @@ import { useSession } from "@/hooks/use-session";
 import { creditsQuery } from "@/lib/queries";
 import {
   DOCUMENT_TYPES,
+  PAGE_RANGES,
+  calculateTotalDocumentCost,
+  calculateStudentExtraCost,
   checkAffordability,
   creditsToMzn,
   formatMzn,
   type DocumentTypeDef,
+  type PageRangeOption,
 } from "@/lib/dokvera";
 
 export const Route = createFileRoute("/_authenticated/documents/new")({
@@ -56,19 +60,31 @@ function NewDocument() {
   const credits = balance ?? 0;
 
   const [selected, setSelected] = useState<DocumentTypeDef | null>(null);
+  const [selectedPageRange, setSelectedPageRange] = useState<PageRangeOption>(PAGE_RANGES[0]);
+  const [numberOfStudents, setNumberOfStudents] = useState<number>(1);
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
 
+  // Determinar se o tipo selecionado suporta páginas e múltiplos estudantes (Academic / School)
+  const isAcademicOrSchool = selected?.id === "academic" || selected?.id === "school";
+
+  // Calcular o custo total usando as regras puras do código
+  const effectiveCost = useMemo(() => {
+    if (!selected) return 0;
+    const base = isAcademicOrSchool ? selectedPageRange.cost : selected.cost;
+    return isAcademicOrSchool ? calculateTotalDocumentCost(base, numberOfStudents) : base;
+  }, [selected, selectedPageRange, numberOfStudents, isAcademicOrSchool]);
+
   const check = useMemo(
-    () => checkAffordability(credits, selected?.cost ?? 0),
-    [credits, selected],
+    () => checkAffordability(credits, effectiveCost),
+    [credits, effectiveCost],
   );
 
   const create = useMutation({
     mutationFn: async () => {
       if (!selected) throw new Error("Nenhum tipo selecionado");
-      // Credit gate is enforced by code, never by AI.
-      if (!checkAffordability(credits, selected.cost).affordable) {
+      // Credit gate enforced by code
+      if (!checkAffordability(credits, effectiveCost).affordable) {
         throw new Error("Créditos insuficientes");
       }
       const { data, error } = await supabase
@@ -79,7 +95,11 @@ function NewDocument() {
           doc_type: selected.id,
           subject: subject.trim() || null,
           status: "draft",
-          metadata: { estimated_cost: selected.cost },
+          metadata: {
+            estimated_cost: effectiveCost,
+            page_range: isAcademicOrSchool ? selectedPageRange.id : null,
+            students_count: isAcademicOrSchool ? numberOfStudents : 1,
+          },
         })
         .select("id")
         .single();
@@ -92,6 +112,7 @@ function NewDocument() {
       setSelected(null);
       setTitle("");
       setSubject("");
+      setNumberOfStudents(1);
       navigate({ to: "/documents" });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -101,7 +122,7 @@ function NewDocument() {
     <div className="space-y-8">
       <PageHeader
         title="Criar novo documento"
-        subtitle="Escolhe o tipo de documento. O custo em créditos é sempre mostrado antes de avançares."
+        subtitle="Escolhe o tipo de documento. O custo em créditos é sempre calculado de forma transparente antes de avançares."
         action={
           <Badge variant="secondary" className="h-9 gap-2 rounded-full px-4 text-sm">
             <Coins className="size-4 text-primary" />
@@ -117,7 +138,11 @@ function NewDocument() {
             <button
               key={type.id}
               type="button"
-              onClick={() => setSelected(type)}
+              onClick={() => {
+                setSelected(type);
+                setSelectedPageRange(PAGE_RANGES[0]);
+                setNumberOfStudents(1);
+              }}
               className="shadow-soft group flex flex-col justify-between rounded-2xl border border-border/70 bg-card p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-primary/50"
             >
               <div>
@@ -129,7 +154,7 @@ function NewDocument() {
                     variant={affordable ? "secondary" : "outline"}
                     className="rounded-full text-[11px]"
                   >
-                    {type.cost} cr
+                    {type.id === "academic" ? "A partir de 5" : type.cost} cr
                   </Badge>
                 </div>
                 <h3 className="mt-5 text-base font-semibold">{type.label}</h3>
@@ -147,20 +172,74 @@ function NewDocument() {
       </div>
 
       <Dialog open={Boolean(selected)} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className="rounded-3xl sm:max-w-lg">
+        <DialogContent className="rounded-3xl sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display text-xl">{selected?.label}</DialogTitle>
             <DialogDescription>
-              Confirma os detalhes. Os créditos só são debitados na geração final do documento.
+              Configura os parâmetros do documento. Os cálculos são feitos de forma transparente pelo sistema.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Secções dinâmicas para Trabalhos Académicos / Escolares */}
+            {isAcademicOrSchool && (
+              <div className="space-y-4 rounded-2xl border border-border/70 bg-muted/30 p-4">
+                {/* Seleção de Páginas */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Extensão do documento (Páginas)
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {PAGE_RANGES.map((range) => (
+                      <button
+                        key={range.id}
+                        type="button"
+                        onClick={() => setSelectedPageRange(range)}
+                        className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
+                          selectedPageRange.id === range.id
+                            ? "border-primary bg-primary/5 font-medium shadow-sm"
+                            : "border-border/70 bg-card hover:border-border"
+                        }`}
+                      >
+                        <span className="text-sm font-semibold">{range.label}</span>
+                        <span className="text-xs text-muted-foreground">{range.cost} créditos ({formatMzn(creditsToMzn(range.cost))})</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Número de Estudantes */}
+                <div className="space-y-2 pt-2 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="students-count" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Users className="size-3.5" /> Número de Participantes / Estudantes
+                    </Label>
+                    <span className="text-xs text-muted-foreground">Até 4 incluídos</span>
+                  </div>
+                  <Input
+                    id="students-count"
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={numberOfStudents}
+                    onChange={(e) => setNumberOfStudents(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="h-10 rounded-xl"
+                  />
+                  {numberOfStudents > 4 && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      +{calculateStudentExtraCost(numberOfStudents).additionalStudents} estudantes além dos 4 incluídos (+{calculateStudentExtraCost(numberOfStudents).extraCost} créditos)
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Painel de Resumo Financeiro */}
             <div className="rounded-2xl border border-border/70 bg-surface p-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Custo desta operação</span>
-                <span className="font-semibold">
-                  {check.cost} créditos · {formatMzn(check.costInMzn)}
+                <span className="text-muted-foreground">Custo total da operação</span>
+                <span className="font-semibold text-primary">
+                  {effectiveCost} créditos · {formatMzn(creditsToMzn(effectiveCost))}
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between text-sm">
