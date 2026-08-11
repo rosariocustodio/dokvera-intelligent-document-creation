@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Coins, FilePlus2, FileText, Sparkles, Clock } from "lucide-react";
+import { ArrowRight, Coins, FilePlus2, FileText, Sparkles, Clock, Zap, GraduationCap, Briefcase, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/hooks/use-session";
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Painel Principal — Dokvera" },
-      { name: "description", content: "Visão geral e gestão de documentos no Dokvera." },
+      { name: "description", content: "Visão geral e gestão de documentos académicos e profissionais no Dokvera." },
       { property: "og:title", content: "Painel Principal — Dokvera" },
       { property: "og:description", content: "Painel de controlo de créditos e documentos." },
       { name: "robots", content: "noindex" },
@@ -39,10 +39,10 @@ function Dashboard() {
   const draftDocs = documents?.filter((d) => d.status === "draft").length ?? 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-10">
       <PageHeader
         title="Painel Principal"
-        subtitle="Gerencie os seus documentos académicos e profissionais com eficiência."
+        subtitle="Gerencie os seus documentos académicos e profissionais com eficiência máxima."
       />
 
       {/* Secção Superior: Saldo de Créditos e Estatísticas de Produtividade */}
@@ -67,7 +67,7 @@ function Dashboard() {
               </div>
             )}
             <p className="mt-2 text-sm opacity-90">
-              Utilize os créditos para gerar trabalhos estruturados e relatórios formatados em segundos.
+              Utilize os créditos para gerar trabalhos estruturados, cartas e relatórios formatados em segundos.
             </p>
           </div>
 
@@ -118,6 +118,54 @@ function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* NOVA SECÇÃO: Atalhos Rápidos para Categorias Populares */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="font-display text-lg font-semibold">Iniciar por Categoria</h2>
+          <p className="text-xs text-muted-foreground">Escolha o modelo ideal e acelere a criação do seu documento.</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Link
+            to="/documents/new"
+            className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-primary/50 hover:shadow-md flex items-center gap-4"
+          >
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary group-hover:scale-105 transition-transform">
+              <GraduationCap className="size-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">Académico</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Trabalhos, relatórios e monografias</p>
+            </div>
+          </Link>
+
+          <Link
+            to="/documents/new"
+            className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-primary/50 hover:shadow-md flex items-center gap-4"
+          >
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary group-hover:scale-105 transition-transform">
+              <Briefcase className="size-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">Profissional</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Currículos e propostas de valor</p>
+            </div>
+          </Link>
+
+          <Link
+            to="/documents/new"
+            className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-primary/50 hover:shadow-md flex items-center gap-4"
+          >
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary group-hover:scale-105 transition-transform">
+              <FileCheck className="size-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">Cartas & Ofícios</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Requerimentos e pedidos formais</p>
+            </div>
+          </Link>
+        </div>
+      </section>
 
       {/* Secção de Documentos Recentes */}
       <section className="pt-2">
