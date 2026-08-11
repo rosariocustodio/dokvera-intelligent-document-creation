@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Coins, Info, Zap, ShieldCheck } from "lucide-react";
+import { Check, Coins, Info, Zap, ShieldCheck, Sparkles, ArrowRight } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +21,10 @@ import {
 export const Route = createFileRoute("/_authenticated/credits")({
   head: () => ({
     meta: [
-      { title: "Créditos e Planos — Dokvera" },
-      { name: "description", content: "Gerencie o seu saldo de créditos ou assine o plano mensal profissional no Dokvera." },
-      { property: "og:title", content: "Créditos e Planos — Dokvera" },
-      { property: "og:description", content: "Recarregue créditos por unidade ou escolha o plano mensal." },
+      { title: "Créditos e Assinaturas — Dokvera" },
+      { name: "description", content: "Gerencie o seu saldo avulso ou assine o plano mensal profissional para documentos ilimitados." },
+      { property: "og:title", content: "Créditos e Assinaturas — Dokvera" },
+      { property: "og:description", content: "Planos e pacotes de créditos Dokvera." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -36,174 +37,258 @@ function CreditsPage() {
   const { data: balance } = useQuery({ ...creditsQuery(userId), enabled: Boolean(userId) });
   const credits = balance ?? 0;
 
+  // Estado para custom credit input (A partir de 1 crédito)
+  const [customCredits, setCustomCredits] = useState<number>(5);
+  const minCredits = 1;
+  const customPriceMzn = customCredits * CREDIT_PRICE_MZN;
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 pb-12">
       <PageHeader
-        title="Créditos e Subscrição"
-        subtitle="Escolha pacotes flexíveis por crédito para cartas e documentos pontuais, ou o plano mensal ideal para profissionais."
+        title="Créditos & Assinaturas"
+        subtitle="Adquira créditos avulsos a partir de 1 unidade para cartas e ofícios, ou escolha o plano mensal profissional."
       />
 
-      {/* Cartão de Saldo Actual */}
+      {/* Cartão de Saldo Atual */}
       <div className="gradient-brand shadow-glow relative overflow-hidden rounded-3xl p-7 text-brand-foreground">
-        <div className="absolute -right-4 -top-4 size-28 opacity-15 flex items-center justify-center">
-          <Coins className="size-24" />
-        </div>
-        <p className="text-xs font-medium uppercase tracking-[0.16em] opacity-85">Saldo actual disponível</p>
+        <Sparkles className="animate-float absolute -right-4 -top-4 size-28 opacity-15" />
+        <p className="text-xs font-medium uppercase tracking-[0.16em] opacity-85">Saldo actual na conta</p>
         <div className="mt-3 flex items-baseline gap-3">
-          <p className="font-display text-5xl font-extrabold tracking-tight">{credits}</p>
+          <p className="font-display text-5xl font-extrabold">{credits}</p>
           <span className="text-lg font-semibold opacity-85">
-            {credits === 1 ? "crédito" : "créditos"} ({formatMzn(creditsToMzn(credits))})
+            {credits === 1 ? "crédito disponível" : "créditos disponíveis"}
           </span>
         </div>
-        <p className="mt-2 text-sm opacity-90 max-w-xl">
-          Cada crédito base custa {formatMzn(CREDIT_PRICE_MZN)}. Ideal para gerar cartas, requerimentos e relatórios com total precisão.
+        <p className="mt-2 text-sm opacity-90">
+          Equivalente a <strong className="font-semibold">{formatMzn(creditsToMzn(credits))}</strong> calculados automaticamente pelo sistema.
         </p>
       </div>
 
-      {/* Plano Mensal para Profissionais */}
-      <section>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-display text-xl font-semibold">Plano Profissional Mensal</h2>
-            <p className="text-sm text-muted-foreground">Para utilizadores avançados, consultores e secretarias que geram documentos regularmente.</p>
+      {/* NOVA FUNCIONALIDADE 1: Depósito Flexível a partir de 1 Crédito (Ideal para Cartas/Ofícios rápidos) */}
+      <section className="shadow-soft rounded-3xl border border-border/70 bg-card p-7">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="max-w-xl">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-xs font-semibold text-primary">
+              <Zap className="size-3.5" /> Recarga Flexível Avulsa
+            </span>
+            <h2 className="mt-3 font-display text-xl font-bold">Precisa de apenas uma carta ou documento pontual?</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Compre exatamente o que precisa, a partir de 1 crédito ({formatMzn(CREDIT_PRICE_MZN)} por unidade). Sem mensalidades obrigatórias.
+            </p>
           </div>
-          <Badge variant="outline" className="hidden sm:inline-flex rounded-full border-primary/40 text-primary bg-primary/5 px-3 py-1 font-medium text-xs">
-            Recomendado para Empresas
-          </Badge>
+          <div className="flex flex-col sm:flex-row items-center gap-4 bg-muted/40 p-4 rounded-2xl border border-border/50">
+            <div className="flex items-center gap-3">
+              <label htmlFor="custom-credits" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Qtd:
+              </label>
+              <input
+                id="custom-credits"
+                type="number"
+                min={minCredits}
+                max={100}
+                value={customCredits}
+                onChange={(e) => setCustomCredits(Math.max(minCredits, parseInt(e.target.value) || minCredits))}
+                className="h-11 w-20 rounded-xl border border-border bg-background px-3 text-center font-display font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div className="text-right sm:text-left min-w-[110px]">
+              <p className="text-xs text-muted-foreground">Total a pagar</p>
+              <p className="font-display text-lg font-bold text-primary">{formatMzn(customPriceMzn)}</p>
+            </div>
+            <Button
+              className="h-11 rounded-xl px-6 font-medium shadow-sm w-full sm:w-auto"
+              onClick={() =>
+                toast.success("Processando recarga flexível", {
+                  description: `A solicitar ${customCredits} ${customCredits === 1 ? 'crédito' : 'créditos'} no valor de ${formatMzn(customPriceMzn)}.`,
+                })
+              }
+            >
+              Comprar {customCredits} {customCredits === 1 ? 'Crédito' : 'Créditos'}
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* NOVA FUNCIONALIDADE 2: Plano Mensal Profissional (Para utilizadores frequentes) */}
+      <section>
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <h2 className="font-display text-xl font-semibold">Assinaturas e Planos Profissionais</h2>
+            <p className="text-sm text-muted-foreground">Ideal para escritórios, consultores e estudantes finalistas que exigem alto volume.</p>
+          </div>
         </div>
 
-        <div className="mt-5 shadow-soft rounded-3xl border-2 border-primary/40 bg-card p-8 relative overflow-hidden transition-all duration-300 hover:border-primary/70">
-          <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-semibold px-4 py-1.5 rounded-bl-2xl uppercase tracking-wider">
-            Subscrição Mensal
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-3 md:items-center">
-            <div className="md:col-span-2 space-y-3">
-              <div className="inline-flex items-center gap-2 text-primary font-semibold text-sm">
-                <Zap className="size-4 fill-primary" />
-                Dokvera Pro Ilimitado / Mensal
-              </div>
-              <h3 className="font-display text-2xl font-bold tracking-tight">Geração contínua sem preocupações</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Obtenha créditos recorrentes todos os meses, prioridade máxima nos servidores de processamento de inteligência artificial e suporte dedicado para formatações complexas.
-              </p>
-              <div className="flex flex-wrap gap-4 pt-2 text-xs font-medium text-muted-foreground">
-                <span className="flex items-center gap-1.5"><ShieldCheck className="size-4 text-success" /> Sem fidelização</span>
-                <span className="flex items-center gap-1.5"><Check className="size-4 text-success" /> Cancelamento a qualquer momento</span>
-              </div>
+        <div className="shadow-elevated relative rounded-3xl border-2 border-primary bg-card p-8 overflow-hidden">
+          <Badge className="absolute top-6 right-6 rounded-full px-4 py-1 text-xs font-bold uppercase tracking-wider">
+            Recomendado para Profissionais
+          </Badge>
+          <div className="max-w-2xl">
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-primary-soft text-primary mb-4">
+              <ShieldCheck className="size-6" />
+            </span>
+            <h3 className="font-display text-2xl font-bold">Plano Mensal Pro Dokvera</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Acesso contínuo sem preocupações com saldo a esgotar. Inclui prioridade máxima de processamento e suporte dedicado.
+            </p>
+            
+            <div className="mt-6 flex items-baseline gap-2">
+              <span className="font-display text-4xl font-extrabold">{formatMzn(2750)}</span>
+              <span className="text-sm text-muted-foreground font-medium">/ mês (Créditos mensais generosos incluídos)</span>
             </div>
 
-            <div className="flex flex-col items-start md:items-end justify-center border-t md:border-t-0 md:border-l border-border/70 pt-6 md:pt-0 md:pl-6">
-              <span className="text-xs uppercase font-semibold text-muted-foreground tracking-wider">Investimento</span>
-              <div className="mt-1 flex items-baseline gap-1">
-                <span className="font-display text-3xl font-extrabold">{formatMzn(1650)}</span>
-                <span className="text-xs text-muted-foreground">/ mês</span>
-              </div>
+            <ul className="mt-6 grid sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
+              <li className="flex items-center gap-2">
+                <Check className="size-4 shrink-0 text-success" /> Geração ilimitada de cartas e ofícios
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="size-4 shrink-0 text-success" /> 50 Créditos mensais dedicados a trabalhos complexos
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="size-4 shrink-0 text-success" /> Prioridade na fila de processamento de IA
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="size-4 shrink-0 text-success" /> Suporte técnico prioritário via WhatsApp
+              </li>
+            </ul>
+
+            <div className="mt-8 flex flex-wrap items-center gap-4">
               <Button
-                className="mt-5 h-12 w-full md:w-auto rounded-xl px-8 shadow-md font-medium transition-transform active:scale-95"
+                className="h-12 rounded-xl px-8 font-medium shadow-md"
                 onClick={() =>
-                  toast.info("Subscrições mensais em breve", {
-                    description: "O plano profissional mensal será activado na próxima actualização do sistema.",
+                  toast.info("Subscrição Mensal", {
+                    description: "O sistema de subscrições mensais automáticas estará disponível em breve.",
                   })
                 }
               >
-                <Zap className="mr-2 size-4" />
-                Subcrever Plano Pro
+                Subscriver Plano Mensal Pro <ArrowRight className="ml-2 size-4" />
               </Button>
+              <span className="text-xs text-muted-foreground">Pode cancelar a qualquer momento sem penalizações.</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Pacotes de Créditos por Unidade (A partir de 1 crédito) */}
-      <section className="pt-2">
-        <div>
-          <h2 className="font-display text-xl font-semibold">Pacotes de créditos avulsos</h2>
-          <p className="text-sm text-muted-foreground">Adquira exatamente a quantidade que precisa, a partir de apenas 1 crédito para cartas rápidas.</p>
+      {/* Pacotes de Créditos Tradicionais */}
+      <section>
+        <div className="mb-5">
+          <h2 className="font-display text-xl font-semibold">Pacotes de créditos populares</h2>
+          <p className="text-sm text-muted-foreground">Escolha um pacote com bónus integrado para poupar.</p>
         </div>
-
-        <div className="mt-5 grid gap-5 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-3">
           {CREDIT_PACKS.map((p) => (
             <div
               key={p.id}
               className={
                 p.highlight
-                  ? "shadow-elevated relative rounded-3xl border-2 border-primary/60 bg-card p-7 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
-                  : "shadow-soft rounded-3xl border border-border/70 bg-card p-7 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+                  ? "shadow-elevated relative rounded-3xl border-2 border-primary/60 bg-card p-7 flex flex-col justify-between"
+                  : "shadow-soft rounded-3xl border border-border/70 bg-card p-7 flex flex-col justify-between"
               }
             >
-              {p.highlight ? (
-                <Badge className="absolute -top-3 left-7 rounded-full px-3 py-0.5 bg-primary text-primary-foreground font-medium text-xs shadow-sm">
-                  Mais popular
-                </Badge>
-              ) : null}
-              
               <div>
+                {p.highlight ? (
+                  <Badge className="absolute -top-3 left-7 rounded-full">Mais popular</Badge>
+                ) : null}
                 <h3 className="text-base font-semibold">{p.name}</h3>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="font-display text-3xl font-extrabold">
-                    {formatMzn(packPriceMzn(p))}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground font-medium">
-                  {packTotalCredits(p)} {packTotalCredits(p) === 1 ? "crédito" : "créditos"}
+                <p className="mt-3 font-display text-3xl font-extrabold">
+                  {formatMzn(packPriceMzn(p))}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {packTotalCredits(p)} créditos
                   {p.bonus > 0 ? ` (${p.credits} + ${p.bonus} bónus)` : ""}
                 </p>
-
-                <ul className="mt-6 space-y-2.5 text-sm text-muted-foreground border-t border-border/50 pt-5">
+                <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
                   {p.perks.map((perk) => (
-                    <li key={perk} className="flex items-start gap-2.5">
+                    <li key={perk} className="flex items-start gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                      <span>{perk}</span>
+                      {perk}
                     </li>
                   ))}
                 </ul>
               </div>
-
               <Button
                 variant={p.highlight ? "default" : "outline"}
-                className={
-                  p.highlight
-                    ? "mt-8 h-12 w-full rounded-xl shadow-md font-medium transition-transform active:scale-95"
-                    : "mt-8 h-12 w-full rounded-xl border-border/80 font-medium hover:bg-muted/50 transition-transform active:scale-95"
-                }
+                className="mt-8 h-11 w-full rounded-xl font-medium shadow-sm transition-all hover:scale-[1.01]"
                 onClick={() =>
                   toast.info("Pagamentos em breve", {
-                    description: "A compra avulsa de créditos será activada na próxima fase do Dokvera.",
+                    description: `A compra do pacote ${p.name} será ativada na próxima fase do Dokvera.`,
                   })
                 }
               >
-                <Coins className="mr-2 size-4" />
-                Comprar pacote
+                <Coins className="mr-1.5 size-4" />
+                Adquirir Pacote
               </Button>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Tabela de Custos por Tipo de Documento */}
-      <section className="shadow-soft rounded-3xl border border-border/70 bg-card p-7">
-        <h2 className="font-display text-lg font-semibold">Custo por tipo de documento</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">Saiba exatamente quantos créditos cada formato consome antes de gerar.</p>
-        
-        <ul className="mt-5 divide-y divide-border/70">
-          {DOCUMENT_TYPES.map((t) => (
-            <li key={t.id} className="flex items-center justify-between gap-3 py-3.5 text-sm">
-              <span className="font-medium text-foreground">{t.label}</span>
-              <span className="font-medium text-primary bg-primary/5 px-3 py-1 rounded-lg text-xs">
-                {t.cost} {t.cost === 1 ? "crédito" : "créditos"} · {formatMzn(creditsToMzn(t.cost))}
-              </span>
-            </li>
-          ))}
-        </ul>
-        
-        <div className="mt-6 flex items-start gap-3 rounded-2xl bg-muted/40 p-4 border border-border/50 text-xs text-muted-foreground">
-          <Info className="mt-0.5 size-4 shrink-0 text-primary" />
-          <p className="leading-relaxed">
-            Os créditos são validados automaticamente pelo sistema antes de cada operação e apenas debitados quando o documento é concluído com sucesso. O depósito mínimo aceite é de 1 crédito, ideal para cartas formais e requerimentos pontuais.
+      {/* NOVA FUNCIONALIDADE 3: Histórico Rápido de Custos & FAQ / Transparência de Preços */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="shadow-soft rounded-3xl border border-border/70 bg-card p-7 flex flex-col justify-between">
+          <div>
+            <h2 className="font-display text-lg font-semibold">Tabela de Custo por Documento</h2>
+            <p className="mt-1 text-xs text-muted-foreground">Transparência total nos descontos por operação.</p>
+            <ul className="mt-4 divide-y divide-border/70">
+              {DOCUMENT_TYPES.map((t) => (
+                <li key={t.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                  <span className="font-medium">{t.label}</span>
+                  <span className="text-muted-foreground font-semibold">
+                    {t.cost} {t.cost === 1 ? 'crédito' : 'créditos'} · {formatMzn(creditsToMzn(t.cost))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="mt-6 flex items-start gap-2 text-xs text-muted-foreground pt-4 border-t border-border/50">
+            <Info className="mt-0.5 size-3.5 shrink-0 text-primary" />
+            Os créditos apenas são debitados após a confirmação e geração final bem-sucedida do documento.
           </p>
-        </div>
-      </section>
+        </section>
+
+        {/* Simulador de Poupança / Vantagens do Sistema */}
+        <section className="shadow-soft rounded-3xl border border-border/70 bg-card p-7 flex flex-col justify-between">
+          <div>
+            <h2 className="font-display text-lg font-semibold">Garantia e Segurança Dokvera</h2>
+            <p className="mt-1 text-xs text-muted-foreground">Porque confiar na nossa plataforma de automação.</p>
+            
+            <div className="mt-5 space-y-4">
+              <div className="flex gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary font-bold text-sm">
+                  1
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold">Cálculos Independentes</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Os valores e preços são geridos de forma estática pelo sistema e nunca manipulados por modelos de inteligência artificial.</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary font-bold text-sm">
+                  2
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold">Reembolso Automático em Falhas</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Se ocorrer algum erro técnico imprevisto durante a geração, o crédito é devolvido instantaneamente à sua conta.</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary font-bold text-sm">
+                  3
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold">Validade Permanente</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Os créditos avulsos adquiridos nunca expiram. Use-os sempre que precisar, ao seu próprio ritmo.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-border/50 text-xs text-muted-foreground text-center">
+            Precisa de fatura com NUIT para empresa ou instituição? Contacte o nosso suporte.
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
