@@ -115,7 +115,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       </div>
 
       <div className="mt-auto space-y-3 pt-4 border-t border-border/60">
-        {/* Atalho de Suporte */}
         <a
           href="https://wa.me/"
           target="_blank"
@@ -151,13 +150,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-surface">
-      {/* Sidebar Desktop */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-sidebar-border bg-sidebar lg:block">
         {sidebarBody}
       </aside>
 
       <div className="lg:pl-72 flex flex-col min-h-screen">
-        {/* Header Superior Profissional */}
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-border/60 bg-background/80 px-4 backdrop-blur-xl md:px-7">
           <div className="flex items-center gap-3">
             <Sheet open={open} onOpenChange={setOpen}>
@@ -177,10 +174,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </span>
           </div>
 
-          <div className="flex items-center.gap-3 flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5">
             <ThemeToggle />
 
-            {/* Dropdown de Notificações Rápido */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="rounded-xl relative size-10 border-border/70">
@@ -211,10 +207,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        {/* Conteúdo Principal */}
         <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-7 md:px-7 md:py-9">{children}</main>
 
-        {/* Rodapé Corporativo */}
         <footer className="mt-auto border-t border-border/40 px-4 py-6 text-center text-xs text-muted-foreground md:px-7 flex flex-col sm:flex-row items-center justify-between gap-2 bg-background/40">
           <p>© {new Date().getFullYear()} Dokvera. Todos os direitos reservados.</p>
           <p className="text-muted-foreground/80">Plataforma inteligente gerida por Ruqzora</p>
