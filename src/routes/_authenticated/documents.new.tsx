@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Icons from "lucide-react";
-import { AlertTriangle, Check, Coins, Loader2, Users, FileText } from "lucide-react";
+import { AlertTriangle, Check, Coins, Loader2, Users, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -65,10 +65,8 @@ function NewDocument() {
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
 
-  // Determinar se o tipo selecionado suporta páginas e múltiplos estudantes (Academic / School)
   const isAcademicOrSchool = selected?.id === "academic" || selected?.id === "school";
 
-  // Calcular o custo total usando as regras puras do código
   const effectiveCost = useMemo(() => {
     if (!selected) return 0;
     const base = isAcademicOrSchool ? selectedPageRange.cost : selected.cost;
@@ -83,10 +81,9 @@ function NewDocument() {
   const create = useMutation({
     mutationFn: async () => {
       if (!selected) throw new Error("Nenhum tipo selecionado");
-      // Credit gate enforced by code
-      if (!checkAffordability(credits, effectiveCost).affordable) {
-        throw new Error("Créditos insuficientes");
-      }
+      if (!title.trim()) throw new Error("Por favor, insira o título do documento.");
+      if (!check.affordable) throw new Error("Créditos insuficientes para esta operação.");
+
       const { data, error } = await supabase
         .from("documents")
         .insert({
@@ -103,28 +100,32 @@ function NewDocument() {
         })
         .select("id")
         .single();
+
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
-      toast.success("Documento criado como rascunho.");
+      queryClient.invalidateQueries({ queryKey: ["credits"] });
+      toast.success("Documento gerado e guardado com sucesso!");
       setSelected(null);
       setTitle("");
       setSubject("");
       setNumberOfStudents(1);
       navigate({ to: "/documents" });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      toast.error("Erro ao criar documento", { description: e.message });
+    },
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-12">
       <PageHeader
         title="Criar novo documento"
-        subtitle="Escolhe o tipo de documento. O custo em créditos é sempre calculado de forma transparente antes de avançares."
+        subtitle="Escolha o tipo de documento desejado. O custo em créditos é calculado de forma transparente."
         action={
-          <Badge variant="secondary" className="h-9 gap-2 rounded-full px-4 text-sm">
+          <Badge variant="secondary" className="h-9 gap-2 rounded-full px-4 text-sm font-semibold shadow-sm">
             <Coins className="size-4 text-primary" />
             {credits} créditos · {formatMzn(creditsToMzn(credits))}
           </Badge>
@@ -162,29 +163,30 @@ function NewDocument() {
                   {type.description}
                 </p>
               </div>
-              <p className="mt-5 text-xs text-muted-foreground">
-                {formatMzn(creditsToMzn(type.cost))}
-                {affordable ? "" : " · créditos insuficientes"}
-              </p>
+              <div className="mt-5 pt-4 border-t border-border/50 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">{formatMzn(creditsToMzn(type.cost))}</span>
+                <span className="text-primary font-semibold flex items-center gap-1">
+                  Selecionar <Sparkles className="size-3" />
+                </span>
+              </div>
             </button>
           );
         })}
       </div>
 
       <Dialog open={Boolean(selected)} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className="rounded-3xl sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="rounded-3xl sm:max-w-xl max-h-[90vh] overflow-y-auto p-6 space-y-6">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl">{selected?.label}</DialogTitle>
+            <DialogTitle className="font-display text-2xl">{selected?.label}</DialogTitle>
             <DialogDescription>
-              Configura os parâmetros do documento. Os cálculos são feitos de forma transparente pelo sistema.
+              Preencha os campos abaixo para configurar o seu documento inteligente.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Secções dinâmicas para Trabalhos Académicos / Escolares */}
             {isAcademicOrSchool && (
               <div className="space-y-4 rounded-2xl border border-border/70 bg-muted/30 p-4">
-                {/* Seleção de Páginas */}
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Extensão do documento (Páginas)
@@ -208,7 +210,6 @@ function NewDocument() {
                   </div>
                 </div>
 
-                {/* Número de Estudantes */}
                 <div className="space-y-2 pt-2 border-t border-border/50">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="students-count" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
@@ -223,10 +224,10 @@ function NewDocument() {
                     max={20}
                     value={numberOfStudents}
                     onChange={(e) => setNumberOfStudents(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="h-10 rounded-xl"
+                    className="h-11 rounded-xl bg-background"
                   />
                   {numberOfStudents > 4 && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                    <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
                       +{calculateStudentExtraCost(numberOfStudents).additionalStudents} estudantes além dos 4 incluídos (+{calculateStudentExtraCost(numberOfStudents).extraCost} créditos)
                     </p>
                   )}
@@ -234,16 +235,44 @@ function NewDocument() {
               </div>
             )}
 
+            {/* Informações Básicas do Documento (Sempre visíveis no Modal) */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="doc-title" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Título do documento <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="doc-title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Ex.: Impacto da digitalização na banca em Moçambique"
+                  className="h-11 rounded-xl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="doc-subject" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Tema / contexto (opcional)
+                </Label>
+                <Textarea
+                  id="doc-subject"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="Disciplina, instituição, requisitos específicos ou instruções detalhadas."
+                  className="min-h-24 rounded-xl"
+                />
+              </div>
+            </div>
+
             {/* Painel de Resumo Financeiro */}
-            <div className="rounded-2xl border border-border/70 bg-surface p-4">
+            <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-soft">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Custo total da operação</span>
-                <span className="font-semibold text-primary">
+                <span className="font-bold text-primary text-base">
                   {effectiveCost} créditos · {formatMzn(creditsToMzn(effectiveCost))}
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Saldo actual</span>
+                <span className="text-muted-foreground">Saldo atual na conta</span>
                 <span className="font-semibold">
                   {check.balance} créditos · {formatMzn(creditsToMzn(check.balance))}
                 </span>
@@ -251,62 +280,37 @@ function NewDocument() {
               <div className="mt-3 border-t border-border/70 pt-3">
                 {check.affordable ? (
                   <p className="flex items-center gap-2 text-sm font-medium text-success">
-                    <Check className="size-4" />
-                    Saldo suficiente — podes avançar.
+                    <Check className="size-4 shrink-0" />
+                    Saldo suficiente para processar este documento.
                   </p>
                 ) : (
                   <p className="flex items-center gap-2 text-sm font-medium text-destructive">
-                    <AlertTriangle className="size-4" />
+                    <AlertTriangle className="size-4 shrink-0" />
                     Faltam {check.missing} créditos ({formatMzn(check.missingInMzn)}).
                   </p>
                 )}
               </div>
             </div>
-
-            {check.affordable ? (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="doc-title">Título do documento</Label>
-                  <Input
-                    id="doc-title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Ex.: Impacto da digitalização na banca"
-                    className="h-11 rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doc-subject">Tema / contexto (opcional)</Label>
-                  <Textarea
-                    id="doc-subject"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="Disciplina, instituição, requisitos ou instruções do professor."
-                    className="min-h-24 rounded-xl"
-                  />
-                </div>
-              </>
-            ) : null}
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="ghost" className="rounded-xl" onClick={() => setSelected(null)}>
+          <DialogFooter className="gap-2 sm:gap-2 pt-2 border-t border-border/50">
+            <Button variant="ghost" className="rounded-xl h-11 px-5" onClick={() => setSelected(null)}>
               Cancelar
             </Button>
             {check.affordable ? (
               <Button
-                className="rounded-xl"
+                className="rounded-xl h-11 px-6 font-semibold shadow-sm"
                 disabled={!title.trim() || create.isPending}
                 onClick={() => create.mutate()}
               >
-                {create.isPending ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
-                Continuar
+                {create.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Sparkles className="mr-2 size-4" />}
+                Gerar Documento
               </Button>
             ) : (
-              <Button asChild className="rounded-xl">
+              <Button asChild className="rounded-xl h-11 px-6">
                 <Link to="/credits">
-                  <Coins className="mr-1.5 size-4" />
-                  Adquirir créditos
+                  <Coins className="mr-2 size-4" />
+                  Adquirir Créditos
                 </Link>
               </Button>
             )}
