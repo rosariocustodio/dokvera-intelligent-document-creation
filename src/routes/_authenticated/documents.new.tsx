@@ -60,7 +60,7 @@ function NewDocument() {
   const credits = balance ?? 0;
 
   const [selected, setSelected] = useState<DocumentTypeDef | null>(null);
-  const [selectedPageRange, setSelectedPageRange] = useState<PageRangeOption>(PAGE_RANGES[0]);
+  const [selectedPageRange, setSelectedPageRange] = useState<PageRangeOption>((PAGE_RANGES[0] as PageRangeOption));
   const [numberOfStudents, setNumberOfStudents] = useState<number>(1);
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
@@ -141,7 +141,7 @@ function NewDocument() {
               type="button"
               onClick={() => {
                 setSelected(type);
-                setSelectedPageRange(PAGE_RANGES[0]);
+                setSelectedPageRange((PAGE_RANGES[0] as PageRangeOption));
                 setNumberOfStudents(1);
               }}
               className="shadow-soft group flex flex-col justify-between rounded-2xl border border-border/70 bg-card p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-primary/50"

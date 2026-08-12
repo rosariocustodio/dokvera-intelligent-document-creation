@@ -321,7 +321,7 @@ function Landing() {
                 </p>
                 <p className="mt-1.5 text-sm text-muted-foreground">
                   {packTotalCredits(p)} créditos
-                  {p.bonus > 0 ? ` (${p.credits} + ${p.bonus} bónus)` : ""}
+                  {(p.bonus ?? 0) > 0 ? ` (${p.credits} + ${(p.bonus ?? 0)} bónus)` : ""}
                 </p>
                 <ul className="mt-6 space-y-2.5 text-sm">
                   {p.perks.map((perk) => (
