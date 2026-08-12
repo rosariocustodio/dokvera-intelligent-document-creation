@@ -46,6 +46,8 @@ export type CreditPack = {
   /** Total price in MZN for the whole pack. */
   priceMzn: number;
   highlight?: boolean;
+  /** Legacy bonus display, kept for existing pricing sections. */
+  bonus?: number;
   perks: string[];
 };
 
@@ -168,4 +170,92 @@ export function relativeTime(value: string | null | undefined): string {
   const days = Math.round(hours / 24);
   if (days < 30) return `há ${days} d`;
   return formatDate(value);
+}
+
+/* ------------------------------------------------------------------ */
+/* Compatibility layer                                                 */
+/* Kept so existing screens keep compiling while they migrate to       */
+/* `src/lib/document-specs.ts` + `src/lib/pricing.ts`.                 */
+/* ------------------------------------------------------------------ */
+
+export function packTotalCredits(pack: CreditPack): number {
+  return pack.credits;
+}
+
+export function packPriceMzn(pack: CreditPack): number {
+  return pack.priceMzn;
+}
+
+export type DocumentTypeId = string;
+
+export type DocumentTypeDef = {
+  id: string;
+  label: string;
+  description: string;
+  cost: number;
+  icon: string;
+};
+
+export const DOCUMENT_TYPES: DocumentTypeDef[] = [
+  { id: "academic", label: "Trabalho Académico", description: "Monografias e trabalhos universitários com estrutura formal.", cost: 5, icon: "GraduationCap" },
+  { id: "school", label: "Trabalho Escolar", description: "Trabalhos do ensino básico e secundário.", cost: 4, icon: "BookOpen" },
+  { id: "cv", label: "CV", description: "Currículo profissional pronto a enviar.", cost: 3, icon: "IdCard" },
+  { id: "report", label: "Relatório", description: "Relatórios de estágio, actividade ou projecto.", cost: 6, icon: "ClipboardList" },
+  { id: "summary", label: "Resumo", description: "Resumos e sínteses de textos ou aulas.", cost: 2, icon: "AlignLeft" },
+  { id: "request", label: "Requerimento", description: "Requerimentos e cartas formais.", cost: 2, icon: "FileSignature" },
+  { id: "other", label: "Outro Documento", description: "Descreve o que precisas e organizamos a estrutura.", cost: 3, icon: "FilePlus2" },
+];
+
+export function getDocumentType(id: string): DocumentTypeDef | undefined {
+  return DOCUMENT_TYPES.find((t) => t.id === id);
+}
+
+export function documentTypeLabel(id: string): string {
+  return getDocumentType(id)?.label ?? "Documento";
+}
+
+export type PageRangeOption = {
+  id: string;
+  label: string;
+  minPages: number;
+  maxPages: number;
+  cost: number;
+};
+
+export const PAGE_RANGES: PageRangeOption[] = [
+  { id: "10-15", label: "10–15 páginas", minPages: 10, maxPages: 15, cost: 5 },
+  { id: "16-20", label: "16–20 páginas", minPages: 16, maxPages: 20, cost: 7 },
+];
+
+export function calculateStudentExtraCost(totalStudents: number): {
+  additionalStudents: number;
+  extraCost: number;
+} {
+  const additionalStudents = Math.max(0, totalStudents - 4);
+  return { additionalStudents, extraCost: Number((additionalStudents * 0.39).toFixed(2)) };
+}
+
+export function calculateTotalDocumentCost(baseCost: number, numberOfStudents: number): number {
+  return Number((baseCost + calculateStudentExtraCost(numberOfStudents).extraCost).toFixed(2));
+}
+
+export type AffordabilityCheck = {
+  cost: number;
+  balance: number;
+  affordable: boolean;
+  missing: number;
+  costInMzn: number;
+  missingInMzn: number;
+};
+
+export function checkAffordability(balance: number, cost: number): AffordabilityCheck {
+  const missing = Math.max(0, Number((cost - balance).toFixed(2)));
+  return {
+    cost,
+    balance,
+    affordable: balance >= cost,
+    missing,
+    costInMzn: creditsToMzn(cost),
+    missingInMzn: creditsToMzn(missing),
+  };
 }
