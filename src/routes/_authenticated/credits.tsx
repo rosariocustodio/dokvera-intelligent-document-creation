@@ -194,7 +194,7 @@ function CreditsPage() {
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {packTotalCredits(p)} créditos
-                  {p.bonus > 0 ? ` (${p.credits} + ${p.bonus} bónus)` : ""}
+                  {(p.bonus ?? 0) > 0 ? ` (${p.credits} + ${(p.bonus ?? 0)} bónus)` : ""}
                 </p>
                 <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
                   {p.perks.map((perk) => (

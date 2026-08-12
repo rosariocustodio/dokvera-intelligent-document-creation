@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 
 const toneClass = {
   muted: "bg-muted text-muted-foreground",
+  info: "bg-primary/15 text-primary",
+  danger: "bg-destructive/15 text-destructive",
   warning: "bg-warning/15 text-warning-foreground dark:text-warning",
   success: "bg-success/15 text-success",
 } as const;
@@ -14,9 +16,9 @@ export function DocumentCard({ doc }: { doc: DocumentRow }) {
   const status = statusMeta(doc.status);
   const metadata = (doc.metadata as Record<string, any>) ?? {};
   
-  const pageRange = metadata.page_range;
-  const studentsCount = metadata.students_count;
-  const estimatedCost = metadata.estimated_cost;
+  const pageRange = metadata['page_range'];
+  const studentsCount = metadata['students_count'];
+  const estimatedCost = metadata['estimated_cost'];
 
   return (
     <article className="shadow-soft group flex flex-col justify-between rounded-2xl border border-border/70 bg-card p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40">

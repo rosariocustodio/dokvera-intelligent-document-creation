@@ -14,6 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      credit_orders: {
+        Row: {
+          amount_mzn: number
+          created_at: string
+          credits: number
+          id: string
+          kind: string
+          pack_id: string | null
+          provider: string | null
+          provider_reference: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_mzn: number
+          created_at?: string
+          credits: number
+          id?: string
+          kind?: string
+          pack_id?: string | null
+          provider?: string | null
+          provider_reference?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_mzn?: number
+          created_at?: string
+          credits?: number
+          id?: string
+          kind?: string
+          pack_id?: string | null
+          provider?: string | null
+          provider_reference?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          amount_mzn: number
+          created_at: string
+          credits: number
+          description: string | null
+          document_id: string | null
+          id: string
+          kind: string
+          user_id: string
+        }
+        Insert: {
+          amount_mzn?: number
+          created_at?: string
+          credits: number
+          description?: string | null
+          document_id?: string | null
+          id?: string
+          kind: string
+          user_id: string
+        }
+        Update: {
+          amount_mzn?: number
+          created_at?: string
+          credits?: number
+          description?: string | null
+          document_id?: string | null
+          id?: string
+          kind?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credits: {
         Row: {
           balance: number
@@ -35,14 +118,53 @@ export type Database = {
         }
         Relationships: []
       }
+      document_events: {
+        Row: {
+          created_at: string
+          detail: Json
+          document_id: string
+          event: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: Json
+          document_id: string
+          event: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          detail?: Json
+          document_id?: string
+          event?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_events_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           content: string | null
           created_at: string
           credits_spent: number
           doc_type: string
+          error_message: string | null
+          estimated_cost: number
           id: string
+          instructions: string | null
           metadata: Json
+          options: Json
           status: string
           subject: string | null
           title: string
@@ -54,8 +176,12 @@ export type Database = {
           created_at?: string
           credits_spent?: number
           doc_type: string
+          error_message?: string | null
+          estimated_cost?: number
           id?: string
+          instructions?: string | null
           metadata?: Json
+          options?: Json
           status?: string
           subject?: string | null
           title: string
@@ -67,8 +193,12 @@ export type Database = {
           created_at?: string
           credits_spent?: number
           doc_type?: string
+          error_message?: string | null
+          estimated_cost?: number
           id?: string
+          instructions?: string | null
           metadata?: Json
+          options?: Json
           status?: string
           subject?: string | null
           title?: string
@@ -84,6 +214,9 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          institution: string | null
+          onboarded_at: string | null
+          phone: string | null
           updated_at: string
         }
         Insert: {
@@ -92,6 +225,9 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          institution?: string | null
+          onboarded_at?: string | null
+          phone?: string | null
           updated_at?: string
         }
         Update: {
@@ -100,6 +236,9 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          institution?: string | null
+          onboarded_at?: string | null
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -109,7 +248,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      refund_credits: {
+        Args: { _credits: number; _description: string; _document_id: string }
+        Returns: number
+      }
+      spend_credits: {
+        Args: { _credits: number; _description: string; _document_id: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
