@@ -9,7 +9,7 @@
  * `src/lib/pricing.ts`. Costs are ALWAYS computed in code, never by AI.
  */
 
-export type DocCategoryId = "academico" | "profissional" | "formal" | "outro";
+export type DocCategoryId = "academico" | "profissional" | "administrativo" | "negocios" | "comunicacao" | "personalizado";
 
 export type DocCategory = {
   id: DocCategoryId;
@@ -20,7 +20,7 @@ export type DocCategory = {
 export const DOC_CATEGORIES: DocCategory[] = [
   {
     id: "academico",
-    label: "Académico & Escolar",
+    label: "Académico",
     description: "Trabalhos, relatórios e resumos para escola e universidade.",
   },
   {
@@ -29,13 +29,23 @@ export const DOC_CATEGORIES: DocCategory[] = [
     description: "CV, cartas de apresentação e documentos de trabalho.",
   },
   {
-    id: "formal",
-    label: "Formal & Administrativo",
-    description: "Requerimentos, declarações e cartas oficiais.",
+    id: "administrativo",
+    label: "Administrativo",
+    description: "Requerimentos, declarações e formulários oficiais.",
   },
   {
-    id: "outro",
-    label: "Outro",
+    id: "negocios",
+    label: "Negócios",
+    description: "Planos de negócio, propostas comerciais e relatórios de empresa.",
+  },
+  {
+    id: "comunicacao",
+    label: "Comunicação",
+    description: "Cartas formais, ofícios, comunicados e correspondência.",
+  },
+  {
+    id: "personalizado",
+    label: "Personalizado",
     description: "Descreve o documento que precisas e nós estruturamos.",
   },
 ];
@@ -436,7 +446,7 @@ export const DOC_SPECS: DocSpec[] = [
     id: "request",
     label: "Requerimento",
     description: "Requerimentos formais com a linguagem administrativa correcta.",
-    category: "formal",
+    category: "administrativo",
     icon: "FileSignature",
     keywords: ["requerimento", "pedido", "oficio", "administração", "formal"],
     baseCredits: 2,
@@ -469,7 +479,7 @@ export const DOC_SPECS: DocSpec[] = [
     id: "declaration",
     label: "Declaração",
     description: "Declarações, autorizações e termos de responsabilidade.",
-    category: "formal",
+    category: "administrativo",
     icon: "ScrollText",
     keywords: ["declaração", "autorização", "termo", "responsabilidade"],
     baseCredits: 2,
@@ -511,7 +521,7 @@ export const DOC_SPECS: DocSpec[] = [
     id: "letter",
     label: "Carta Formal / Ofício",
     description: "Comunicação oficial entre pessoas, empresas e instituições.",
-    category: "formal",
+    category: "comunicacao",
     icon: "Send",
     keywords: ["carta", "ofício", "comunicação", "empresa", "instituição"],
     baseCredits: 2,
@@ -553,7 +563,7 @@ export const DOC_SPECS: DocSpec[] = [
     id: "other",
     label: "Outro Documento",
     description: "Descreve o que precisas e nós organizamos a estrutura.",
-    category: "outro",
+    category: "personalizado",
     icon: "FilePlus2",
     keywords: ["outro", "personalizado", "livre"],
     baseCredits: 3,

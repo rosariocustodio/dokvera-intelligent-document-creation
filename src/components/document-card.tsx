@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { CalendarDays, Clock, FileText, Users, Layers, Coins } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { DocumentRow } from "@/lib/queries";
@@ -21,7 +22,12 @@ export function DocumentCard({ doc }: { doc: DocumentRow }) {
   const estimatedCost = metadata['estimated_cost'];
 
   return (
-    <article className="shadow-soft group flex flex-col justify-between rounded-2xl border border-border/70 bg-card p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40">
+    <Link 
+      to="/documents/$id" 
+      params={{ id: doc.id }}
+      className="block"
+    >
+      <article className="shadow-soft group flex h-full flex-col justify-between rounded-2xl border border-border/70 bg-card p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md cursor-pointer">
       <div>
         <div className="flex items-start justify-between gap-3">
           <span className="flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
@@ -72,5 +78,6 @@ export function DocumentCard({ doc }: { doc: DocumentRow }) {
         </div>
       </dl>
     </article>
+    </Link>
   );
 }

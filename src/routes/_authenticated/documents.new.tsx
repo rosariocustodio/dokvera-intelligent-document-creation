@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Icons from "lucide-react";
@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/page-header";
 import { useSession } from "@/hooks/use-session";
-import { creditsQuery } from "@/lib/queries";
+import { creditsQuery, documentQuery } from "@/lib/queries";
+import { z } from "zod";
 import {
   DOCUMENT_TYPES,
   PAGE_RANGES,
@@ -34,6 +35,9 @@ import {
 } from "@/lib/dokvera";
 
 export const Route = createFileRoute("/_authenticated/documents/new")({
+  validateSearch: (search) => z.object({
+    draftId: z.string().optional(),
+  }).parse(search),
   head: () => ({
     meta: [
       { title: "Criar documento — Dokvera" },
@@ -56,14 +60,53 @@ function NewDocument() {
   const userId = user?.id ?? "";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { draftId } = Route.useSearch();
   const { data: balance } = useQuery({ ...creditsQuery(userId), enabled: Boolean(userId) });
   const credits = balance ?? 0;
+
+  const { data: draftDoc } = useQuery({
+    ...documentQuery(draftId || ""),
+    enabled: Boolean(draftId),
+  });
 
   const [selected, setSelected] = useState<DocumentTypeDef | null>(null);
   const [selectedPageRange, setSelectedPageRange] = useState<PageRangeOption>((PAGE_RANGES[0] as PageRangeOption));
   const [numberOfStudents, setNumberOfStudents] = useState<number>(1);
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
+  const [cvTemplate, setCvTemplate] = useState<string>("classic");
+  const [cvLayout, setCvLayout] = useState<string>("one_column");
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  useEffect(() => {
+    if (draftDoc) {
+      setTitle(draftDoc.title || "");
+      setSubject(draftDoc.subject || "");
+      
+      const matchedSpec = DOCUMENT_TYPES.find(t => t.id === draftDoc.doc_type);
+      if (matchedSpec) {
+        setSelected(matchedSpec);
+      }
+      
+      const draftMetadata = draftDoc.metadata || {};
+      const pageRangeId = draftMetadata["page_range"] as string | undefined;
+      const studentsCount = draftMetadata["students_count"] as number | string | undefined;
+
+      if (pageRangeId) {
+        const matchedRange = PAGE_RANGES.find(r => r.id === pageRangeId);
+        if (matchedRange) {
+          setSelectedPageRange(matchedRange as PageRangeOption);
+        }
+      }
+      if (studentsCount) {
+        setNumberOfStudents(Number(studentsCount));
+      }
+
+      const draftOptions = draftDoc.options || {};
+      if (draftOptions["template"]) setCvTemplate(draftOptions["template"] as string);
+      if (draftOptions["layout"]) setCvLayout(draftOptions["layout"] as string);
+    }
+  }, [draftDoc]);
 
   const isAcademicOrSchool = selected?.id === "academic" || selected?.id === "school";
 
@@ -78,44 +121,142 @@ function NewDocument() {
     [credits, effectiveCost],
   );
 
+  // Auto-save debounced effect
+  useEffect(() => {
+    if (!title.trim() || !selected) {
+      setAutoSaveStatus("idle");
+      return;
+    }
+    
+    setAutoSaveStatus("saving");
+    
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        if (draftId) {
+          const { error } = await supabase
+            .from("documents")
+            .update({
+              title: title.trim(),
+              subject: subject.trim() || null,
+              estimated_cost: effectiveCost,
+              options: selected?.id === "cv" ? { template: cvTemplate, layout: cvLayout } : {},
+              metadata: {
+                estimated_cost: effectiveCost,
+                page_range: isAcademicOrSchool ? selectedPageRange.id : null,
+                students_count: isAcademicOrSchool ? numberOfStudents : 1,
+              },
+            })
+            .eq("id", draftId);
+          
+          if (error) {
+            setAutoSaveStatus("error");
+          } else {
+            queryClient.invalidateQueries({ queryKey: ["documents"] });
+            queryClient.invalidateQueries({ queryKey: ["document", draftId] });
+            setAutoSaveStatus("saved");
+          }
+        } else {
+          const { data, error } = await supabase
+            .from("documents")
+            .insert({
+              user_id: userId,
+              title: title.trim(),
+              doc_type: selected.id,
+              subject: subject.trim() || null,
+              status: "draft",
+              estimated_cost: effectiveCost,
+              options: selected.id === "cv" ? { template: cvTemplate, layout: cvLayout } : {},
+              metadata: {
+                estimated_cost: effectiveCost,
+                page_range: isAcademicOrSchool ? selectedPageRange.id : null,
+                students_count: isAcademicOrSchool ? numberOfStudents : 1,
+              },
+            })
+            .select("id")
+            .single();
+          
+          if (error) {
+            setAutoSaveStatus("error");
+          } else if (data) {
+            navigate({
+              to: "/documents/new",
+              search: { draftId: data.id },
+              replace: true,
+            });
+            queryClient.invalidateQueries({ queryKey: ["documents"] });
+            setAutoSaveStatus("saved");
+          }
+        }
+      } catch (err) {
+        console.error("Erro no salvamento automático:", err);
+        setAutoSaveStatus("error");
+      }
+    }, 1500); // 1.5 seconds debounce
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [title, subject, cvTemplate, cvLayout, selected, selectedPageRange, numberOfStudents, draftId]);
+
   const create = useMutation({
     mutationFn: async () => {
       if (!selected) throw new Error("Nenhum tipo selecionado");
       if (!title.trim()) throw new Error("Por favor, insira o título do documento.");
       if (!check.affordable) throw new Error("Créditos insuficientes para esta operação.");
 
-      const { data, error } = await supabase
-        .from("documents")
-        .insert({
-          user_id: userId,
-          title: title.trim(),
-          doc_type: selected.id,
-          subject: subject.trim() || null,
-          status: "draft",
-          metadata: {
+      if (draftId) {
+        const { error } = await supabase
+          .from("documents")
+          .update({
+            title: title.trim(),
+            subject: subject.trim() || null,
             estimated_cost: effectiveCost,
-            page_range: isAcademicOrSchool ? selectedPageRange.id : null,
-            students_count: isAcademicOrSchool ? numberOfStudents : 1,
-          },
-        })
-        .select("id")
-        .single();
+            metadata: {
+              estimated_cost: effectiveCost,
+              page_range: isAcademicOrSchool ? selectedPageRange.id : null,
+              students_count: isAcademicOrSchool ? numberOfStudents : 1,
+            },
+          })
+          .eq("id", draftId);
 
-      if (error) throw error;
-      return data;
+        if (error) throw error;
+        return { id: draftId };
+      } else {
+        const { data, error } = await supabase
+          .from("documents")
+          .insert({
+            user_id: userId,
+            title: title.trim(),
+            doc_type: selected.id,
+            subject: subject.trim() || null,
+            status: "draft",
+            estimated_cost: effectiveCost,
+            metadata: {
+              estimated_cost: effectiveCost,
+              page_range: isAcademicOrSchool ? selectedPageRange.id : null,
+              students_count: isAcademicOrSchool ? numberOfStudents : 1,
+            },
+          })
+          .select("id")
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
+      if (draftId) {
+        queryClient.invalidateQueries({ queryKey: ["document", draftId] });
+      }
       queryClient.invalidateQueries({ queryKey: ["credits"] });
-      toast.success("Documento gerado e guardado com sucesso!");
+      toast.success(draftId ? "Rascunho atualizado com sucesso!" : "Documento gerado e guardado com sucesso!");
       setSelected(null);
       setTitle("");
       setSubject("");
       setNumberOfStudents(1);
-      navigate({ to: "/documents" });
+      navigate({ to: draftId ? `/documents/${draftId}` : "/documents" });
     },
     onError: (e: Error) => {
-      toast.error("Erro ao criar documento", { description: e.message });
+      toast.error(draftId ? "Erro ao atualizar rascunho" : "Erro ao criar documento", { description: e.message });
     },
   });
 
@@ -184,6 +325,65 @@ function NewDocument() {
           </DialogHeader>
 
           <div className="space-y-5">
+            {/* Secções dinâmicas para Currículo (CV) */}
+            {selected?.id === "cv" && (
+              <div className="space-y-4 rounded-2xl border border-border/70 bg-muted/30 p-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Estilo do Currículo (Design)
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: "classic", label: "Clássico", desc: "Design formal, uma coluna" },
+                      { id: "modern", label: "Moderno", desc: "Moderno, azul e cinza" },
+                      { id: "minimal", label: "Minimalista", desc: "Limpo, amplo espaçamento" },
+                      { id: "bold", label: "Destaque (Bold)", desc: "Cabeçalho com cor forte" }
+                    ].map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        type="button"
+                        onClick={() => setCvTemplate(tpl.id)}
+                        className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
+                          cvTemplate === tpl.id
+                            ? "border-primary bg-primary/5 font-medium shadow-sm"
+                            : "border-border/70 bg-card hover:border-border"
+                        }`}
+                      >
+                        <span className="text-sm font-semibold">{tpl.label}</span>
+                        <span className="text-[11px] text-muted-foreground">{tpl.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-border/50">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Layout de Colunas
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: "one_column", label: "Uma Coluna (ATS)", desc: "Excelente compatibilidade" },
+                      { id: "two_columns", label: "Duas Colunas", desc: "Mais compacto e visual" }
+                    ].map((lyt) => (
+                      <button
+                        key={lyt.id}
+                        type="button"
+                        onClick={() => setCvLayout(lyt.id)}
+                        className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
+                          cvLayout === lyt.id
+                            ? "border-primary bg-primary/5 font-medium shadow-sm"
+                            : "border-border/70 bg-card hover:border-border"
+                        }`}
+                      >
+                        <span className="text-sm font-semibold">{lyt.label}</span>
+                        <span className="text-[11px] text-muted-foreground">{lyt.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Secções dinâmicas para Trabalhos Académicos / Escolares */}
             {isAcademicOrSchool && (
               <div className="space-y-4 rounded-2xl border border-border/70 bg-muted/30 p-4">
@@ -293,27 +493,44 @@ function NewDocument() {
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-2 pt-2 border-t border-border/50">
-            <Button variant="ghost" className="rounded-xl h-11 px-5" onClick={() => setSelected(null)}>
-              Cancelar
-            </Button>
-            {check.affordable ? (
-              <Button
-                className="rounded-xl h-11 px-6 font-semibold shadow-sm"
-                disabled={!title.trim() || create.isPending}
-                onClick={() => create.mutate()}
-              >
-                {create.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Sparkles className="mr-2 size-4" />}
-                Gerar Documento
+          <DialogFooter className="gap-2 sm:gap-2 pt-2 border-t border-border/50 items-center justify-between">
+            <div className="flex items-center gap-1.5 min-h-5">
+              {autoSaveStatus === "saving" && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Loader2 className="size-3 animate-spin text-primary" /> A gravar rascunho...
+                </span>
+              )}
+              {autoSaveStatus === "saved" && (
+                <span className="text-xs text-success flex items-center gap-1">
+                  <Check className="size-3.5" /> Rascunho gravado automaticamente
+                </span>
+              )}
+              {autoSaveStatus === "error" && (
+                <span className="text-xs text-destructive">Erro ao gravar rascunho</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" className="rounded-xl h-11 px-5" onClick={() => setSelected(null)}>
+                Cancelar
               </Button>
-            ) : (
-              <Button asChild className="rounded-xl h-11 px-6">
-                <Link to="/credits">
-                  <Coins className="mr-2 size-4" />
-                  Adquirir Créditos
-                </Link>
-              </Button>
-            )}
+              {check.affordable ? (
+                <Button
+                  className="rounded-xl h-11 px-6 font-semibold shadow-sm"
+                  disabled={!title.trim() || create.isPending}
+                  onClick={() => create.mutate()}
+                >
+                  {create.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Sparkles className="mr-2 size-4" />}
+                  {draftId ? "Concluir Rascunho" : "Gerar Documento"}
+                </Button>
+              ) : (
+                <Button asChild className="rounded-xl h-11 px-6">
+                  <Link to="/credits">
+                    <Coins className="mr-2 size-4" />
+                    Adquirir Créditos
+                  </Link>
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
