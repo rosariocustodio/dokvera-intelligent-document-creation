@@ -315,9 +315,9 @@ function AuthPage() {
                 </p>
 
                 <div className="mt-6">
-                  <GoogleSignInButton />
+                  <GoogleSignInButton label="Entrar com o Google" />
                   <p className="mt-2 text-center text-[11px] text-muted-foreground">
-                    Vais escolher a conta Google e confirmar o acesso.
+                    Inicie sessão de forma segura com o seu email Google institucional ou pessoal.
                   </p>
                 </div>
 

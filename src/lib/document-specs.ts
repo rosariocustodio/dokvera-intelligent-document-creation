@@ -203,7 +203,7 @@ const ACADEMIC_GROUPS: FieldGroup[] = [
   },
 ];
 
-export const DOC_SPECS: DocSpec[] = [
+const baseSpecs: DocSpec[] = [
   {
     id: "academic",
     label: "Trabalho Académico",
@@ -353,7 +353,7 @@ export const DOC_SPECS: DocSpec[] = [
     category: "profissional",
     icon: "IdCard",
     keywords: ["cv", "curriculo", "curriculum", "emprego", "candidatura"],
-    baseCredits: 3,
+    baseCredits: 5,
     templates: [
       { id: "classic", label: "Clássico", description: "Uma coluna, sóbrio, ideal para banca e função pública.", accent: "classic" },
       { id: "modern", label: "Moderno", description: "Duas colunas com barra lateral de contactos e competências.", accent: "modern" },
@@ -377,6 +377,19 @@ export const DOC_SPECS: DocSpec[] = [
           { id: "birth_date", label: "Data de nascimento", type: "date" },
           { id: "nationality", label: "Nacionalidade", type: "text" },
           { id: "linkedin", label: "LinkedIn / portefólio", type: "text" },
+          { id: "bi_number", label: "Bilhete de Identidade (BI)", type: "text", placeholder: "Número de BI" },
+          { id: "nuit_number", label: "Número de NUIT", type: "text", placeholder: "Número de NUIT" },
+          { id: "driving_license", label: "Carta de Condução", type: "text", placeholder: "Ex.: Serviços, Profissional, Pesados" },
+          {
+            id: "travel_availability",
+            label: "Disponibilidade de Viagem / Mudança",
+            type: "select",
+            options: [
+              { value: "yes", label: "Disponível para viagem e mudança" },
+              { value: "travel_only", label: "Disponível apenas para viajar" },
+              { value: "no", label: "Indisponível" },
+            ],
+          },
         ],
       },
       {
@@ -416,7 +429,7 @@ export const DOC_SPECS: DocSpec[] = [
     category: "profissional",
     icon: "Mail",
     keywords: ["carta", "candidatura", "vaga", "emprego", "motivação"],
-    baseCredits: 2,
+    baseCredits: 4,
     groups: [
       {
         id: "candidatura",
@@ -595,6 +608,105 @@ export const DOC_SPECS: DocSpec[] = [
     ],
     instructionsPlaceholder: "Descreve com detalhe como queres o documento: estrutura, tom, extensão e o que evitar.",
   },
+];
+
+const academicSpec = baseSpecs.find(s => s.id === "academic")!;
+const schoolSpec = baseSpecs.find(s => s.id === "school")!;
+const reportSpec = baseSpecs.find(s => s.id === "report")!;
+const summarySpec = baseSpecs.find(s => s.id === "summary")!;
+const cvSpec = baseSpecs.find(s => s.id === "cv")!;
+const requestSpec = baseSpecs.find(s => s.id === "request")!;
+const declarationSpec = baseSpecs.find(s => s.id === "declaration")!;
+const letterSpec = baseSpecs.find(s => s.id === "letter")!;
+const otherSpec = baseSpecs.find(s => s.id === "other")!;
+
+export const DOC_SPECS: DocSpec[] = [
+  ...baseSpecs,
+  {
+    ...academicSpec,
+    id: "tcc",
+    label: "Monografia/TCC",
+    description: "Trabalhos de conclusão de curso com estrutura formal completa.",
+  },
+  {
+    ...reportSpec,
+    id: "academic_report",
+    label: "Relatório Académico",
+    description: "Relatórios de estágio, atividade ou projeto universitário.",
+  },
+  {
+    ...summarySpec,
+    id: "academic_summary",
+    label: "Resumo Académico",
+    description: "Resumos e sínteses de textos académicos e aulas.",
+  },
+  {
+    ...academicSpec,
+    id: "scientific_article",
+    label: "Artigo Científico",
+    description: "Artigo estruturado para publicação em revistas científicas ou conferências.",
+  },
+  {
+    ...academicSpec,
+    id: "research_project",
+    label: "Projeto de Pesquisa",
+    description: "Proposta e anteprojeto de tema para investigação ou TCC.",
+  },
+  {
+    ...summarySpec,
+    id: "reading_sheet",
+    label: "Ficha de Leitura",
+    description: "Ficha de revisão e síntese bibliográfica sistemática.",
+  },
+  {
+    ...schoolSpec,
+    id: "school_research",
+    label: "Pesquisa Escolar",
+    description: "Relatórios de pesquisa e pequenos projetos de aula.",
+  },
+  {
+    ...summarySpec,
+    id: "school_summary",
+    label: "Resumo Escolar",
+    description: "Resumos de capítulos, livros ou conteúdos escolares.",
+  },
+  {
+    ...otherSpec,
+    id: "proposal",
+    label: "Proposta Profissional",
+    description: "Proposta de serviços, orçamentos ou projetos de negócios.",
+  },
+  {
+    ...requestSpec,
+    id: "formal_req",
+    label: "Pedido Formal",
+    description: "Cartas formais solicitando deferimentos ou autorizações.",
+  },
+  {
+    ...letterSpec,
+    id: "formal_letter",
+    label: "Carta Formal",
+    description: "Correspondência formal para empresas e instituições.",
+  },
+  {
+    ...letterSpec,
+    id: "official_letter",
+    label: "Ofício",
+    description: "Ofícios oficiais para administração pública.",
+  },
+  {
+    ...letterSpec,
+    id: "personal_letter",
+    label: "Carta Pessoal",
+    description: "Correspondência pessoal, convites ou notas amigáveis.",
+    category: "personalizado",
+  },
+  {
+    ...cvSpec,
+    id: "simple_cv",
+    label: "Curriculum Vitae Simples",
+    description: "Currículo limpo e simples para candidaturas rápidas.",
+  }
 ];
 
 export function getSpec(id: string): DocSpec | undefined {

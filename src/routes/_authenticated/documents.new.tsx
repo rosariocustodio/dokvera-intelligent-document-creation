@@ -37,6 +37,7 @@ import {
 export const Route = createFileRoute("/_authenticated/documents/new")({
   validateSearch: (search) => z.object({
     draftId: z.string().optional(),
+    category: z.string().optional(),
   }).parse(search),
   head: () => ({
     meta: [
@@ -55,12 +56,36 @@ function TypeIcon({ name }: { name: string }) {
   return <Icon className="size-5" />;
 }
 
+const CATEGORIES = [
+  { id: "academic", label: "Académico" },
+  { id: "school", label: "Escolar" },
+  { id: "pro", label: "Profissional" },
+  { id: "letters", label: "Cartas e Ofícios" },
+  { id: "personal", label: "Pessoal" },
+];
+
+const ACADEMIC_IDS = ["academic", "academic_report", "tcc", "academic_summary", "scientific_article", "research_project", "reading_sheet"];
+const SCHOOL_IDS = ["school", "school_research", "school_summary"];
+const PRO_IDS = ["cv", "cover_letter", "proposal"];
+const LETTERS_IDS = ["request", "formal_req", "formal_letter", "official_letter", "declaration"];
+const PERSONAL_IDS = ["personal_letter", "simple_cv"];
+
+function getDocumentCategory(id: string): string {
+  if (ACADEMIC_IDS.includes(id)) return "academic";
+  if (SCHOOL_IDS.includes(id)) return "school";
+  if (PRO_IDS.includes(id)) return "pro";
+  if (LETTERS_IDS.includes(id)) return "letters";
+  if (PERSONAL_IDS.includes(id)) return "personal";
+  return "academic";
+}
+
 function NewDocument() {
   const { user } = useSession();
   const userId = user?.id ?? "";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { draftId } = Route.useSearch();
+  const { draftId, category: urlCategory } = Route.useSearch();
+  const [activeCategory, setActiveCategory] = useState<string>(urlCategory || "academic");
   const { data: balance } = useQuery({ ...creditsQuery(userId), enabled: Boolean(userId) });
   const credits = balance ?? 0;
 
@@ -108,7 +133,14 @@ function NewDocument() {
     }
   }, [draftDoc]);
 
-  const isAcademicOrSchool = selected?.id === "academic" || selected?.id === "school";
+  const isAcademicOrSchool =
+    selected?.id === "academic" ||
+    selected?.id === "academic_report" ||
+    selected?.id === "tcc" ||
+    selected?.id === "scientific_article" ||
+    selected?.id === "research_project" ||
+    selected?.id === "school" ||
+    selected?.id === "school_research";
 
   const effectiveCost = useMemo(() => {
     if (!selected) return 0;
@@ -273,8 +305,26 @@ function NewDocument() {
         }
       />
 
+      {/* Category Tabs */}
+      <div className="flex flex-wrap gap-1.5 p-1 bg-muted/60 rounded-2xl max-w-2xl">
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat.id}
+            type="button"
+            onClick={() => setActiveCategory(cat.id)}
+            className={`flex-1 min-w-[110px] sm:flex-none px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all ${
+              activeCategory === cat.id
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-background/40 hover:text-foreground"
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {DOCUMENT_TYPES.map((type) => {
+        {DOCUMENT_TYPES.filter((t) => getDocumentCategory(t.id) === activeCategory).map((type) => {
           const affordable = credits >= type.cost;
           return (
             <button
@@ -296,7 +346,7 @@ function NewDocument() {
                     variant={affordable ? "secondary" : "outline"}
                     className="rounded-full text-[11px]"
                   >
-                    {type.id === "academic" ? "A partir de 5" : type.cost} cr
+                    {type.id === "academic" || type.id === "tcc" || type.id === "academic_report" ? "A partir de 5" : type.cost} cr
                   </Badge>
                 </div>
                 <h3 className="mt-5 text-base font-semibold">{type.label}</h3>

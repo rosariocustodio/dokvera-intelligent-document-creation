@@ -11,7 +11,7 @@ export const BRAND = {
 } as const;
 
 /** Price of a single credit bought individually, in Mozambican Metical (MZN/MT). */
-export const CREDIT_PRICE_MZN = 55;
+export const CREDIT_PRICE_MZN = 10;
 
 export function creditsToMzn(credits: number): number {
   return Math.round(credits * CREDIT_PRICE_MZN);
@@ -56,29 +56,29 @@ export const CREDIT_PACKS: CreditPack[] = [
     id: "start",
     name: "Início",
     credits: 10,
-    priceMzn: 520,
+    priceMzn: 100,
     perks: ["Ideal para experimentar", "Todos os tipos de documento", "Créditos sem validade"],
   },
   {
     id: "student",
     name: "Estudante",
     credits: 25,
-    priceMzn: 1225,
+    priceMzn: 250,
     highlight: true,
-    perks: ["Cobre 4–5 trabalhos completos", "Histórico e reedição de documentos", "Exportação PDF e DOCX"],
+    perks: ["Cobre trabalhos completos", "Histórico e reedição de documentos", "Exportação PDF e DOCX"],
   },
   {
     id: "pro",
     name: "Profissional",
     credits: 60,
-    priceMzn: 2700,
+    priceMzn: 550,
     perks: ["Para uso intensivo e grupos", "Prioridade de processamento", "Suporte prioritário"],
   },
   {
     id: "institution",
     name: "Instituição",
     credits: 150,
-    priceMzn: 6300,
+    priceMzn: 1300,
     perks: ["Para turmas e escritórios", "Melhor preço por crédito", "Factura com NUIT"],
   },
 ];
@@ -197,13 +197,35 @@ export type DocumentTypeDef = {
 };
 
 export const DOCUMENT_TYPES: DocumentTypeDef[] = [
-  { id: "academic", label: "Trabalho Académico", description: "Monografias e trabalhos universitários com estrutura formal.", cost: 5, icon: "GraduationCap" },
-  { id: "school", label: "Trabalho Escolar", description: "Trabalhos do ensino básico e secundário.", cost: 4, icon: "BookOpen" },
-  { id: "cv", label: "CV", description: "Currículo profissional pronto a enviar.", cost: 3, icon: "IdCard" },
-  { id: "report", label: "Relatório", description: "Relatórios de estágio, actividade ou projecto.", cost: 6, icon: "ClipboardList" },
-  { id: "summary", label: "Resumo", description: "Resumos e sínteses de textos ou aulas.", cost: 2, icon: "AlignLeft" },
-  { id: "request", label: "Requerimento", description: "Requerimentos e cartas formais.", cost: 2, icon: "FileSignature" },
-  { id: "other", label: "Outro Documento", description: "Descreve o que precisas e organizamos a estrutura.", cost: 3, icon: "FilePlus2" },
+  // Académico (Gerações complexas com IA)
+  { id: "academic", label: "Trabalho Académico", description: "Estrutura académica com capa, índice e referências.", cost: 25, icon: "GraduationCap" },
+  { id: "academic_report", label: "Relatório Académico", description: "Relatórios de estágio, atividade ou projeto universitário.", cost: 25, icon: "ClipboardList" },
+  { id: "tcc", label: "Monografia/TCC", description: "Trabalhos de conclusão de curso com estrutura formal completa.", cost: 25, icon: "BookOpen" },
+  { id: "academic_summary", label: "Resumo Académico", description: "Resumos e sínteses de textos académicos e aulas.", cost: 10, icon: "AlignLeft" },
+  { id: "scientific_article", label: "Artigo Científico", description: "Artigo estruturado para publicação em revistas científicas ou conferências.", cost: 25, icon: "BookOpen" },
+  { id: "research_project", label: "Projeto de Pesquisa", description: "Proposta e anteprojeto de tema para investigação ou TCC.", cost: 25, icon: "FileText" },
+  { id: "reading_sheet", label: "Ficha de Leitura", description: "Ficha de revisão e síntese bibliográfica sistemática.", cost: 10, icon: "AlignLeft" },
+
+  // Escolar (IA simples)
+  { id: "school", label: "Trabalho Escolar", description: "Trabalhos escolares rápidos para o ensino básico e secundário.", cost: 15, icon: "BookOpen" },
+  { id: "school_research", label: "Pesquisa Escolar", description: "Relatórios de pesquisa e pequenos projetos de aula.", cost: 15, icon: "Search" },
+  { id: "school_summary", label: "Resumo Escolar", description: "Resumos de capítulos, livros ou conteúdos escolares.", cost: 8, icon: "AlignLeft" },
+
+  // Profissional (Híbridos / Código)
+  { id: "cv", label: "CV", description: "Currículo profissional pronto a enviar.", cost: 5, icon: "IdCard" },
+  { id: "cover_letter", label: "Carta de Apresentação", description: "Carta de candidatura personalizada para vagas de emprego.", cost: 4, icon: "FileText" },
+  { id: "proposal", label: "Proposta Profissional", description: "Proposta de serviços, orçamentos ou projetos de negócios.", cost: 15, icon: "FilePlus2" },
+
+  // Cartas e Ofícios (SEM IA - Geração de Código)
+  { id: "request", label: "Requerimento", description: "Requerimentos formais para secretarias e órgãos públicos.", cost: 3, icon: "FileSignature" },
+  { id: "formal_req", label: "Pedido Formal", description: "Cartas formais solicitando deferimentos ou autorizações.", cost: 3, icon: "FileText" },
+  { id: "formal_letter", label: "Carta Formal", description: "Correspondência formal para empresas e instituições.", cost: 3, icon: "Mail" },
+  { id: "official_letter", label: "Ofício", description: "Ofícios oficiais para administração pública.", cost: 3, icon: "FileSignature" },
+  { id: "declaration", label: "Declaração", description: "Declaração formal de factos, atividade ou compromisso.", cost: 3, icon: "FileCheck" },
+
+  // Pessoal (SEM IA - Geração de Código)
+  { id: "personal_letter", label: "Carta Pessoal", description: "Correspondência pessoal, convites ou notas amigáveis.", cost: 3, icon: "Mail" },
+  { id: "simple_cv", label: "Curriculum Vitae Simples", description: "Currículo limpo e simples para candidaturas rápidas.", cost: 5, icon: "IdCard" },
 ];
 
 export function getDocumentType(id: string): DocumentTypeDef | undefined {
@@ -223,8 +245,8 @@ export type PageRangeOption = {
 };
 
 export const PAGE_RANGES: PageRangeOption[] = [
-  { id: "10-15", label: "10–15 páginas", minPages: 10, maxPages: 15, cost: 5 },
-  { id: "16-20", label: "16–20 páginas", minPages: 16, maxPages: 20, cost: 7 },
+  { id: "10-15", label: "10–15 páginas", minPages: 10, maxPages: 15, cost: 25 },
+  { id: "16-20", label: "16–20 páginas", minPages: 16, maxPages: 20, cost: 28 },
 ];
 
 export function calculateStudentExtraCost(totalStudents: number): {

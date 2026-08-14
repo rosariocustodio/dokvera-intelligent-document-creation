@@ -1,6 +1,7 @@
+import * as React from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Coins, FilePlus2, FileText, Sparkles, Clock, Zap, GraduationCap, Briefcase, FileCheck } from "lucide-react";
+import { ArrowRight, Coins, FilePlus2, FileText, Sparkles, Clock, Zap, GraduationCap, Briefcase, BookOpen, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/hooks/use-session";
@@ -125,12 +126,13 @@ function Dashboard() {
           <h2 className="font-display text-lg font-semibold">Iniciar por Categoria</h2>
           <p className="text-xs text-muted-foreground">Escolha o modelo ideal e acelere a criação do seu documento.</p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <Link
             to="/documents/new"
-            className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-primary/50 hover:shadow-md flex items-center gap-4"
+            search={{ category: "academic" }}
+            className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-blue-500/50 hover:shadow-md flex items-center gap-4"
           >
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary group-hover:scale-105 transition-transform">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform">
               <GraduationCap className="size-6" />
             </div>
             <div>
@@ -141,27 +143,57 @@ function Dashboard() {
 
           <Link
             to="/documents/new"
-            className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-primary/50 hover:shadow-md flex items-center gap-4"
+            search={{ category: "school" }}
+            className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-amber-500/50 hover:shadow-md flex items-center gap-4"
           >
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary group-hover:scale-105 transition-transform">
-              <Briefcase className="size-6" />
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
+              <BookOpen className="size-6" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold">Profissional</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Currículos e propostas de valor</p>
+              <h3 className="text-sm font-semibold">Escolar</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Trabalhos, pesquisas e resumos</p>
             </div>
           </Link>
 
           <Link
             to="/documents/new"
-            className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-primary/50 hover:shadow-md flex items-center gap-4"
+            search={{ category: "pro" }}
+            className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-indigo-500/50 hover:shadow-md flex items-center gap-4"
           >
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary group-hover:scale-105 transition-transform">
-              <FileCheck className="size-6" />
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform">
+              <Briefcase className="size-6" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold">Cartas & Ofícios</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Requerimentos e pedidos formais</p>
+              <h3 className="text-sm font-semibold">Profissional</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Currículos e cartas de apresentação</p>
+            </div>
+          </Link>
+
+          <Link
+            to="/documents/new"
+            search={{ category: "letters" }}
+            className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-emerald-500/50 hover:shadow-md flex items-center gap-4"
+          >
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform">
+              <FileText className="size-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">Cartas e Ofícios</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Requerimentos, ofícios e declarações</p>
+            </div>
+          </Link>
+
+          <Link
+            to="/documents/new"
+            search={{ category: "personal" }}
+            className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-purple-500/50 hover:shadow-md flex items-center gap-4 animate-fade-in"
+          >
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform">
+              <User className="size-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">Pessoal</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Cartas pessoais e currículos simples</p>
             </div>
           </Link>
         </div>

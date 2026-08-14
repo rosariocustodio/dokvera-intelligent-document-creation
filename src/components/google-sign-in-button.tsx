@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -45,26 +46,21 @@ export function GoogleSignInButton({
   async function signIn() {
     setLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-        extraParams: { prompt: "select_account" },
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: {
+            prompt: "select_account",
+          },
+        },
       });
 
-      if (result.error) {
+      if (error) {
         toast.error("Não foi possível entrar com o Google. Tenta novamente.");
         setLoading(false);
         return;
       }
-      if (result.redirected) return;
-
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        toast.error("Sessão não iniciada. Tenta novamente.");
-        setLoading(false);
-        return;
-      }
-      toast.success("Sessão iniciada com sucesso.");
-      navigate({ to: "/dashboard", replace: true });
     } catch {
       toast.error("Ocorreu um erro ao iniciar sessão.");
       setLoading(false);
