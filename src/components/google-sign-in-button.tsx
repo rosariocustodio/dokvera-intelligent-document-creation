@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { lovable } from "@/integrations/lovable/index";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 function GoogleMark() {
@@ -30,7 +31,7 @@ function GoogleMark() {
 }
 
 export function GoogleSignInButton({
-  label = "Entrar com o Google",
+  label = "Continuar com o Google",
   className,
   variant = "outline",
 }: {
@@ -46,14 +47,24 @@ export function GoogleSignInButton({
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
+        extraParams: { prompt: "select_account" },
       });
+
       if (result.error) {
         toast.error("Não foi possível entrar com o Google. Tenta novamente.");
         setLoading(false);
         return;
       }
       if (result.redirected) return;
-      navigate({ to: "/dashboard" });
+
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        toast.error("Sessão não iniciada. Tenta novamente.");
+        setLoading(false);
+        return;
+      }
+      toast.success("Sessão iniciada com sucesso.");
+      navigate({ to: "/dashboard", replace: true });
     } catch {
       toast.error("Ocorreu um erro ao iniciar sessão.");
       setLoading(false);
@@ -62,14 +73,15 @@ export function GoogleSignInButton({
 
   return (
     <Button
+      type="button"
       variant={variant}
       size="lg"
       onClick={signIn}
       disabled={loading}
-      className={cn("h-12 gap-2.5 rounded-xl px-6 text-sm font-semibold", className)}
+      className={cn("h-12 w-full gap-2.5 rounded-xl px-6 text-sm font-semibold", className)}
     >
       {loading ? <Loader2 className="size-4.5 animate-spin" /> : <GoogleMark />}
-      {label}
+      {loading ? "A abrir o Google…" : label}
     </Button>
   );
 }
