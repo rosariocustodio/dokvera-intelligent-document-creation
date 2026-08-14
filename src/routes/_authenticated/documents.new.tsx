@@ -33,6 +33,7 @@ import {
   type DocumentTypeDef,
   type PageRangeOption,
 } from "@/lib/dokvera";
+import { getSpec } from "@/lib/document-specs";
 
 export const Route = createFileRoute("/_authenticated/documents/new")({
   validateSearch: (search) => z.object({
@@ -101,7 +102,10 @@ function NewDocument() {
   const [subject, setSubject] = useState("");
   const [cvTemplate, setCvTemplate] = useState<string>("classic");
   const [cvLayout, setCvLayout] = useState<string>("one_column");
+  const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  const spec = selected ? getSpec(selected.id) : null;
 
   useEffect(() => {
     if (draftDoc) {
@@ -127,7 +131,8 @@ function NewDocument() {
         setNumberOfStudents(Number(studentsCount));
       }
 
-      const draftOptions = draftDoc.options || {};
+      const draftOptions = (draftDoc.options || {}) as Record<string, any>;
+      if (draftOptions["fields"]) setFieldValues(draftOptions["fields"] as Record<string, any>);
       if (draftOptions["template"]) setCvTemplate(draftOptions["template"] as string);
       if (draftOptions["layout"]) setCvLayout(draftOptions["layout"] as string);
     }
@@ -171,7 +176,11 @@ function NewDocument() {
               title: title.trim(),
               subject: subject.trim() || null,
               estimated_cost: effectiveCost,
-              options: selected?.id === "cv" ? { template: cvTemplate, layout: cvLayout } : {},
+              options: {
+                fields: fieldValues,
+                template: selected?.id === "cv" || selected?.id === "simple_cv" ? cvTemplate : null,
+                layout: selected?.id === "cv" || selected?.id === "simple_cv" ? cvLayout : null,
+              },
               metadata: {
                 estimated_cost: effectiveCost,
                 page_range: isAcademicOrSchool ? selectedPageRange.id : null,
@@ -197,7 +206,11 @@ function NewDocument() {
               subject: subject.trim() || null,
               status: "draft",
               estimated_cost: effectiveCost,
-              options: selected.id === "cv" ? { template: cvTemplate, layout: cvLayout } : {},
+              options: {
+                fields: fieldValues,
+                template: selected.id === "cv" || selected.id === "simple_cv" ? cvTemplate : null,
+                layout: selected.id === "cv" || selected.id === "simple_cv" ? cvLayout : null,
+              },
               metadata: {
                 estimated_cost: effectiveCost,
                 page_range: isAcademicOrSchool ? selectedPageRange.id : null,
