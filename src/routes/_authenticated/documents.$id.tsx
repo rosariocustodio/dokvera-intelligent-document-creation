@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { 
   ArrowLeft, 
   Copy, 
@@ -121,7 +121,7 @@ function MarkdownView({ content }: { content: string }) {
 }
 
 function renderTextWithFormatting(text: string) {
-  const parts: (string | JSX.Element)[] = [];
+  const parts: (string | ReactElement)[] = [];
   let current = text;
   
   // Simple bold parser
@@ -151,7 +151,7 @@ function renderTextWithFormatting(text: string) {
   return parts.map((part, index) => {
     if (typeof part !== "string") return part;
     
-    const italicParts: (string | JSX.Element)[] = [];
+    const italicParts: (string | ReactElement)[] = [];
     const italicRegex = /\*(.*?)\*/g;
     let iMatch;
     let iLastIndex = 0;
