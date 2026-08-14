@@ -121,7 +121,7 @@ function MarkdownView({ content }: { content: string }) {
 }
 
 function renderTextWithFormatting(text: string) {
-  const parts: (string | JSX.Element)[] = [];
+  const parts: (string | React.ReactElement)[] = [];
   let current = text;
   
   // Simple bold parser
@@ -151,7 +151,7 @@ function renderTextWithFormatting(text: string) {
   return parts.map((part, index) => {
     if (typeof part !== "string") return part;
     
-    const italicParts: (string | JSX.Element)[] = [];
+    const italicParts: (string | React.ReactElement)[] = [];
     const italicRegex = /\*(.*?)\*/g;
     let iMatch;
     let iLastIndex = 0;
