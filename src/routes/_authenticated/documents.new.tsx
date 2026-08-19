@@ -95,6 +95,7 @@ function NewDocument() {
     enabled: Boolean(draftId),
   });
 
+  const [step, setStep] = useState<number>(1);
   const [selected, setSelected] = useState<DocumentTypeDef | null>(null);
   const [selectedPageRange, setSelectedPageRange] = useState<PageRangeOption>((PAGE_RANGES[0] as PageRangeOption));
   const [numberOfStudents, setNumberOfStudents] = useState<number>(1);
@@ -309,7 +310,7 @@ function NewDocument() {
     <div className="space-y-8 pb-12">
       <PageHeader
         title="Criar novo documento"
-        subtitle="Escolha o tipo de documento desejado. O custo em créditos é calculado de forma transparente."
+        subtitle="Siga o assistente estruturado para criar o seu documento inteligente de forma simples."
         action={
           <Badge variant="secondary" className="h-9 gap-2 rounded-full px-4 text-sm font-semibold shadow-sm">
             <Coins className="size-4 text-primary" />
@@ -318,218 +319,170 @@ function NewDocument() {
         }
       />
 
-      {/* Category Tabs */}
-      <div className="flex flex-wrap gap-1.5 p-1 bg-muted/60 rounded-2xl max-w-2xl">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat.id}
-            type="button"
-            onClick={() => setActiveCategory(cat.id)}
-            className={`flex-1 min-w-[110px] sm:flex-none px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all ${
-              activeCategory === cat.id
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-background/40 hover:text-foreground"
-            }`}
-          >
-            {cat.label}
-          </button>
-        ))}
+      {/* Progress Bar */}
+      <div className="w-full bg-muted rounded-full h-2 overflow-hidden mb-6">
+        <div 
+          className="bg-primary h-full transition-all duration-300"
+          style={{ width: `${(step / 3) * 100}%` }}
+        />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {DOCUMENT_TYPES.filter((t) => getDocumentCategory(t.id) === activeCategory).map((type) => {
-          const affordable = credits >= type.cost;
-          return (
-            <button
-              key={type.id}
-              type="button"
-              onClick={() => {
-                setSelected(type);
-                setSelectedPageRange((PAGE_RANGES[0] as PageRangeOption));
-                setNumberOfStudents(1);
-              }}
-              className="shadow-soft group flex flex-col justify-between rounded-2xl border border-border/70 bg-card p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-primary/50"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-3">
-                  <span className="flex size-11 items-center justify-center rounded-xl bg-primary-soft text-primary transition-transform duration-300 group-hover:scale-105">
-                    <TypeIcon name={type.icon} />
-                  </span>
-                  <Badge
-                    variant={affordable ? "secondary" : "outline"}
-                    className="rounded-full text-[11px]"
-                  >
-                    {type.id === "academic" || type.id === "tcc" || type.id === "academic_report" ? "A partir de 5" : type.cost} cr
-                  </Badge>
-                </div>
-                <h3 className="mt-5 text-base font-semibold">{type.label}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {type.description}
-                </p>
-              </div>
-              <div className="mt-5 pt-4 border-t border-border/50 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-medium">{formatMzn(creditsToMzn(type.cost))}</span>
-                <span className="text-primary font-semibold flex items-center gap-1">
-                  Selecionar <Sparkles className="size-3" />
-                </span>
-              </div>
-            </button>
-          );
-        })}
+      <div className="flex items-center justify-between text-sm font-medium text-muted-foreground px-1 mb-8">
+        <span className={step >= 1 ? "text-primary font-semibold" : ""}>1. Tipo de Documento</span>
+        <span className={step >= 2 ? "text-primary font-semibold" : ""}>2. Tema Central</span>
+        <span className={step >= 3 ? "text-primary font-semibold" : ""}>3. Detalhes Adicionais</span>
       </div>
 
-      <Dialog open={Boolean(selected)} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className="rounded-3xl sm:max-w-xl max-h-[90vh] overflow-y-auto p-6 space-y-6">
-          <DialogHeader>
-            <DialogTitle className="font-display text-2xl">{selected?.label}</DialogTitle>
-            <DialogDescription>
-              Preencha os campos abaixo para configurar o seu documento inteligente.
-            </DialogDescription>
-          </DialogHeader>
+      {/* STEP 1: Seleção do Tipo de Documento */}
+      {step === 1 && (
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold">Passo 1: Escolha o Tipo de Documento</h2>
+            <p className="text-sm text-muted-foreground">Selecione uma categoria para filtrar as opções disponíveis.</p>
+          </div>
 
-          <div className="space-y-5">
-            {/* Secções dinâmicas para Currículo (CV) */}
-            {selected?.id === "cv" && (
-              <div className="space-y-4 rounded-2xl border border-border/70 bg-muted/30 p-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Estilo do Currículo (Design)
-                  </Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: "classic", label: "Clássico", desc: "Design formal, uma coluna" },
-                      { id: "modern", label: "Moderno", desc: "Moderno, azul e cinza" },
-                      { id: "minimal", label: "Minimalista", desc: "Limpo, amplo espaçamento" },
-                      { id: "bold", label: "Destaque (Bold)", desc: "Cabeçalho com cor forte" }
-                    ].map((tpl) => (
-                      <button
-                        key={tpl.id}
-                        type="button"
-                        onClick={() => setCvTemplate(tpl.id)}
-                        className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
-                          cvTemplate === tpl.id
-                            ? "border-primary bg-primary/5 font-medium shadow-sm"
-                            : "border-border/70 bg-card hover:border-border"
-                        }`}
+          <div className="flex flex-wrap gap-1.5 p-1 bg-muted/60 rounded-2xl max-w-2xl">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setActiveCategory(cat.id)}
+                className={`flex-1 min-w-[110px] sm:flex-none px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all ${
+                  activeCategory === cat.id
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-background/40 hover:text-foreground"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {DOCUMENT_TYPES.filter((t) => getDocumentCategory(t.id) === activeCategory).map((type) => {
+              const isSelected = selected?.id === type.id;
+              const affordable = credits >= type.cost;
+              return (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => {
+                    setSelected(type);
+                    setSelectedPageRange((PAGE_RANGES[0] as PageRangeOption));
+                    setNumberOfStudents(1);
+                  }}
+                  className={`shadow-soft group flex flex-col justify-between rounded-2xl border p-6 text-left transition-all duration-300 hover:-translate-y-1 ${
+                    isSelected
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-border/70 bg-card hover:border-primary/50"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-3">
+                      <span className={`flex size-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105 ${
+                        isSelected ? "bg-primary text-primary-foreground" : "bg-primary-soft text-primary"
+                      }`}>
+                        <TypeIcon name={type.icon} />
+                      </span>
+                      <Badge
+                        variant={affordable ? "secondary" : "outline"}
+                        className="rounded-full text-[11px]"
                       >
-                        <span className="text-sm font-semibold">{tpl.label}</span>
-                        <span className="text-[11px] text-muted-foreground">{tpl.desc}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2 border-t border-border/50">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Layout de Colunas
-                  </Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: "one_column", label: "Uma Coluna (ATS)", desc: "Excelente compatibilidade" },
-                      { id: "two_columns", label: "Duas Colunas", desc: "Mais compacto e visual" }
-                    ].map((lyt) => (
-                      <button
-                        key={lyt.id}
-                        type="button"
-                        onClick={() => setCvLayout(lyt.id)}
-                        className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
-                          cvLayout === lyt.id
-                            ? "border-primary bg-primary/5 font-medium shadow-sm"
-                            : "border-border/70 bg-card hover:border-border"
-                        }`}
-                      >
-                        <span className="text-sm font-semibold">{lyt.label}</span>
-                        <span className="text-[11px] text-muted-foreground">{lyt.desc}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Secções dinâmicas para Trabalhos Académicos / Escolares */}
-            {isAcademicOrSchool && (
-              <div className="space-y-4 rounded-2xl border border-border/70 bg-muted/30 p-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Extensão do documento (Páginas)
-                  </Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {PAGE_RANGES.map((range) => (
-                      <button
-                        key={range.id}
-                        type="button"
-                        onClick={() => setSelectedPageRange(range)}
-                        className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
-                          selectedPageRange.id === range.id
-                            ? "border-primary bg-primary/5 font-medium shadow-sm"
-                            : "border-border/70 bg-card hover:border-border"
-                        }`}
-                      >
-                        <span className="text-sm font-semibold">{range.label}</span>
-                        <span className="text-xs text-muted-foreground">{range.cost} créditos ({formatMzn(creditsToMzn(range.cost))})</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2 border-t border-border/50">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="students-count" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                      <Users className="size-3.5" /> Número de Participantes / Estudantes
-                    </Label>
-                    <span className="text-xs text-muted-foreground">Até 4 incluídos</span>
-                  </div>
-                  <Input
-                    id="students-count"
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={numberOfStudents}
-                    onChange={(e) => setNumberOfStudents(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="h-11 rounded-xl bg-background"
-                  />
-                  {numberOfStudents > 4 && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                      +{calculateStudentExtraCost(numberOfStudents).additionalStudents} estudantes além dos 4 incluídos (+{calculateStudentExtraCost(numberOfStudents).extraCost} créditos)
+                        {type.id === "academic" || type.id === "tcc" || type.id === "academic_report" ? "A partir de 5" : type.cost} cr
+                      </Badge>
+                    </div>
+                    <h3 className="mt-5 text-base font-semibold">{type.label}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      {type.description}
                     </p>
-                  )}
-                </div>
-              </div>
-            )}
+                  </div>
+                  <div className="mt-5 pt-4 border-t border-border/50 flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground font-medium">{formatMzn(creditsToMzn(type.cost))}</span>
+                    <span className="text-primary font-semibold flex items-center gap-1">
+                      {isSelected ? "Selecionado" : "Selecionar"} <Sparkles className="size-3" />
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
 
-            {/* Informações Básicas do Documento (Sempre visíveis no Modal) */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="doc-title" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Título do documento <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="doc-title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ex.: Impacto da digitalização na banca em Moçambique"
-                  className="h-11 rounded-xl"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="doc-subject" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Tema / contexto (opcional)
-                </Label>
-                <Textarea
-                  id="doc-subject"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Disciplina, instituição, requisitos específicos ou instruções detalhadas."
-                  className="min-h-24 rounded-xl"
-                />
-              </div>
+          <div className="flex justify-end pt-4 border-t">
+            <Button
+              className="rounded-xl h-11 px-6 font-semibold"
+              disabled={!selected}
+              onClick={() => setStep(2)}
+            >
+              Avançar <Icons.ArrowRight className="ml-2 size-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* STEP 2: Tema Central */}
+      {step === 2 && (
+        <div className="space-y-6 max-w-2xl mx-auto bg-card border border-border/70 rounded-2xl p-6 shadow-soft">
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold">Passo 2: Qual é o Tema Central?</h2>
+            <p className="text-sm text-muted-foreground">Defina o título principal ou o tema que guiará a inteligência artificial.</p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="doc-title" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Tema / Título Principal <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="doc-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Ex.: Impacto da digitalização na banca em Moçambique"
+                className="h-11 rounded-xl"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-between pt-6 border-t">
+            <Button variant="ghost" className="rounded-xl h-11 px-5" onClick={() => setStep(1)}>
+              <Icons.ArrowLeft className="mr-2 size-4" /> Voltar
+            </Button>
+            <Button
+              className="rounded-xl h-11 px-6 font-semibold"
+              disabled={!title.trim()}
+              onClick={() => setStep(3)}
+            >
+              Avançar <Icons.ArrowRight className="ml-2 size-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* STEP 3: Caixa de texto livre */}
+      {step === 3 && (
+        <div className="space-y-6 max-w-2xl mx-auto bg-card border border-border/70 rounded-2xl p-6 shadow-soft">
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold">Passo 3: Descreva como quer o documento</h2>
+            <p className="text-sm text-muted-foreground">Forneça instruções livres, requisitos específicos, estrutura preferida ou qualquer detalhe extra.</p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="doc-subject" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Instruções e Detalhes
+              </Label>
+              <Textarea
+                id="doc-subject"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Descreva como quer o documento..."
+                className="min-h-32 rounded-xl"
+              />
             </div>
 
             {/* Painel de Resumo Financeiro */}
-            <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-soft">
+            <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Custo total da operação</span>
+                <span className="text-muted-foreground">Custo total estimado</span>
                 <span className="font-bold text-primary text-base">
                   {effectiveCost} créditos · {formatMzn(creditsToMzn(effectiveCost))}
                 </span>
@@ -556,7 +509,7 @@ function NewDocument() {
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-2 pt-2 border-t border-border/50 items-center justify-between">
+          <div className="flex justify-between items-center pt-6 border-t">
             <div className="flex items-center gap-1.5 min-h-5">
               {autoSaveStatus === "saving" && (
                 <span className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -572,9 +525,10 @@ function NewDocument() {
                 <span className="text-xs text-destructive">Erro ao gravar rascunho</span>
               )}
             </div>
+
             <div className="flex gap-2">
-              <Button variant="ghost" className="rounded-xl h-11 px-5" onClick={() => setSelected(null)}>
-                Cancelar
+              <Button variant="ghost" className="rounded-xl h-11 px-5" onClick={() => setStep(2)}>
+                <Icons.ArrowLeft className="mr-2 size-4" /> Voltar
               </Button>
               {check.affordable ? (
                 <Button
@@ -594,9 +548,9 @@ function NewDocument() {
                 </Button>
               )}
             </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
