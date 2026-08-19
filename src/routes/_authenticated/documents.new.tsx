@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Icons from "lucide-react";
@@ -105,8 +105,32 @@ function NewDocument() {
   const [cvLayout, setCvLayout] = useState<string>("one_column");
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [studentInput, setStudentInput] = useState("");
 
   const spec = selected ? getSpec(selected.id) : null;
+
+  const handleFieldChange = (fieldId: string, value: any) => {
+    setFieldValues((prev: Record<string, any>) => ({
+      ...prev,
+      [fieldId]: value,
+    }));
+  };
+
+  const addStudent = (fieldId: string) => {
+    if (!studentInput.trim()) return;
+    const currentStudents = (fieldValues[fieldId] as string[]) || [];
+    const updated = [...currentStudents, studentInput.trim()];
+    handleFieldChange(fieldId, updated);
+    setStudentInput("");
+    setNumberOfStudents(updated.length);
+  };
+
+  const removeStudent = (fieldId: string, index: number) => {
+    const currentStudents = (fieldValues[fieldId] as string[]) || [];
+    const updated = currentStudents.filter((_, i) => i !== index);
+    handleFieldChange(fieldId, updated);
+    setNumberOfStudents(Math.max(1, updated.length));
+  };
 
   useEffect(() => {
     if (draftDoc) {
@@ -248,6 +272,8 @@ function NewDocument() {
       if (!title.trim()) throw new Error("Por favor, insira o título do documento.");
       if (!check.affordable) throw new Error("Créditos insuficientes para esta operação.");
 
+      let documentId = draftId;
+
       if (draftId) {
         const { error } = await supabase
           .from("documents")
@@ -255,6 +281,11 @@ function NewDocument() {
             title: title.trim(),
             subject: subject.trim() || null,
             estimated_cost: effectiveCost,
+            options: {
+              fields: fieldValues,
+              template: selected?.id === "cv" || selected?.id === "simple_cv" ? cvTemplate : null,
+              layout: selected?.id === "cv" || selected?.id === "simple_cv" ? cvLayout : null,
+            },
             metadata: {
               estimated_cost: effectiveCost,
               page_range: isAcademicOrSchool ? selectedPageRange.id : null,
@@ -264,7 +295,6 @@ function NewDocument() {
           .eq("id", draftId);
 
         if (error) throw error;
-        return { id: draftId };
       } else {
         const { data, error } = await supabase
           .from("documents")
@@ -275,6 +305,11 @@ function NewDocument() {
             subject: subject.trim() || null,
             status: "draft",
             estimated_cost: effectiveCost,
+            options: {
+              fields: fieldValues,
+              template: selected.id === "cv" || selected.id === "simple_cv" ? cvTemplate : null,
+              layout: selected.id === "cv" || selected.id === "simple_cv" ? cvLayout : null,
+            },
             metadata: {
               estimated_cost: effectiveCost,
               page_range: isAcademicOrSchool ? selectedPageRange.id : null,
@@ -285,24 +320,36 @@ function NewDocument() {
           .single();
 
         if (error) throw error;
-        return data;
+        if (data) {
+          documentId = data.id;
+        }
       }
+
+      if (!documentId) {
+        throw new Error("Não foi possível determinar o ID do documento.");
+      }
+
+      // Aciona a geração real do conteúdo do documento (IA para acadêmicos/escolares, Código local para os restantes)
+      const { generateDocumentContent } = await import("@/lib/documents.functions");
+      await generateDocumentContent({ data: { documentId } });
+
+      return { id: documentId };
     },
-    onSuccess: (data) => {
+    onSuccess: (data: { id: string }) => {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
       if (draftId) {
         queryClient.invalidateQueries({ queryKey: ["document", draftId] });
       }
       queryClient.invalidateQueries({ queryKey: ["credits"] });
-      toast.success(draftId ? "Rascunho atualizado com sucesso!" : "Documento gerado e guardado com sucesso!");
+      toast.success("Documento gerado com sucesso!");
       setSelected(null);
       setTitle("");
       setSubject("");
       setNumberOfStudents(1);
-      navigate({ to: draftId ? `/documents/${draftId}` : "/documents" });
+      navigate({ to: `/documents/${data.id}` });
     },
     onError: (e: Error) => {
-      toast.error(draftId ? "Erro ao atualizar rascunho" : "Erro ao criar documento", { description: e.message });
+      toast.error("Erro ao gerar o documento", { description: e.message });
     },
   });
 
@@ -435,7 +482,7 @@ function NewDocument() {
               <Input
                 id="doc-title"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
                 placeholder="Ex.: Impacto da digitalização na banca em Moçambique"
                 className="h-11 rounded-xl"
               />
@@ -457,96 +504,301 @@ function NewDocument() {
         </div>
       )}
 
-      {/* STEP 3: Caixa de texto livre */}
+      {/* STEP 3: Campos de preenchimento dinâmicos por Tipo de Documento */}
       {step === 3 && (
-        <div className="space-y-6 max-w-2xl mx-auto bg-card border border-border/70 rounded-2xl p-6 shadow-soft">
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold">Passo 3: Descreva como quer o documento</h2>
-            <p className="text-sm text-muted-foreground">Forneça instruções livres, requisitos específicos, estrutura preferida ou qualquer detalhe extra.</p>
-          </div>
-
-          <div className="space-y-4">
+        <div className="space-y-8 max-w-3xl mx-auto">
+          {/* Informações e Detalhes Específicos */}
+          <div className="space-y-6 bg-card border border-border/70 rounded-2xl p-6 shadow-soft">
             <div className="space-y-2">
-              <Label htmlFor="doc-subject" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Instruções e Detalhes
-              </Label>
-              <Textarea
-                id="doc-subject"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Descreva como quer o documento..."
-                className="min-h-32 rounded-xl"
-              />
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Sparkles className="size-5 text-primary" />
+                Passo 3: Preencha os detalhes do seu {selected?.label}
+              </h2>
+              <p className="text-sm text-muted-foreground">Cada tipo de documento possui campos específicos para garantir que a estrutura final seja perfeita.</p>
             </div>
 
-            {/* Painel de Resumo Financeiro */}
-            <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Custo total estimado</span>
-                <span className="font-bold text-primary text-base">
-                  {effectiveCost} créditos · {formatMzn(creditsToMzn(effectiveCost))}
-                </span>
+            <div className="space-y-6 pt-4">
+              {spec?.groups.map((group) => (
+                <div key={group.id} className="space-y-4 rounded-xl border border-border/50 bg-muted/20 p-5">
+                  <div>
+                    <h3 className="font-semibold text-base text-foreground">{group.label}</h3>
+                    {group.description && <p className="text-xs text-muted-foreground mt-0.5">{group.description}</p>}
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {group.fields.map((field) => {
+                      const value = fieldValues[field.id] ?? "";
+                      const isRequired = field.required;
+
+                      return (
+                        <div key={field.id} className={`space-y-1.5 ${field.type === "textarea" || field.type === "students" || field.type === "list" ? "sm:col-span-2" : ""}`}>
+                          <Label htmlFor={field.id} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            {field.label} {isRequired && <span className="text-destructive">*</span>}
+                          </Label>
+
+                          {field.type === "text" && (
+                            <Input
+                              id={field.id}
+                              value={value}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange(field.id, e.target.value)}
+                              placeholder={field.placeholder}
+                              className="h-11 rounded-xl"
+                              required={isRequired}
+                            />
+                          )}
+
+                          {field.type === "number" && (
+                            <Input
+                              id={field.id}
+                              type="number"
+                              min={field.min}
+                              max={field.max}
+                              value={value}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange(field.id, parseInt(e.target.value) || "")}
+                              placeholder={field.placeholder}
+                              className="h-11 rounded-xl"
+                              required={isRequired}
+                            />
+                          )}
+
+                          {field.type === "date" && (
+                            <Input
+                              id={field.id}
+                              type="date"
+                              value={value}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange(field.id, e.target.value)}
+                              className="h-11 rounded-xl"
+                              required={isRequired}
+                            />
+                          )}
+
+                          {field.type === "textarea" && (
+                            <Textarea
+                              id={field.id}
+                              value={value}
+                              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleFieldChange(field.id, e.target.value)}
+                              placeholder={field.placeholder}
+                              className="min-h-24 rounded-xl"
+                              required={isRequired}
+                            />
+                          )}
+
+                          {field.type === "select" && (
+                            <div className="relative">
+                              <select
+                                id={field.id}
+                                value={value}
+                                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFieldChange(field.id, e.target.value)}
+                                className="w-full h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                required={isRequired}
+                              >
+                                <option value="">Selecione uma opção...</option>
+                                {field.options?.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+
+                          {field.type === "list" && (
+                            <div className="space-y-1">
+                              <Textarea
+                                id={field.id}
+                                value={value}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleFieldChange(field.id, e.target.value)}
+                                placeholder={field.placeholder || "Insira um item por linha..."}
+                                className="min-h-24 rounded-xl"
+                                required={isRequired}
+                              />
+                              <p className="text-[11px] text-muted-foreground">{field.help || "Insira um item por linha para o desenvolvimento."}</p>
+                            </div>
+                          )}
+
+                          {field.type === "students" && (
+                            <div className="space-y-3">
+                              <div className="flex gap-2">
+                                <Input
+                                  value={studentInput}
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStudentInput(e.target.value)}
+                                  placeholder="Nome do participante"
+                                  className="h-11 rounded-xl"
+                                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      addStudent(field.id);
+                                    }
+                                  }}
+                                />
+                                <Button type="button" onClick={() => addStudent(field.id)} className="h-11 rounded-xl px-4">
+                                  Adicionar
+                                </Button>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {Array.isArray(value) && value.map((std, idx) => (
+                                  <Badge key={idx} variant="secondary" className="pl-3 pr-1.5 py-1.5 gap-1.5 text-sm rounded-lg">
+                                    {std}
+                                    <button
+                                      type="button"
+                                      onClick={() => removeStudent(field.id, idx)}
+                                      className="size-4 rounded-full flex items-center justify-center hover:bg-muted-foreground/20 text-muted-foreground"
+                                    >
+                                      ×
+                                    </button>
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {field.help && field.type !== "list" && (
+                            <p className="text-[11px] text-muted-foreground mt-1">{field.help}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {/* Opções de Template e Layout se definidos */}
+              {spec?.templates && (
+                <div className="space-y-4 rounded-xl border border-border/50 bg-muted/20 p-5">
+                  <div>
+                    <h3 className="font-semibold text-base text-foreground">Estilo e Design do Documento</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Selecione o estilo visual que prefere para o seu documento.</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {spec.templates.map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        type="button"
+                        onClick={() => setCvTemplate(tpl.id)}
+                        className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
+                          cvTemplate === tpl.id
+                            ? "border-primary bg-primary/5 font-medium shadow-sm"
+                            : "border-border/70 bg-card hover:border-border"
+                        }`}
+                      >
+                        <span className="text-sm font-semibold">{tpl.label}</span>
+                        <span className="text-[11px] text-muted-foreground">{tpl.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Extensão de Páginas se aplicável (Trabalhos Académicos) */}
+              {isAcademicOrSchool && (
+                <div className="space-y-4 rounded-xl border border-border/50 bg-muted/20 p-5">
+                  <div>
+                    <h3 className="font-semibold text-base text-foreground">Extensão do documento (Páginas)</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Selecione o tamanho que deseja que o seu documento tenha.</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {PAGE_RANGES.map((range) => (
+                      <button
+                        key={range.id}
+                        type="button"
+                        onClick={() => setSelectedPageRange(range)}
+                        className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
+                          selectedPageRange.id === range.id
+                            ? "border-primary bg-primary/5 font-medium shadow-sm"
+                            : "border-border/70 bg-card hover:border-border"
+                        }`}
+                      >
+                        <span className="text-sm font-semibold">{range.label}</span>
+                        <span className="text-xs text-muted-foreground">{range.cost} créditos ({formatMzn(creditsToMzn(range.cost))})</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Caixa de Texto Livre Opcional para IA */}
+              <div className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-5">
+                <Label htmlFor="doc-subject" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Instruções Adicionais para IA (Opcional)
+                </Label>
+                <Textarea
+                  id="doc-subject"
+                  value={subject}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setSubject(e.target.value)}
+                  placeholder={spec?.instructionsPlaceholder || "Descreva como quer o documento..."}
+                  className="min-h-24 rounded-xl"
+                />
               </div>
-              <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Saldo atual na conta</span>
-                <span className="font-semibold">
-                  {check.balance} créditos · {formatMzn(creditsToMzn(check.balance))}
-                </span>
+
+              {/* Painel de Resumo Financeiro */}
+              <div className="rounded-2xl border border-border/70 bg-muted/10 p-5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Custo total estimado</span>
+                  <span className="font-bold text-primary text-base">
+                    {effectiveCost} créditos · {formatMzn(creditsToMzn(effectiveCost))}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Saldo atual na conta</span>
+                  <span className="font-semibold">
+                    {check.balance} créditos · {formatMzn(creditsToMzn(check.balance))}
+                  </span>
+                </div>
+                <div className="mt-3 border-t border-border/70 pt-3">
+                  {check.affordable ? (
+                    <p className="flex items-center gap-2 text-sm font-medium text-success">
+                      <Check className="size-4 shrink-0" />
+                      Saldo suficiente para processar este documento.
+                    </p>
+                  ) : (
+                    <p className="flex items-center gap-2 text-sm font-medium text-destructive">
+                      <AlertTriangle className="size-4 shrink-0" />
+                      Faltam {check.missing} créditos ({formatMzn(check.missingInMzn)}).
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="mt-3 border-t border-border/70 pt-3">
-                {check.affordable ? (
-                  <p className="flex items-center gap-2 text-sm font-medium text-success">
-                    <Check className="size-4 shrink-0" />
-                    Saldo suficiente para processar este documento.
-                  </p>
-                ) : (
-                  <p className="flex items-center gap-2 text-sm font-medium text-destructive">
-                    <AlertTriangle className="size-4 shrink-0" />
-                    Faltam {check.missing} créditos ({formatMzn(check.missingInMzn)}).
-                  </p>
+            </div>
+
+            <div className="flex justify-between items-center pt-6 border-t">
+              <div className="flex items-center gap-1.5 min-h-5">
+                {autoSaveStatus === "saving" && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Loader2 className="size-3 animate-spin text-primary" /> A gravar rascunho...
+                  </span>
+                )}
+                {autoSaveStatus === "saved" && (
+                  <span className="text-xs text-success flex items-center gap-1">
+                    <Check className="size-3.5" /> Rascunho gravado automaticamente
+                  </span>
+                )}
+                {autoSaveStatus === "error" && (
+                  <span className="text-xs text-destructive">Erro ao gravar rascunho</span>
                 )}
               </div>
-            </div>
-          </div>
 
-          <div className="flex justify-between items-center pt-6 border-t">
-            <div className="flex items-center gap-1.5 min-h-5">
-              {autoSaveStatus === "saving" && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Loader2 className="size-3 animate-spin text-primary" /> A gravar rascunho...
-                </span>
-              )}
-              {autoSaveStatus === "saved" && (
-                <span className="text-xs text-success flex items-center gap-1">
-                  <Check className="size-3.5" /> Rascunho gravado automaticamente
-                </span>
-              )}
-              {autoSaveStatus === "error" && (
-                <span className="text-xs text-destructive">Erro ao gravar rascunho</span>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <Button variant="ghost" className="rounded-xl h-11 px-5" onClick={() => setStep(2)}>
-                <Icons.ArrowLeft className="mr-2 size-4" /> Voltar
-              </Button>
-              {check.affordable ? (
-                <Button
-                  className="rounded-xl h-11 px-6 font-semibold shadow-sm"
-                  disabled={!title.trim() || create.isPending}
-                  onClick={() => create.mutate()}
-                >
-                  {create.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Sparkles className="mr-2 size-4" />}
-                  {draftId ? "Concluir Rascunho" : "Gerar Documento"}
+              <div className="flex gap-2">
+                <Button variant="ghost" className="rounded-xl h-11 px-5" onClick={() => setStep(2)}>
+                  <Icons.ArrowLeft className="mr-2 size-4" /> Voltar
                 </Button>
-              ) : (
-                <Button asChild className="rounded-xl h-11 px-6">
-                  <Link to="/credits">
-                    <Coins className="mr-2 size-4" />
-                    Adquirir Créditos
-                  </Link>
-                </Button>
-              )}
+                {check.affordable ? (
+                  <Button
+                    className="rounded-xl h-11 px-6 font-semibold shadow-sm"
+                    disabled={!title.trim() || create.isPending}
+                    onClick={() => create.mutate()}
+                  >
+                    {create.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Sparkles className="mr-2 size-4" />}
+                    {draftId ? "Concluir Rascunho" : "Gerar Documento"}
+                  </Button>
+                ) : (
+                  <Button asChild className="rounded-xl h-11 px-6">
+                    <Link to="/credits">
+                      <Coins className="mr-2 size-4" />
+                      Adquirir Créditos
+                    </Link>
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
