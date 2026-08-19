@@ -107,6 +107,34 @@ function NewDocument() {
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [studentInput, setStudentInput] = useState("");
 
+  // Estados exclusivos para o Builder de Trabalho Académico
+  const [academicSubStep, setAcademicSubStep] = useState<number>(1);
+  const [academicFaculty, setAcademicFaculty] = useState("");
+  const [academicCourse, setAcademicCourse] = useState("");
+  const [academicDiscipline, setAcademicDiscipline] = useState("");
+  const [academicTeacher, setAcademicTeacher] = useState("");
+  const [academicDeliveryDate, setAcademicDeliveryDate] = useState("");
+  const [academicCity, setAcademicCity] = useState("Maputo");
+  const [academicInstitution, setAcademicInstitution] = useState("");
+  const [academicStudentsList, setAcademicStudentsList] = useState<string[]>([]);
+  const [academicStructure, setAcademicStructure] = useState<Record<string, boolean>>({
+    cover: true,
+    titlePage: true, // folha de rosto
+    index: true,
+    intro: true,
+    generalObjective: true,
+    specificObjectives: true,
+    theoreticalFramework: true,
+    methodology: true,
+    development: true,
+    conclusion: true,
+    references: true,
+    annexes: false,
+  });
+  const [academicPages, setAcademicPages] = useState<string>("10-15");
+  const [academicFormat, setAcademicFormat] = useState<"apa" | "abnt">("apa");
+  const [academicLanguage, setAcademicLanguage] = useState<"basico" | "academico" | "tecnico">("academico");
+
   const spec = selected ? getSpec(selected.id) : null;
 
   const handleFieldChange = (fieldId: string, value: any) => {
@@ -157,11 +185,49 @@ function NewDocument() {
       }
 
       const draftOptions = (draftDoc.options || {}) as Record<string, any>;
-      if (draftOptions["fields"]) setFieldValues(draftOptions["fields"] as Record<string, any>);
+      if (draftOptions["fields"]) {
+        const fields = draftOptions["fields"] as Record<string, any>;
+        setFieldValues(fields);
+        
+        // Carrega estados específicos do Trabalho Académico se aplicável
+        if (draftDoc.doc_type === "academic") {
+          if (fields["faculty"]) setAcademicFaculty(fields["faculty"]);
+          if (fields["course"]) setAcademicCourse(fields["course"]);
+          if (fields["subject"]) setAcademicDiscipline(fields["subject"]);
+          if (fields["teacher"]) setAcademicTeacher(fields["teacher"]);
+          if (fields["delivery_date"]) setAcademicDeliveryDate(fields["delivery_date"]);
+          if (fields["city"]) setAcademicCity(fields["city"]);
+          if (fields["institution"]) setAcademicInstitution(fields["institution"]);
+          if (Array.isArray(fields["students"])) setAcademicStudentsList(fields["students"]);
+          if (fields["structure"]) setAcademicStructure(fields["structure"]);
+          if (fields["citation_style"]) setAcademicFormat(fields["citation_style"]);
+          if (fields["language_level"]) setAcademicLanguage(fields["language_level"]);
+          if (fields["page_range"]) setAcademicPages(fields["page_range"]);
+        }
+      }
       if (draftOptions["template"]) setCvTemplate(draftOptions["template"] as string);
       if (draftOptions["layout"]) setCvLayout(draftOptions["layout"] as string);
     }
   }, [draftDoc]);
+
+  // Função auxiliar para mapear dados académicos
+  const getAcademicFields = () => {
+    return {
+      theme: title,
+      faculty: academicFaculty,
+      course: academicCourse,
+      subject: academicDiscipline,
+      teacher: academicTeacher,
+      delivery_date: academicDeliveryDate,
+      city: academicCity,
+      institution: academicInstitution,
+      students: academicStudentsList,
+      structure: academicStructure,
+      citation_style: academicFormat,
+      language_level: academicLanguage,
+      page_range: academicPages,
+    };
+  };
 
   const isAcademicOrSchool =
     selected?.id === "academic" ||
@@ -174,9 +240,15 @@ function NewDocument() {
 
   const effectiveCost = useMemo(() => {
     if (!selected) return 0;
+    if (selected.id === "academic") {
+      const baseCost = academicPages === "16-20" ? 28 : 25; // 10-15 páginas custa 25, 16-20 custa 28
+      const extraStudentsCount = Math.max(0, academicStudentsList.length - 4);
+      const extraStudentsCost = extraStudentsCount * 0.39;
+      return Number((baseCost + extraStudentsCost).toFixed(2));
+    }
     const base = isAcademicOrSchool ? selectedPageRange.cost : selected.cost;
     return isAcademicOrSchool ? calculateTotalDocumentCost(base, numberOfStudents) : base;
-  }, [selected, selectedPageRange, numberOfStudents, isAcademicOrSchool]);
+  }, [selected, selectedPageRange, numberOfStudents, isAcademicOrSchool, academicPages, academicStudentsList]);
 
   const check = useMemo(
     () => checkAffordability(credits, effectiveCost),
@@ -194,6 +266,8 @@ function NewDocument() {
     
     const delayDebounceFn = setTimeout(async () => {
       try {
+        const fieldsToSave = selected.id === "academic" ? getAcademicFields() : fieldValues;
+        
         if (draftId) {
           const { error } = await supabase
             .from("documents")
@@ -202,14 +276,14 @@ function NewDocument() {
               subject: subject.trim() || null,
               estimated_cost: effectiveCost,
               options: {
-                fields: fieldValues,
+                fields: fieldsToSave,
                 template: selected?.id === "cv" || selected?.id === "simple_cv" ? cvTemplate : null,
                 layout: selected?.id === "cv" || selected?.id === "simple_cv" ? cvLayout : null,
               },
               metadata: {
                 estimated_cost: effectiveCost,
-                page_range: isAcademicOrSchool ? selectedPageRange.id : null,
-                students_count: isAcademicOrSchool ? numberOfStudents : 1,
+                page_range: selected.id === "academic" ? academicPages : (isAcademicOrSchool ? selectedPageRange.id : null),
+                students_count: selected.id === "academic" ? Math.max(1, academicStudentsList.length) : (isAcademicOrSchool ? numberOfStudents : 1),
               },
             })
             .eq("id", draftId);
@@ -232,14 +306,14 @@ function NewDocument() {
               status: "draft",
               estimated_cost: effectiveCost,
               options: {
-                fields: fieldValues,
+                fields: fieldsToSave,
                 template: selected.id === "cv" || selected.id === "simple_cv" ? cvTemplate : null,
                 layout: selected.id === "cv" || selected.id === "simple_cv" ? cvLayout : null,
               },
               metadata: {
                 estimated_cost: effectiveCost,
-                page_range: isAcademicOrSchool ? selectedPageRange.id : null,
-                students_count: isAcademicOrSchool ? numberOfStudents : 1,
+                page_range: selected.id === "academic" ? academicPages : (isAcademicOrSchool ? selectedPageRange.id : null),
+                students_count: selected.id === "academic" ? Math.max(1, academicStudentsList.length) : (isAcademicOrSchool ? numberOfStudents : 1),
               },
             })
             .select("id")
@@ -264,7 +338,28 @@ function NewDocument() {
     }, 1500); // 1.5 seconds debounce
 
     return () => clearTimeout(delayDebounceFn);
-  }, [title, subject, cvTemplate, cvLayout, selected, selectedPageRange, numberOfStudents, draftId]);
+  }, [
+    title, 
+    subject, 
+    cvTemplate, 
+    cvLayout, 
+    selected, 
+    selectedPageRange, 
+    numberOfStudents, 
+    draftId,
+    academicFaculty,
+    academicCourse,
+    academicDiscipline,
+    academicTeacher,
+    academicDeliveryDate,
+    academicCity,
+    academicInstitution,
+    academicStudentsList,
+    academicStructure,
+    academicPages,
+    academicFormat,
+    academicLanguage
+  ]);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -273,6 +368,7 @@ function NewDocument() {
       if (!check.affordable) throw new Error("Créditos insuficientes para esta operação.");
 
       let documentId = draftId;
+      const fieldsToSave = selected.id === "academic" ? getAcademicFields() : fieldValues;
 
       if (draftId) {
         const { error } = await supabase
@@ -282,14 +378,14 @@ function NewDocument() {
             subject: subject.trim() || null,
             estimated_cost: effectiveCost,
             options: {
-              fields: fieldValues,
+              fields: fieldsToSave,
               template: selected?.id === "cv" || selected?.id === "simple_cv" ? cvTemplate : null,
               layout: selected?.id === "cv" || selected?.id === "simple_cv" ? cvLayout : null,
             },
             metadata: {
               estimated_cost: effectiveCost,
-              page_range: isAcademicOrSchool ? selectedPageRange.id : null,
-              students_count: isAcademicOrSchool ? numberOfStudents : 1,
+              page_range: selected.id === "academic" ? academicPages : (isAcademicOrSchool ? selectedPageRange.id : null),
+              students_count: selected.id === "academic" ? Math.max(1, academicStudentsList.length) : (isAcademicOrSchool ? numberOfStudents : 1),
             },
           })
           .eq("id", draftId);
@@ -306,14 +402,14 @@ function NewDocument() {
             status: "draft",
             estimated_cost: effectiveCost,
             options: {
-              fields: fieldValues,
+              fields: fieldsToSave,
               template: selected.id === "cv" || selected.id === "simple_cv" ? cvTemplate : null,
               layout: selected.id === "cv" || selected.id === "simple_cv" ? cvLayout : null,
             },
             metadata: {
               estimated_cost: effectiveCost,
-              page_range: isAcademicOrSchool ? selectedPageRange.id : null,
-              students_count: isAcademicOrSchool ? numberOfStudents : 1,
+              page_range: selected.id === "academic" ? academicPages : (isAcademicOrSchool ? selectedPageRange.id : null),
+              students_count: selected.id === "academic" ? Math.max(1, academicStudentsList.length) : (isAcademicOrSchool ? numberOfStudents : 1),
             },
           })
           .select("id")
@@ -346,6 +442,7 @@ function NewDocument() {
       setTitle("");
       setSubject("");
       setNumberOfStudents(1);
+      setAcademicSubStep(1);
       navigate({ to: `/documents/${data.id}` });
     },
     onError: (e: Error) => {
