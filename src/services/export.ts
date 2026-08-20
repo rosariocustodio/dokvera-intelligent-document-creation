@@ -64,41 +64,82 @@ function triggerDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function exportToPdf(title: string, content: string, footer = "Dokvera by Ruqzora") {
+export function exportToPdf(title: string, content: string, footer = "Dokvera — Documentação Inteligente") {
   const blocks = parseContent(content);
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 56;
   const maxWidth = pageWidth - margin * 2;
-  let y = margin;
+  
+  // Cores corporativas elegantes (Executivo/Profissional)
+  const COLOR_PRIMARY = [27, 54, 93];    // #1B365D - Azul Escuro Executivo
+  const COLOR_SECONDARY = [44, 82, 130];  // #2C5282 - Azul Corporativo Médio
+  const COLOR_TEXT = [45, 55, 72];       // #2D3748 - Cinza Escuro Suave (Texto Principal)
+  const COLOR_GOLD = [197, 160, 89];     // #C5A059 - Dourado Moçambicano (Timbre/Linhas)
+  const COLOR_MUTED = [113, 128, 150];   // #718096 - Cinza Muted
 
-  const addFooter = () => {
+  // Desenhando o papel timbrado profissional (Timbre) na primeira página
+  const drawLetterhead = () => {
+    // Linhas decorativas elegantes no topo
+    doc.setDrawColor(COLOR_PRIMARY[0], COLOR_PRIMARY[1], COLOR_PRIMARY[2]);
+    doc.setLineWidth(3);
+    doc.line(margin, 40, pageWidth - margin, 40);
+
+    doc.setDrawColor(COLOR_GOLD[0], COLOR_GOLD[1], COLOR_GOLD[2]);
+    doc.setLineWidth(1);
+    doc.line(margin, 46, pageWidth - margin, 46);
+
+    // Texto do Timbre Corporativo / Oficial Moçambicano
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(COLOR_PRIMARY[0], COLOR_PRIMARY[1], COLOR_PRIMARY[2]);
+    doc.text("REPÚBLICA DE MOÇAMBIQUE", pageWidth / 2, 64, { align: "center" });
+
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.setTextColor(140);
-    doc.text(footer, margin, pageHeight - 28);
-    doc.setTextColor(20);
+    doc.setTextColor(COLOR_MUTED[0], COLOR_MUTED[1], COLOR_MUTED[2]);
+    doc.text("DOKVERA • SERVIÇO DE ELABORAÇÃO DOCUMENTAL INTELIGENTE", pageWidth / 2, 76, { align: "center" });
+    
+    // Pequeno brasão geométrico estilizado no centro superior
+    doc.setDrawColor(COLOR_GOLD[0], COLOR_GOLD[1], COLOR_GOLD[2]);
+    doc.setLineWidth(1);
+    doc.circle(pageWidth / 2, 94, 6);
+    doc.line(pageWidth / 2 - 12, 94, pageWidth / 2 + 12, 94);
+
+    // Linha inferior de separação do cabeçalho
+    doc.setDrawColor(226, 232, 240); // Gray 200
+    doc.setLineWidth(1);
+    doc.line(margin, 110, pageWidth - margin, 110);
   };
 
+  // Primeira página recebe o timbre e começa o conteúdo mais abaixo
+  drawLetterhead();
+  let y = 140;
+
   const ensureSpace = (needed: number) => {
-    if (y + needed <= pageHeight - margin) return;
-    addFooter();
+    // Se o espaço não for suficiente, quebra de página
+    if (y + needed <= pageHeight - margin - 20) return;
     doc.addPage();
-    y = margin;
+    // Nas páginas subsequentes, a margem superior começa normal
+    y = margin + 10;
   };
 
   const write = (
     text: string,
-    { size, style, spacingBefore, spacingAfter, indent = 0 }:
-      { size: number; style: "normal" | "bold"; spacingBefore: number; spacingAfter: number; indent?: number },
+    { size, style, color, spacingBefore, spacingAfter, indent = 0 }:
+      { size: number; style: "normal" | "bold" | "italic"; color: number[]; spacingBefore: number; spacingAfter: number; indent?: number },
   ) => {
     doc.setFont("helvetica", style);
     doc.setFontSize(size);
+    doc.setTextColor(color[0], color[1], color[2]);
+    
     const lines = doc.splitTextToSize(text, maxWidth - indent) as string[];
-    const lineHeight = size * 1.45;
+    const lineHeight = size * 1.5; // Espaçamento de linha profissional de 1.5
+    
     ensureSpace(spacingBefore + lines.length * lineHeight);
     y += spacingBefore;
+    
     for (const line of lines) {
       ensureSpace(lineHeight);
       doc.text(line, margin + indent, y);
@@ -107,27 +148,86 @@ export function exportToPdf(title: string, content: string, footer = "Dokvera by
     y += spacingAfter;
   };
 
+  // Escrever o Título do Documento com destaque executivo
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  const titleLines = doc.splitTextToSize(title, maxWidth) as string[];
+  doc.setTextColor(COLOR_PRIMARY[0], COLOR_PRIMARY[1], COLOR_PRIMARY[2]);
+  const titleLines = doc.splitTextToSize(title.toUpperCase(), maxWidth) as string[];
+  
   for (const line of titleLines) {
+    ensureSpace(28);
     doc.text(line, margin, y);
-    y += 26;
+    y += 28;
   }
-  y += 10;
+  y += 12;
 
+  // Renderizar o conteúdo de forma esteticamente rica
   for (const block of blocks) {
-    if (block.type === "h1") write(block.text, { size: 16, style: "bold", spacingBefore: 14, spacingAfter: 6 });
-    else if (block.type === "h2") write(block.text, { size: 14, style: "bold", spacingBefore: 12, spacingAfter: 5 });
-    else if (block.type === "h3") write(block.text, { size: 12, style: "bold", spacingBefore: 10, spacingAfter: 4 });
-    else if (block.type === "bullet")
-      write(`•  ${block.text}`, { size: 11, style: "normal", spacingBefore: 0, spacingAfter: 3, indent: 14 });
-    else if (block.type === "number")
-      write(`—  ${block.text}`, { size: 11, style: "normal", spacingBefore: 0, spacingAfter: 3, indent: 14 });
-    else write(block.text, { size: 11, style: "normal", spacingBefore: 0, spacingAfter: 8 });
+    if (block.type === "h1") {
+      // Título principal: azul escuro proeminente com espaço de segurança extra para evitar títulos órfãos
+      write(block.text, { size: 15, style: "bold", color: COLOR_PRIMARY, spacingBefore: 18, spacingAfter: 8 });
+      // Linha de sublinhado decorativo abaixo do H1
+      ensureSpace(4);
+      doc.setDrawColor(COLOR_GOLD[0], COLOR_GOLD[1], COLOR_GOLD[2]);
+      doc.setLineWidth(1.5);
+      doc.line(margin, y - 4, margin + 80, y - 4);
+      y += 6;
+    } else if (block.type === "h2") {
+      write(block.text, { size: 13, style: "bold", color: COLOR_SECONDARY, spacingBefore: 14, spacingAfter: 6 });
+    } else if (block.type === "h3") {
+      write(block.text, { size: 11, style: "bold", color: COLOR_TEXT, spacingBefore: 12, spacingAfter: 5 });
+    } else if (block.type === "bullet") {
+      // Marcador redondo dourado e recuo elegante
+      doc.setFillColor(COLOR_GOLD[0], COLOR_GOLD[1], COLOR_GOLD[2]);
+      doc.circle(margin + 6, y + 5, 2.5, "F");
+      write(block.text, { size: 10.5, style: "normal", color: COLOR_TEXT, spacingBefore: 0, spacingAfter: 4, indent: 18 });
+    } else if (block.type === "number") {
+      // Marcador de numeração estilizado com cor primária
+      write(block.text, { size: 10.5, style: "normal", color: COLOR_TEXT, spacingBefore: 0, spacingAfter: 4, indent: 18 });
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(COLOR_PRIMARY[0], COLOR_PRIMARY[1], COLOR_PRIMARY[2]);
+      doc.text("—", margin, y - 4); // Traço elegante à esquerda
+    } else {
+      // Parágrafo com cor suave e excelente legibilidade
+      write(block.text, { size: 10.5, style: "normal", color: COLOR_TEXT, spacingBefore: 0, spacingAfter: 9 });
+    }
   }
 
-  addFooter();
+  // --- PASSAGEM 2: Renderização de Cabeçalhos Simples, Rodapés e Numeração Dinâmica ---
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+
+    // Nas páginas subsequentes (2, 3...), desenhamos um cabeçalho mais simples para poupar espaço
+    if (i > 1) {
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(1);
+      doc.line(margin, 35, pageWidth - margin, 35);
+
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(COLOR_MUTED[0], COLOR_MUTED[1], COLOR_MUTED[2]);
+      doc.text(title.toUpperCase(), margin, 28);
+    }
+
+    // Linha de rodapé decorativa em todas as páginas
+    doc.setDrawColor(226, 232, 240); // Gray 200
+    doc.setLineWidth(1);
+    doc.line(margin, pageHeight - 45, pageWidth - margin, pageHeight - 45);
+
+    // Rodapé de marca à esquerda
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(COLOR_MUTED[0], COLOR_MUTED[1], COLOR_MUTED[2]);
+    doc.text(footer, margin, pageHeight - 32);
+
+    // Numeração dinâmica "Página X de Y" à direita
+    const pageNumText = `Página ${i} de ${totalPages}`;
+    const textWidth = doc.getTextWidth(pageNumText);
+    doc.text(pageNumText, pageWidth - margin - textWidth, pageHeight - 32);
+  }
+
   doc.save(`${safeFileName(title)}.pdf`);
 }
 
