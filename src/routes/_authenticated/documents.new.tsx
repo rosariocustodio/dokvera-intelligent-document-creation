@@ -555,7 +555,14 @@ function NewDocument() {
             <Button
               className="rounded-xl h-11 px-6 font-semibold"
               disabled={!selected}
-              onClick={() => setStep(2)}
+              onClick={() => {
+                if (selected?.id === "academic") {
+                  setStep(3);
+                  setAcademicSubStep(1);
+                } else {
+                  setStep(2);
+                }
+              }}
             >
               Avançar <Icons.ArrowRight className="ml-2 size-4" />
             </Button>
