@@ -706,6 +706,12 @@ export const DOC_SPECS: DocSpec[] = [
     id: "simple_cv",
     label: "Curriculum Vitae Simples",
     description: "Currículo limpo e simples para candidaturas rápidas.",
+  },
+  {
+    ...cvSpec,
+    id: "cv",
+    label: "Currículo (CV)",
+    description: "CV profissional pronto a enviar, com modelo e layout à escolha.",
   }
 ];
 
