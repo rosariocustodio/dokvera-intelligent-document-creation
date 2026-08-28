@@ -28,14 +28,15 @@ export type DocumentRecord = {
 };
 
 const SYSTEM_PROMPT = [
-  "És um redactor profissional moçambicano que escreve documentos em português de Moçambique (pt-MZ).",
+  "És um redactor profissional e experiente que escreve documentos de alta qualidade.",
   "Escreves o documento final completo em Markdown, pronto a exportar.",
   "Regras obrigatórias:",
   "- Usa exactamente as secções pedidas, na ordem indicada, cada uma como um cabeçalho '## '.",
-  "- Não inventes dados pessoais, instituições, notas ou datas que não foram fornecidos.",
+  "- Adapta a linguagem e o tom ao contexto fornecido pelo utilizador.",
+  "- Não inventes dados pessoais, instituições, nomes ou datas que não foram fornecidos.",
   "- Não escrevas comentários sobre o teu próprio trabalho nem instruções ao utilizador.",
   "- Nunca menciones preços, créditos ou custos.",
-  "- Se a informação fornecida for insuficiente numa secção, escreve conteúdo genérico correcto e coerente com o tema.",
+  "- Se a informação fornecida for insuficiente numa secção, escreve conteúdo genérico profissional, coerente e de alta relevância para o tema.",
 ].join("\n");
 
 export async function generateDocument(supabase: AnyClient, documentId: string) {
