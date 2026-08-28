@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import {
   CREDIT_PACKS,
   CREDIT_PRICE_MZN,
@@ -161,7 +160,6 @@ function Landing() {
                   <ArrowRight className="ml-1.5 size-4" />
                 </Link>
               </Button>
-              <GoogleSignInButton className="w-full sm:w-auto" />
             </div>
             <p className="mt-5 text-xs text-muted-foreground">
               1 crédito = {formatMzn(CREDIT_PRICE_MZN)} · 10 créditos de boas-vindas na primeira

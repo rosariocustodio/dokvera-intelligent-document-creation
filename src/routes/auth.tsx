@@ -20,7 +20,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { cn } from "@/lib/utils";
 
 const title = "Entrar no Dokvera — cria a tua conta";
