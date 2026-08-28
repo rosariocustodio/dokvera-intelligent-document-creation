@@ -310,20 +310,13 @@ function AuthPage() {
                 </h1>
                 <p className="mt-1.5 text-sm text-muted-foreground">
                   {mode === "login"
-                    ? "Usa o Google ou as tuas credenciais."
+                    ? "Usa as tuas credenciais para aceder."
                     : "Confirmamos os teus dados antes de concluir o registo."}
                 </p>
 
-                <div className="mt-6">
-                  <GoogleSignInButton label="Entrar com o Google" />
-                  <p className="mt-2 text-center text-[11px] text-muted-foreground">
-                    Inicie sessão de forma segura com o seu email Google institucional ou pessoal.
-                  </p>
-                </div>
-
-                <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="mt-6 flex items-center gap-3 text-xs text-muted-foreground">
                   <span className="h-px flex-1 bg-border" />
-                  ou com email
+                  Entrar com email
                   <span className="h-px flex-1 bg-border" />
                 </div>
 

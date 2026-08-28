@@ -355,14 +355,17 @@ function Landing() {
             Começa hoje o teu próximo documento
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-sm opacity-90 md:text-base">
-            Cria a tua conta em segundos com o Google e recebe 10 créditos para experimentar.
+            Cria a tua conta em segundos e começa a preparar os teus documentos.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <GoogleSignInButton
-              label="Login / Cadastro com Google"
+            <Button
+              asChild
               variant="secondary"
-              className="w-full sm:w-auto"
-            />
+              size="lg"
+              className="h-12 w-full rounded-xl px-8 text-sm font-semibold sm:w-auto"
+            >
+              <Link to="/auth">Começar agora</Link>
+            </Button>
             <Button
               asChild
               variant="outline"
