@@ -466,35 +466,56 @@ const baseSpecs: DocSpec[] = [
   {
     id: "cover_letter",
     label: "Carta de Apresentação",
-    description: "Carta de candidatura ajustada à vaga e à empresa.",
+    description: "Carta de candidatura personalizada para vagas de emprego.",
     category: "profissional",
-    icon: "Mail",
-    keywords: ["carta", "candidatura", "vaga", "emprego", "motivação"],
+    icon: "FileText",
+    keywords: ["carta", "apresentação", "candidatura", "emprego", "vaga", "motivação"],
     baseCredits: 4,
     groups: [
       {
-        id: "candidatura",
-        label: "Candidatura",
+        id: "candidato",
+        label: "Dados do Candidato",
         fields: [
-          { id: "full_name", label: "O teu nome", type: "text", required: true },
-          { id: "position", label: "Vaga a que te candidatas", type: "text", required: true },
-          { id: "company", label: "Empresa / instituição", type: "text" },
-          { id: "recipient", label: "Destinatário", type: "text", placeholder: "Ex.: Departamento de Recursos Humanos" },
-          { id: "contact", label: "Os teus contactos", type: "text", placeholder: "Email e telefone" },
-          { id: "city", label: "Local", type: "text" },
-          { id: "letter_date", label: "Data", type: "date" },
-          { id: "highlights", label: "Pontos fortes a destacar", type: "list" },
+          { id: "full_name", label: "Nome completo", type: "text", required: true },
+          { id: "headline", label: "Cargo pretendido", type: "text", required: true, placeholder: "Ex.: Analista Financeiro Júnior" },
+          { id: "email", label: "Email", type: "text" },
+          { id: "phone", label: "Telefone", type: "text", placeholder: "+258 8x xxx xxxx" },
+          { id: "address", label: "Cidade / província", type: "text", placeholder: "Ex.: Maputo, Moçambique" },
+          { id: "linkedin", label: "LinkedIn / portefólio", type: "text" },
+        ],
+      },
+      {
+        id: "vaga",
+        label: "Dados da Vaga",
+        fields: [
+          { id: "company", label: "Empresa / Organização", type: "text", required: true },
+          { id: "role", label: "Cargo / Vaga", type: "text", required: true },
+          { id: "source", label: "Onde viu a vaga", type: "text", placeholder: "Ex.: LinkedIn, site da empresa, indicação" },
+          { id: "contact_person", label: "Nome do recrutador (se souber)", type: "text" },
+        ],
+      },
+      {
+        id: "conteudo",
+        label: "Conteúdo da Carta",
+        fields: [
+          { id: "motivation", label: "Motivação / Por que esta empresa", type: "textarea", required: true, help: "O que te atrai nesta organização e neste cargo." },
+          { id: "key_skills", label: "Principais competências para a vaga", type: "list", help: "Uma por linha: competência — breve evidência/exemplo." },
+          { id: "achievements", label: "Conquistas relevantes", type: "list", help: "Uma por linha: feito — impacto mensurável." },
+          { id: "availability", label: "Disponibilidade", type: "text", placeholder: "Ex.: Imediata, aviso prévio de 30 dias" },
+          { id: "salary_expectation", label: "Expectativa salarial (opcional)", type: "text" },
         ],
       },
     ],
     structure: [
-      { id: "greeting", label: "Saudação formal", default: true },
-      { id: "intro", label: "Apresentação e motivo", default: true, required: true },
-      { id: "value", label: "Competências e mais-valia", default: true },
-      { id: "closing", label: "Fecho e disponibilidade", default: true },
-      { id: "signature", label: "Assinatura", default: true },
+      { id: "header", label: "Cabeçalho (contactos + data)", default: true, required: true },
+      { id: "salutation", label: "Saudação personalizada", default: true, required: true },
+      { id: "intro", label: "Apresentação e vaga visada", default: true, required: true },
+      { id: "value", label: "O que ofereço (competências + conquistas)", default: true, required: true },
+      { id: "motivation", label: "Motivação e fit cultural", default: true },
+      { id: "closing", label: "Fecho com call to action", default: true, required: true },
+      { id: "signature", label: "Assinatura", default: true, required: true },
     ],
-    instructionsPlaceholder: "Ex.: tom confiante mas humilde, no máximo uma página.",
+    instructionsPlaceholder: "Ex.: tom confiante mas humilde, uma página, referir projeto específico da empresa que admirei.",
   },
   {
     id: "reference_letter",
@@ -716,6 +737,7 @@ const schoolSpec = baseSpecs.find(s => s.id === "school")!;
 const reportSpec = baseSpecs.find(s => s.id === "report")!;
 const summarySpec = baseSpecs.find(s => s.id === "summary")!;
 const cvSpec = baseSpecs.find(s => s.id === "cv")!;
+const coverLetterSpec = baseSpecs.find(s => s.id === "cover_letter")!;
 const requestSpec = baseSpecs.find(s => s.id === "request")!;
 const declarationSpec = baseSpecs.find(s => s.id === "declaration")!;
 const letterSpec = baseSpecs.find(s => s.id === "letter")!;
@@ -813,6 +835,12 @@ export const DOC_SPECS: DocSpec[] = [
     id: "cv",
     label: "Currículo (CV)",
     description: "CV profissional pronto a enviar, com modelo e layout à escolha.",
+  },
+  {
+    ...coverLetterSpec,
+    id: "cover_letter",
+    label: "Carta de Apresentação",
+    description: "Carta de candidatura personalizada para vagas de emprego.",
   }
 ];
 
