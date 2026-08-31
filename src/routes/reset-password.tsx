@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -29,17 +29,45 @@ export const Route = createFileRoute("/reset-password")({
 function ResetPasswordPage() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
+  const [isRecoveryFlow, setIsRecoveryFlow] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Use ref to avoid closure issues in onAuthStateChange
+  const isRecoveryFlowRef = useRef(isRecoveryFlow);
+  isRecoveryFlowRef.current = isRecoveryFlow;
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setReady(Boolean(data.session)));
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true);
+    // Check for existing session first
+    supabase.auth.getSession().then(({ data }) => {
+      const hasSession = Boolean(data.session);
+      // If there's a session but we're not in a recovery flow, redirect to dashboard
+      if (hasSession && !isRecoveryFlowRef.current) {
+        navigate({ to: "/dashboard", replace: true });
+        return;
+      }
+      setReady(hasSession);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        // User clicked recovery link - this is the recovery flow
+        setIsRecoveryFlow(true);
+        setReady(true);
+        // Mark that we're in recovery mode so other routes can block access
+        sessionStorage.setItem("inPasswordRecovery", "true");
+      } else if ((event === "SIGNED_IN" || event === "USER_UPDATED") && isRecoveryFlowRef.current) {
+        // Password was updated (updateUser triggers USER_UPDATED), recovery flow complete
+        setIsRecoveryFlow(false);
+        sessionStorage.removeItem("inPasswordRecovery");
+      } else if (event === "SIGNED_IN" && !isRecoveryFlowRef.current) {
+        // Normal sign in - redirect to dashboard
+        navigate({ to: "/dashboard", replace: true });
+      }
     });
     return () => sub.subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

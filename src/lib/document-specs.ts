@@ -129,11 +129,14 @@ export type DocSpec = {
   instructionsPlaceholder: string;
 };
 
+// Preços reais confirmados: 110 MT / 210 MT / 270 MT / 380 MT (a 10 MT/crédito).
+// O mesmo número de créditos aplica-se a qualquer país — só o preço de compra
+// do crédito varia por país (ver src/lib/countries.ts).
 const ACADEMIC_PAGE_TIERS: PageTier[] = [
-  { id: "5-9", label: "5–9 páginas", minPages: 5, maxPages: 9, credits: 3 },
-  { id: "10-15", label: "10–15 páginas", minPages: 10, maxPages: 15, credits: 5 },
-  { id: "16-20", label: "16–20 páginas", minPages: 16, maxPages: 20, credits: 7 },
-  { id: "21-30", label: "21–30 páginas", minPages: 21, maxPages: 30, credits: 10 },
+  { id: "1-5", label: "Até 5 páginas", minPages: 1, maxPages: 5, credits: 11 },
+  { id: "6-11", label: "Até 11 páginas", minPages: 6, maxPages: 11, credits: 21 },
+  { id: "12-15", label: "Até 15 páginas", minPages: 12, maxPages: 15, credits: 27 },
+  { id: "16-21", label: "Até 21 páginas", minPages: 16, maxPages: 21, credits: 38 },
 ];
 
 const ACADEMIC_STRUCTURE: StructureOption[] = [

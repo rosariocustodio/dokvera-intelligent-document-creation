@@ -29,6 +29,7 @@ export type ProfileRow = {
   phone: string | null;
   institution: string | null;
   onboarded_at: string | null;
+  country: string;
 };
 
 export type CreditTransactionRow = {
@@ -79,7 +80,7 @@ export const profileQuery = (userId: string) =>
     queryFn: async (): Promise<ProfileRow | null> => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, email, avatar_url, phone, institution, onboarded_at")
+        .select("id, full_name, email, avatar_url, phone, institution, onboarded_at, country")
         .eq("id", userId)
         .maybeSingle();
       if (error) throw error;

@@ -1,4 +1,4 @@
-/**
+``/**
  * Server-side document generation orchestration.
  *
  * Credit flow (always code-controlled, never AI):

@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/page-header";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useSession } from "@/hooks/use-session";
 import { profileQuery } from "@/lib/queries";
+import { listCountries, DEFAULT_COUNTRY, type CountryCode } from "@/lib/countries";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -33,16 +35,20 @@ function SettingsPage() {
   const queryClient = useQueryClient();
   const { data: profile } = useQuery({ ...profileQuery(userId), enabled: Boolean(userId) });
   const [fullName, setFullName] = useState("");
+  const [country, setCountry] = useState<CountryCode>(DEFAULT_COUNTRY);
 
   useEffect(() => {
-    if (profile) setFullName(profile.full_name ?? "");
+    if (profile) {
+      setFullName(profile.full_name ?? "");
+      setCountry((profile.country as CountryCode) ?? DEFAULT_COUNTRY);
+    }
   }, [profile]);
 
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName.trim() })
+        .update({ full_name: fullName.trim(), country })
         .eq("id", userId);
       if (error) throw error;
     },
@@ -78,14 +84,35 @@ function SettingsPage() {
           </div>
         </div>
 
-        <div className="mt-6 max-w-sm space-y-2">
-          <Label htmlFor="full-name">Nome completo</Label>
-          <Input
-            id="full-name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="h-11 rounded-xl"
-          />
+        <div className="mt-6 flex flex-wrap gap-6">
+          <div className="max-w-sm flex-1 space-y-2">
+            <Label htmlFor="full-name">Nome completo</Label>
+            <Input
+              id="full-name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="h-11 rounded-xl"
+            />
+          </div>
+
+          <div className="max-w-xs flex-1 space-y-2">
+            <Label htmlFor="country">País</Label>
+            <Select value={country} onValueChange={(value) => setCountry(value as CountryCode)}>
+              <SelectTrigger id="country" className="h-11 rounded-xl">
+                <SelectValue placeholder="Escolhe o teu país" />
+              </SelectTrigger>
+              <SelectContent>
+                {listCountries().map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Define os preços e a moeda mostrados em todo o Dokvera.
+            </p>
+          </div>
         </div>
         <Button
           className="mt-5 rounded-xl"

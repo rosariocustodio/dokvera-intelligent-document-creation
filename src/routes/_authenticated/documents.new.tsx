@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/page-header";
 import { useSession } from "@/hooks/use-session";
-import { creditsQuery, documentQuery } from "@/lib/queries";
+import { creditsQuery, documentQuery, profileQuery } from "@/lib/queries";
 import { z } from "zod";
 import {
   DOCUMENT_TYPES,
@@ -28,8 +28,8 @@ import {
   calculateTotalDocumentCost,
   calculateStudentExtraCost,
   checkAffordability,
-  creditsToMzn,
-  formatMzn,
+  creditsToCurrency,
+  formatCurrency,
   type DocumentTypeDef,
   type PageRangeOption,
 } from "@/lib/dokvera";
@@ -88,6 +88,8 @@ function NewDocument() {
   const { draftId, category: urlCategory } = Route.useSearch();
   const [activeCategory, setActiveCategory] = useState<string>(urlCategory || "academic");
   const { data: balance } = useQuery({ ...creditsQuery(userId), enabled: Boolean(userId) });
+  const { data: profile } = useQuery({ ...profileQuery(userId), enabled: Boolean(userId) });
+  const country = profile?.country;
   const credits = balance ?? 0;
 
   const { data: draftDoc } = useQuery({
@@ -251,7 +253,7 @@ function NewDocument() {
   }, [selected, selectedPageRange, numberOfStudents, isAcademicOrSchool, academicPages, academicStudentsList]);
 
   const check = useMemo(
-    () => checkAffordability(credits, effectiveCost),
+    () => checkAffordability(credits, effectiveCost, country),
     [credits, effectiveCost],
   );
 
@@ -458,7 +460,7 @@ function NewDocument() {
         action={
           <Badge variant="secondary" className="h-9 gap-2 rounded-full px-4 text-sm font-semibold shadow-sm">
             <Coins className="size-4 text-primary" />
-            {credits} créditos · {formatMzn(creditsToMzn(credits))}
+            {credits} créditos · {formatCurrency(creditsToCurrency(credits, country), country)}
           </Badge>
         }
       />
@@ -541,7 +543,7 @@ function NewDocument() {
                     </p>
                   </div>
                   <div className="mt-5 pt-4 border-t border-border/50 flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground font-medium">{formatMzn(creditsToMzn(type.cost))}</span>
+                    <span className="text-muted-foreground font-medium">{formatCurrency(creditsToCurrency(type.cost, country), country)}</span>
                     <span className="text-primary font-semibold flex items-center gap-1">
                       {isSelected ? "Selecionado" : "Selecionar"} <Sparkles className="size-3" />
                     </span>
@@ -813,7 +815,7 @@ function NewDocument() {
                         }`}
                       >
                         <span className="text-sm font-semibold">{range.label}</span>
-                        <span className="text-xs text-muted-foreground">{range.cost} créditos ({formatMzn(creditsToMzn(range.cost))})</span>
+                        <span className="text-xs text-muted-foreground">{range.cost} créditos ({formatCurrency(creditsToCurrency(range.cost, country), country)})</span>
                       </button>
                     ))}
                   </div>
@@ -839,13 +841,13 @@ function NewDocument() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Custo total estimado</span>
                   <span className="font-bold text-primary text-base">
-                    {effectiveCost} créditos · {formatMzn(creditsToMzn(effectiveCost))}
+                    {effectiveCost} créditos · {formatCurrency(creditsToCurrency(effectiveCost, country), country)}
                   </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Saldo atual na conta</span>
                   <span className="font-semibold">
-                    {check.balance} créditos · {formatMzn(creditsToMzn(check.balance))}
+                    {check.balance} créditos · {formatCurrency(creditsToCurrency(check.balance, country), country)}
                   </span>
                 </div>
                 <div className="mt-3 border-t border-border/70 pt-3">
@@ -857,7 +859,7 @@ function NewDocument() {
                   ) : (
                     <p className="flex items-center gap-2 text-sm font-medium text-destructive">
                       <AlertTriangle className="size-4 shrink-0" />
-                      Faltam {check.missing} créditos ({formatMzn(check.missingInMzn)}).
+                      Faltam {check.missing} créditos ({formatCurrency(check.missingInMzn, country)}).
                     </p>
                   )}
                 </div>
