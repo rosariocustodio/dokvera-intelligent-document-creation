@@ -15,7 +15,7 @@ async function logEvent(documentId: string, event: string, detail: Record<string
     document_id: documentId,
     user_id: userId,
     event,
-    detail,
+    detail: detail as never,
   });
 }
 
