@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { CalendarDays, Clock, FileText, Users, Layers, Coins } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { DocumentRow } from "@/lib/queries";
-import { documentTypeLabel, formatDate, formatDateTime, formatMzn, creditsToMzn, statusMeta } from "@/lib/dokvera";
+import { documentTypeLabel, formatDate, formatDateTime, formatCurrency, creditsToCurrency, statusMeta } from "@/lib/dokvera";
 import { cn } from "@/lib/utils";
 
 const toneClass = {
@@ -13,7 +13,7 @@ const toneClass = {
   success: "bg-success/15 text-success",
 } as const;
 
-export function DocumentCard({ doc }: { doc: DocumentRow }) {
+export function DocumentCard({ doc, country }: { doc: DocumentRow; country?: string | null | undefined }) {
   const status = statusMeta(doc.status);
   const metadata = (doc.metadata as Record<string, any>) ?? {};
   
@@ -58,7 +58,7 @@ export function DocumentCard({ doc }: { doc: DocumentRow }) {
             {estimatedCost !== undefined && (
               <span className="inline-flex items-center gap-1 bg-primary/5 px-2 py-0.5 rounded-md font-medium text-primary">
                 <Coins className="size-3" />
-                {estimatedCost} cr ({formatMzn(creditsToMzn(estimatedCost))})
+                {estimatedCost} cr ({formatCurrency(creditsToCurrency(estimatedCost, country), country)})
               </span>
             )}
           </div>
@@ -69,12 +69,12 @@ export function DocumentCard({ doc }: { doc: DocumentRow }) {
         <div className="flex items-center gap-2">
           <CalendarDays className="size-3.5" />
           <dt className="sr-only">Criado</dt>
-          <dd>Criado a {formatDate(doc.created_at)}</dd>
+          <dd>Criado a {formatDate(doc.created_at, country)}</dd>
         </div>
         <div className="flex items-center gap-2">
           <Clock className="size-3.5" />
           <dt className="sr-only">Actualizado</dt>
-          <dd>Actualizado {formatDateTime(doc.updated_at)}</dd>
+          <dd>Actualizado {formatDateTime(doc.updated_at, country)}</dd>
         </div>
       </dl>
     </article>

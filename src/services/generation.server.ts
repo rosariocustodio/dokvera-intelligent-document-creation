@@ -1,4 +1,4 @@
-``/**
+/**
  * Server-side document generation orchestration.
  *
  * Credit flow (always code-controlled, never AI):
@@ -13,6 +13,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSpec } from "@/lib/document-specs";
 import { computeCost } from "@/lib/pricing";
 import { formatDate } from "@/lib/dokvera";
+import { getCountryConfig } from "@/lib/countries";
 import { buildOutline, outlineToBrief } from "@/services/document-outline";
 import { requestCompletion } from "@/services/ai.server";
 
@@ -56,6 +57,19 @@ export async function generateDocument(supabase: AnyClient, documentId: string) 
 
   const spec = getSpec(record.doc_type);
   if (!spec) throw new Error("Tipo de documento inválido.");
+
+  const { data: authUser } = await supabase.auth.getUser();
+  const userId = authUser.user?.id;
+  let country: string | null = null;
+  if (userId) {
+    const { data: profileRow } = await supabase
+      .from("profiles")
+      .select("country")
+      .eq("id", userId)
+      .maybeSingle();
+    country = (profileRow as { country?: string } | null)?.country ?? null;
+  }
+  const defaultCity = getCountryConfig(country).defaultCity;
 
   const outline = buildOutline(record.doc_type, record.title, record.options, record.instructions);
   if (!outline) throw new Error("Não foi possível preparar o documento.");
@@ -111,7 +125,7 @@ export async function generateDocument(supabase: AnyClient, documentId: string) 
           t("justification") ? `**Fundamentação:**\n${t("justification")}\n` : "",
           `Nestes termos,`,
           `Pede Deferimento.\n`,
-          `${t("city") || "Maputo"}, ${t("letter_date") ? formatDate(t("letter_date")) : formatDate(new Date().toISOString())}\n`,
+          `${t("city") || defaultCity}, ${t("letter_date") ? formatDate(t("letter_date"), country) : formatDate(new Date().toISOString(), country)}\n`,
           `__________________________________________`,
           `(Assinatura do Requerente)\n`,
           t("contact") ? `**Contactos:** ${t("contact")}` : "",
@@ -122,7 +136,7 @@ export async function generateDocument(supabase: AnyClient, documentId: string) 
           `Eu, **${t("declarant") || record.title}**, ${t("id_document") ? `portador do documento de identificação ${t("id_document")},` : ""} declaro para os devidos efeitos que:\n`,
           `${t("purpose") || "o conteúdo declarado é fidedigno e conforme à verdade."}\n`,
           t("beneficiary") ? `A presente declaração é emitida a favor de **${t("beneficiary")}** por ser a pura verdade.\n` : "",
-          `${t("city") || "Maputo"}, ${t("letter_date") ? formatDate(t("letter_date")) : formatDate(new Date().toISOString())}\n`,
+          `${t("city") || defaultCity}, ${t("letter_date") ? formatDate(t("letter_date"), country) : formatDate(new Date().toISOString(), country)}\n`,
           `__________________________________________`,
           `(Assinatura do Declarante)`,
         ].filter(Boolean).join("\n");
@@ -137,7 +151,7 @@ export async function generateDocument(supabase: AnyClient, documentId: string) 
           `Sem mais de momento, apresentamos os nossos melhores cumprimentos.\n`,
           `Atentamente,\n`,
           `${t("sender") || record.title}\n`,
-          `${t("city") || "Maputo"}, ${t("letter_date") ? formatDate(t("letter_date")) : formatDate(new Date().toISOString())}`,
+          `${t("city") || defaultCity}, ${t("letter_date") ? formatDate(t("letter_date"), country) : formatDate(new Date().toISOString(), country)}`,
         ].filter(Boolean).join("\n");
       } else if (record.doc_type === "personal_letter") {
         content = [
@@ -147,7 +161,7 @@ export async function generateDocument(supabase: AnyClient, documentId: string) 
           `${t("purpose") || "partilhar novidades e enviar os meus melhores cumprimentos."}\n`,
           `Com muito carinho e amizade,\n`,
           `${t("sender") || "Atentamente"}\n`,
-          `${t("city") || "Maputo"}, ${t("letter_date") ? formatDate(t("letter_date")) : formatDate(new Date().toISOString())}`,
+          `${t("city") || defaultCity}, ${t("letter_date") ? formatDate(t("letter_date"), country) : formatDate(new Date().toISOString(), country)}`,
         ].filter(Boolean).join("\n");
       } else if (record.doc_type === "simple_cv") {
         const listText = (key: string) => {
@@ -164,7 +178,7 @@ export async function generateDocument(supabase: AnyClient, documentId: string) 
           t("address") ? `- Endereço: ${t("address")}` : "",
           t("linkedin") ? `- LinkedIn: ${t("linkedin")}` : "",
           `\n**Dados Pessoais:**`,
-          t("birth_date") ? `- Data de Nascimento: ${formatDate(t("birth_date"))}` : "",
+          t("birth_date") ? `- Data de Nascimento: ${formatDate(t("birth_date"), country)}` : "",
           t("nationality") ? `- Nacionalidade: ${t("nationality")}` : "",
           t("bi_number") ? `- BI: ${t("bi_number")}` : "",
           t("nuit_number") ? `- NUIT: ${t("nuit_number")}` : "",

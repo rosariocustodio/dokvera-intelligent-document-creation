@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/page-header";
 import { useSession } from "@/hooks/use-session";
-import { documentsQuery } from "@/lib/queries";
+import { documentsQuery, profileQuery } from "@/lib/queries";
 import { documentTypeLabel, formatDateTime, statusMeta } from "@/lib/dokvera";
 
 export const Route = createFileRoute("/_authenticated/history")({
@@ -23,6 +23,8 @@ export const Route = createFileRoute("/_authenticated/history")({
 function HistoryPage() {
   const { user } = useSession();
   const userId = user?.id ?? "";
+  const { data: profile } = useQuery({ ...profileQuery(userId), enabled: Boolean(userId) });
+  const country = profile?.country;
   const { data: documents, isLoading } = useQuery({
     ...documentsQuery(userId),
     enabled: Boolean(userId),
@@ -54,11 +56,11 @@ function HistoryPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{doc.title}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {documentTypeLabel(doc.doc_type)} · criado {formatDateTime(doc.created_at)}
+                      {documentTypeLabel(doc.doc_type)} · criado {formatDateTime(doc.created_at, country)}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>Actualizado {formatDateTime(doc.updated_at)}</span>
+                    <span>Actualizado {formatDateTime(doc.updated_at, country)}</span>
                     <Badge variant="secondary" className="rounded-full text-[11px]">
                       {status.label}
                     </Badge>

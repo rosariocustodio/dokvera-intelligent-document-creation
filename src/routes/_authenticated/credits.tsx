@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/page-header";
 import { useSession } from "@/hooks/use-session";
-import { creditsQuery } from "@/lib/queries";
+import { creditsQuery, profileQuery } from "@/lib/queries";
+import { getCountryConfig } from "@/lib/countries";
 import {
   CREDIT_PACKS,
-  CREDIT_PRICE_MZN,
   DOCUMENT_TYPES,
-  creditsToMzn,
-  formatMzn,
-  packPriceMzn,
+  creditsToCurrency,
+  formatCurrency,
+  packPriceInCountry,
   packTotalCredits,
 } from "@/lib/dokvera";
 
@@ -35,12 +35,15 @@ function CreditsPage() {
   const { user } = useSession();
   const userId = user?.id ?? "";
   const { data: balance } = useQuery({ ...creditsQuery(userId), enabled: Boolean(userId) });
+  const { data: profile } = useQuery({ ...profileQuery(userId), enabled: Boolean(userId) });
   const credits = balance ?? 0;
+  const country = profile?.country;
+  const countryConfig = getCountryConfig(country);
 
   // Estado para custom credit input (A partir de 1 crédito)
   const [customCredits, setCustomCredits] = useState<number>(5);
   const minCredits = 1;
-  const customPriceMzn = customCredits * CREDIT_PRICE_MZN;
+  const customPrice = creditsToCurrency(customCredits, country);
 
   return (
     <div className="space-y-10 pb-12">
@@ -60,7 +63,7 @@ function CreditsPage() {
           </span>
         </div>
         <p className="mt-2 text-sm opacity-90">
-          Equivalente a <strong className="font-semibold">{formatMzn(creditsToMzn(credits))}</strong> calculados automaticamente pelo sistema.
+          Equivalente a <strong className="font-semibold">{formatCurrency(creditsToCurrency(credits, country), country)}</strong> calculados automaticamente pelo sistema.
         </p>
       </div>
 
@@ -73,7 +76,7 @@ function CreditsPage() {
             </span>
             <h2 className="mt-3 font-display text-xl font-bold">Precisa de apenas uma carta ou documento pontual?</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Compre exatamente o que precisa, a partir de 1 crédito ({formatMzn(CREDIT_PRICE_MZN)} por unidade). Sem mensalidades obrigatórias.
+              Compre exatamente o que precisa, a partir de 1 crédito ({formatCurrency(countryConfig.creditPrice, country)} por unidade). Sem mensalidades obrigatórias.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-4 bg-muted/40 p-4 rounded-2xl border border-border/50">
@@ -93,13 +96,13 @@ function CreditsPage() {
             </div>
             <div className="text-right sm:text-left min-w-[110px]">
               <p className="text-xs text-muted-foreground">Total a pagar</p>
-              <p className="font-display text-lg font-bold text-primary">{formatMzn(customPriceMzn)}</p>
+              <p className="font-display text-lg font-bold text-primary">{formatCurrency(customPrice, country)}</p>
             </div>
             <Button
               className="h-11 rounded-xl px-6 font-medium shadow-sm w-full sm:w-auto"
               onClick={() =>
                 toast.success("Processando recarga flexível", {
-                  description: `A solicitar ${customCredits} ${customCredits === 1 ? 'crédito' : 'créditos'} no valor de ${formatMzn(customPriceMzn)}.`,
+                  description: `A solicitar ${customCredits} ${customCredits === 1 ? 'crédito' : 'créditos'} no valor de ${formatCurrency(customPrice, country)}.`,
                 })
               }
             >
@@ -132,7 +135,7 @@ function CreditsPage() {
             </p>
             
             <div className="mt-6 flex items-baseline gap-2">
-              <span className="font-display text-4xl font-extrabold">{formatMzn(2750)}</span>
+              <span className="font-display text-4xl font-extrabold">{formatCurrency(countryConfig.monthlyProPrice, country)}</span>
               <span className="text-sm text-muted-foreground font-medium">/ mês (Créditos mensais generosos incluídos)</span>
             </div>
 
@@ -190,7 +193,7 @@ function CreditsPage() {
                 ) : null}
                 <h3 className="text-base font-semibold">{p.name}</h3>
                 <p className="mt-3 font-display text-3xl font-extrabold">
-                  {formatMzn(packPriceMzn(p))}
+                  {formatCurrency(packPriceInCountry(p, country), country)}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {packTotalCredits(p)} créditos
@@ -233,7 +236,7 @@ function CreditsPage() {
                 <li key={t.id} className="flex items-center justify-between gap-3 py-3 text-sm">
                   <span className="font-medium">{t.label}</span>
                   <span className="text-muted-foreground font-semibold">
-                    {t.cost} {t.cost === 1 ? 'crédito' : 'créditos'} · {formatMzn(creditsToMzn(t.cost))}
+                    {t.cost} {t.cost === 1 ? 'crédito' : 'créditos'} · {formatCurrency(creditsToCurrency(t.cost, country), country)}
                   </span>
                 </li>
               ))}

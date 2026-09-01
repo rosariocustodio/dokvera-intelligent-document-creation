@@ -125,6 +125,12 @@ export type DocSpec = {
   structure?: StructureOption[];
   templates?: TemplateOption[];
   layouts?: TemplateOption[];
+  /** Which field (by id, inside `groups`) should become the document's title.
+   *  If omitted, the spec's own `label` is used as the title (fine for
+   *  single-purpose documents like "Declaração" or "Ofício" that don't need
+   *  a distinguishing theme). This replaces the old generic "Tema Central"
+   *  step that every document type was forced through regardless of fit. */
+  titleFieldId?: string;
   /** Placeholder for the "Como gostaria que o documento fosse?" field. */
   instructionsPlaceholder: string;
 };
@@ -215,6 +221,7 @@ const baseSpecs: DocSpec[] = [
     icon: "GraduationCap",
     keywords: ["monografia", "universidade", "faculdade", "tcc", "pesquisa", "trabalho"],
     baseCredits: 5,
+    titleFieldId: "theme",
     pageTiers: ACADEMIC_PAGE_TIERS,
     students: { max: 7, includedFree: 4, extraPerStudent: 0.39 },
     groups: ACADEMIC_GROUPS,
@@ -230,6 +237,7 @@ const baseSpecs: DocSpec[] = [
     icon: "BookOpen",
     keywords: ["escola", "secundário", "básico", "turma", "professor"],
     baseCredits: 4,
+    titleFieldId: "theme",
     pageTiers: ACADEMIC_PAGE_TIERS,
     students: { max: 7, includedFree: 4, extraPerStudent: 0.39 },
     groups: ACADEMIC_GROUPS,
@@ -245,6 +253,7 @@ const baseSpecs: DocSpec[] = [
     icon: "ClipboardList",
     keywords: ["estágio", "actividade", "projecto", "relatorio", "empresa"],
     baseCredits: 6,
+    titleFieldId: "theme",
     pageTiers: [
       { id: "5-9", label: "5–9 páginas", minPages: 5, maxPages: 9, credits: 4 },
       { id: "10-15", label: "10–15 páginas", minPages: 10, maxPages: 15, credits: 6 },
@@ -314,6 +323,7 @@ const baseSpecs: DocSpec[] = [
     icon: "AlignLeft",
     keywords: ["resumo", "sintese", "livro", "artigo", "aula", "ficha de leitura"],
     baseCredits: 2,
+    titleFieldId: "theme",
     pageTiers: [
       { id: "1-2", label: "1–2 páginas", minPages: 1, maxPages: 2, credits: 2 },
       { id: "3-5", label: "3–5 páginas", minPages: 3, maxPages: 5, credits: 3 },
@@ -357,6 +367,7 @@ const baseSpecs: DocSpec[] = [
     icon: "IdCard",
     keywords: ["cv", "curriculo", "curriculum", "emprego", "candidatura"],
     baseCredits: 5,
+    titleFieldId: "full_name",
     templates: [
       { id: "classic", label: "Clássico", description: "Uma coluna, sóbrio, ideal para banca e função pública.", accent: "classic" },
       { id: "modern", label: "Moderno", description: "Duas colunas com barra lateral de contactos e competências.", accent: "modern" },
@@ -433,6 +444,7 @@ const baseSpecs: DocSpec[] = [
     icon: "Linkedin",
     keywords: ["linkedin", "perfil", "rede", "networking", "headhunter", "recrutamento"],
     baseCredits: 4,
+    titleFieldId: "full_name",
     groups: [
       {
         id: "perfil",
@@ -466,56 +478,36 @@ const baseSpecs: DocSpec[] = [
   {
     id: "cover_letter",
     label: "Carta de Apresentação",
-    description: "Carta de candidatura personalizada para vagas de emprego.",
+    description: "Carta de candidatura ajustada à vaga e à empresa.",
     category: "profissional",
-    icon: "FileText",
-    keywords: ["carta", "apresentação", "candidatura", "emprego", "vaga", "motivação"],
+    icon: "Mail",
+    keywords: ["carta", "candidatura", "vaga", "emprego", "motivação"],
     baseCredits: 4,
+    titleFieldId: "position",
     groups: [
       {
-        id: "candidato",
-        label: "Dados do Candidato",
+        id: "candidatura",
+        label: "Candidatura",
         fields: [
-          { id: "full_name", label: "Nome completo", type: "text", required: true },
-          { id: "headline", label: "Cargo pretendido", type: "text", required: true, placeholder: "Ex.: Analista Financeiro Júnior" },
-          { id: "email", label: "Email", type: "text" },
-          { id: "phone", label: "Telefone", type: "text", placeholder: "+258 8x xxx xxxx" },
-          { id: "address", label: "Cidade / província", type: "text", placeholder: "Ex.: Maputo, Moçambique" },
-          { id: "linkedin", label: "LinkedIn / portefólio", type: "text" },
-        ],
-      },
-      {
-        id: "vaga",
-        label: "Dados da Vaga",
-        fields: [
-          { id: "company", label: "Empresa / Organização", type: "text", required: true },
-          { id: "role", label: "Cargo / Vaga", type: "text", required: true },
-          { id: "source", label: "Onde viu a vaga", type: "text", placeholder: "Ex.: LinkedIn, site da empresa, indicação" },
-          { id: "contact_person", label: "Nome do recrutador (se souber)", type: "text" },
-        ],
-      },
-      {
-        id: "conteudo",
-        label: "Conteúdo da Carta",
-        fields: [
-          { id: "motivation", label: "Motivação / Por que esta empresa", type: "textarea", required: true, help: "O que te atrai nesta organização e neste cargo." },
-          { id: "key_skills", label: "Principais competências para a vaga", type: "list", help: "Uma por linha: competência — breve evidência/exemplo." },
-          { id: "achievements", label: "Conquistas relevantes", type: "list", help: "Uma por linha: feito — impacto mensurável." },
-          { id: "availability", label: "Disponibilidade", type: "text", placeholder: "Ex.: Imediata, aviso prévio de 30 dias" },
-          { id: "salary_expectation", label: "Expectativa salarial (opcional)", type: "text" },
+          { id: "full_name", label: "O teu nome", type: "text", required: true },
+          { id: "position", label: "Vaga a que te candidatas", type: "text", required: true },
+          { id: "company", label: "Empresa / instituição", type: "text" },
+          { id: "recipient", label: "Destinatário", type: "text", placeholder: "Ex.: Departamento de Recursos Humanos" },
+          { id: "contact", label: "Os teus contactos", type: "text", placeholder: "Email e telefone" },
+          { id: "city", label: "Local", type: "text" },
+          { id: "letter_date", label: "Data", type: "date" },
+          { id: "highlights", label: "Pontos fortes a destacar", type: "list" },
         ],
       },
     ],
     structure: [
-      { id: "header", label: "Cabeçalho (contactos + data)", default: true, required: true },
-      { id: "salutation", label: "Saudação personalizada", default: true, required: true },
-      { id: "intro", label: "Apresentação e vaga visada", default: true, required: true },
-      { id: "value", label: "O que ofereço (competências + conquistas)", default: true, required: true },
-      { id: "motivation", label: "Motivação e fit cultural", default: true },
-      { id: "closing", label: "Fecho com call to action", default: true, required: true },
-      { id: "signature", label: "Assinatura", default: true, required: true },
+      { id: "greeting", label: "Saudação formal", default: true },
+      { id: "intro", label: "Apresentação e motivo", default: true, required: true },
+      { id: "value", label: "Competências e mais-valia", default: true },
+      { id: "closing", label: "Fecho e disponibilidade", default: true },
+      { id: "signature", label: "Assinatura", default: true },
     ],
-    instructionsPlaceholder: "Ex.: tom confiante mas humilde, uma página, referir projeto específico da empresa que admirei.",
+    instructionsPlaceholder: "Ex.: tom confiante mas humilde, no máximo uma página.",
   },
   {
     id: "reference_letter",
@@ -525,6 +517,7 @@ const baseSpecs: DocSpec[] = [
     icon: "PenSquare",
     keywords: ["referência", "recomendação", "carta", "emprego", "candidatura", "avaliação"],
     baseCredits: 3,
+    titleFieldId: "candidate_name",
     groups: [
       {
         id: "remetente",
@@ -585,6 +578,7 @@ const baseSpecs: DocSpec[] = [
     icon: "FileSignature",
     keywords: ["requerimento", "pedido", "oficio", "administração", "formal"],
     baseCredits: 2,
+    titleFieldId: "purpose",
     groups: [
       {
         id: "pedido",
@@ -618,6 +612,7 @@ const baseSpecs: DocSpec[] = [
     icon: "ScrollText",
     keywords: ["declaração", "autorização", "termo", "responsabilidade"],
     baseCredits: 2,
+    titleFieldId: "purpose",
     groups: [
       {
         id: "declaracao",
@@ -660,6 +655,7 @@ const baseSpecs: DocSpec[] = [
     icon: "Send",
     keywords: ["carta", "ofício", "comunicação", "empresa", "instituição"],
     baseCredits: 2,
+    titleFieldId: "reference",
     groups: [
       {
         id: "carta",
@@ -702,6 +698,7 @@ const baseSpecs: DocSpec[] = [
     icon: "FilePlus2",
     keywords: ["outro", "personalizado", "livre"],
     baseCredits: 3,
+    titleFieldId: "theme",
     pageTiers: [
       { id: "1-3", label: "1–3 páginas", minPages: 1, maxPages: 3, credits: 3 },
       { id: "4-10", label: "4–10 páginas", minPages: 4, maxPages: 10, credits: 5 },
@@ -737,7 +734,6 @@ const schoolSpec = baseSpecs.find(s => s.id === "school")!;
 const reportSpec = baseSpecs.find(s => s.id === "report")!;
 const summarySpec = baseSpecs.find(s => s.id === "summary")!;
 const cvSpec = baseSpecs.find(s => s.id === "cv")!;
-const coverLetterSpec = baseSpecs.find(s => s.id === "cover_letter")!;
 const requestSpec = baseSpecs.find(s => s.id === "request")!;
 const declarationSpec = baseSpecs.find(s => s.id === "declaration")!;
 const letterSpec = baseSpecs.find(s => s.id === "letter")!;
@@ -835,12 +831,6 @@ export const DOC_SPECS: DocSpec[] = [
     id: "cv",
     label: "Currículo (CV)",
     description: "CV profissional pronto a enviar, com modelo e layout à escolha.",
-  },
-  {
-    ...coverLetterSpec,
-    id: "cover_letter",
-    label: "Carta de Apresentação",
-    description: "Carta de candidatura personalizada para vagas de emprego.",
   }
 ];
 

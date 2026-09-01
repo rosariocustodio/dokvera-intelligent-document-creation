@@ -22,6 +22,7 @@ import { PageHeader } from "@/components/page-header";
 import { useSession } from "@/hooks/use-session";
 import { creditsQuery, documentQuery, profileQuery } from "@/lib/queries";
 import { z } from "zod";
+import { getCountryConfig } from "@/lib/countries";
 import {
   DOCUMENT_TYPES,
   PAGE_RANGES,
@@ -116,7 +117,14 @@ function NewDocument() {
   const [academicDiscipline, setAcademicDiscipline] = useState("");
   const [academicTeacher, setAcademicTeacher] = useState("");
   const [academicDeliveryDate, setAcademicDeliveryDate] = useState("");
-  const [academicCity, setAcademicCity] = useState("Maputo");
+  const [academicCity, setAcademicCity] = useState("");
+
+  useEffect(() => {
+    if (!academicCity && profile) {
+      setAcademicCity(getCountryConfig(country).defaultCity);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
   const [academicInstitution, setAcademicInstitution] = useState("");
   const [academicStudentsList, setAcademicStudentsList] = useState<string[]>([]);
   const [academicStructure, setAcademicStructure] = useState<Record<string, boolean>>({
@@ -145,6 +153,20 @@ function NewDocument() {
       [fieldId]: value,
     }));
   };
+
+  // Deriva o título do documento a partir do campo mais relevante do próprio
+  // tipo (spec.titleFieldId), em vez do antigo ecrã genérico "Tema Central"
+  // que era forçado para todos os tipos independentemente de fazer sentido.
+  // Os tipos académicos/escolares têm o seu próprio fluxo dedicado e continuam
+  // a definir `title` diretamente, por isso ficam de fora aqui.
+  useEffect(() => {
+    if (!selected || !spec || isAcademicOrSchool) return;
+    const sourceFieldId = spec.titleFieldId;
+    const rawValue = sourceFieldId ? fieldValues[sourceFieldId] : undefined;
+    const derived = typeof rawValue === "string" ? rawValue.trim() : "";
+    setTitle(derived || spec.label);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id, spec?.titleFieldId, spec?.titleFieldId ? fieldValues[spec.titleFieldId] : null]);
 
   const addStudent = (fieldId: string) => {
     if (!studentInput.trim()) return;
@@ -469,14 +491,13 @@ function NewDocument() {
       <div className="w-full bg-muted rounded-full h-2 overflow-hidden mb-6">
         <div 
           className="bg-primary h-full transition-all duration-300"
-          style={{ width: `${(step / 3) * 100}%` }}
+          style={{ width: `${(step === 1 ? 1 : 2) / 2 * 100}%` }}
         />
       </div>
 
       <div className="flex items-center justify-between text-sm font-medium text-muted-foreground px-1 mb-8">
         <span className={step >= 1 ? "text-primary font-semibold" : ""}>1. Tipo de Documento</span>
-        <span className={step >= 2 ? "text-primary font-semibold" : ""}>2. Tema Central</span>
-        <span className={step >= 3 ? "text-primary font-semibold" : ""}>3. Detalhes Adicionais</span>
+        <span className={step >= 3 ? "text-primary font-semibold" : ""}>2. Detalhes do Documento</span>
       </div>
 
       {/* STEP 1: Seleção do Tipo de Documento */}
@@ -558,51 +579,9 @@ function NewDocument() {
               className="rounded-xl h-11 px-6 font-semibold"
               disabled={!selected}
               onClick={() => {
-                if (selected?.id === "academic") {
-                  setStep(3);
-                  setAcademicSubStep(1);
-                } else {
-                  setStep(2);
-                }
+                setStep(3);
+                if (isAcademicOrSchool) setAcademicSubStep(1);
               }}
-            >
-              Avançar <Icons.ArrowRight className="ml-2 size-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 2: Tema Central */}
-      {step === 2 && (
-        <div className="space-y-6 max-w-2xl mx-auto bg-card border border-border/70 rounded-2xl p-6 shadow-soft">
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold">Passo 2: Qual é o Tema Central?</h2>
-            <p className="text-sm text-muted-foreground">Defina o título principal ou o tema que guiará a inteligência artificial.</p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="doc-title" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Tema / Título Principal <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="doc-title"
-                value={title}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
-                placeholder="Ex.: Impacto da digitalização na banca em Moçambique"
-                className="h-11 rounded-xl"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-between pt-6 border-t">
-            <Button variant="ghost" className="rounded-xl h-11 px-5" onClick={() => setStep(1)}>
-              <Icons.ArrowLeft className="mr-2 size-4" /> Voltar
-            </Button>
-            <Button
-              className="rounded-xl h-11 px-6 font-semibold"
-              disabled={!title.trim()}
-              onClick={() => setStep(3)}
             >
               Avançar <Icons.ArrowRight className="ml-2 size-4" />
             </Button>
@@ -884,7 +863,7 @@ function NewDocument() {
               </div>
 
               <div className="flex gap-2">
-                <Button variant="ghost" className="rounded-xl h-11 px-5" onClick={() => setStep(2)}>
+                <Button variant="ghost" className="rounded-xl h-11 px-5" onClick={() => setStep(1)}>
                   <Icons.ArrowLeft className="mr-2 size-4" /> Voltar
                 </Button>
                 {check.affordable ? (

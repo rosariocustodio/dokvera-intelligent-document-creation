@@ -22,6 +22,11 @@ export type CountryConfig = {
    *  every document cost is expressed in credits (see document-specs.ts),
    *  so changing this one value re-prices the whole catalogue for that country. */
   creditPrice: number;
+  /** Flat monthly price of the "Plano Pro" subscription, in local currency. */
+  monthlyProPrice: number;
+  /** Fallback city used in generated documents when the user leaves the
+   *  city field empty — must never default to Maputo for non-MZ users. */
+  defaultCity: string;
   /** How many decimal places this currency is normally shown with. */
   decimals: number;
 };
@@ -34,6 +39,8 @@ export const COUNTRY_CONFIG: Record<CountryCode, CountryConfig> = {
     currencySymbol: "MT",
     locale: "pt-MZ",
     creditPrice: 10,
+    monthlyProPrice: 2750,
+    defaultCity: "Maputo",
     decimals: 0,
   },
   AO: {
@@ -43,6 +50,8 @@ export const COUNTRY_CONFIG: Record<CountryCode, CountryConfig> = {
     currencySymbol: "Kz",
     locale: "pt-AO",
     creditPrice: 110,
+    monthlyProPrice: 30250,
+    defaultCity: "Luanda",
     decimals: 0,
   },
   PT: {
@@ -52,13 +61,15 @@ export const COUNTRY_CONFIG: Record<CountryCode, CountryConfig> = {
     currencySymbol: "€",
     locale: "pt-PT",
     creditPrice: 0.24,
+    monthlyProPrice: 66,
+    defaultCity: "Lisboa",
     decimals: 2,
   },
 };
 
 export const DEFAULT_COUNTRY: CountryCode = "MZ";
 
-export function getCountryConfig(country?: string | null): CountryConfig {
+export function getCountryConfig(country?: string | null | undefined): CountryConfig {
   if (country && country in COUNTRY_CONFIG) {
     return COUNTRY_CONFIG[country as CountryCode];
   }

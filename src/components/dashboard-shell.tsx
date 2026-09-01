@@ -19,7 +19,7 @@ import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useSession } from "@/hooks/use-session";
 import { creditsQuery, profileQuery } from "@/lib/queries";
-import { creditsToMzn, formatMzn } from "@/lib/dokvera";
+import { creditsToCurrency, formatCurrency } from "@/lib/dokvera";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -84,7 +84,7 @@ function NavLinks({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
   );
 }
 
-function CreditsBadge({ userId }: { userId: string }) {
+function CreditsBadge({ userId, country }: { userId: string; country?: string | null | undefined }) {
   const { data: balance, isLoading } = useQuery(creditsQuery(userId));
   const credits = balance ?? 0;
 
@@ -105,7 +105,7 @@ function CreditsBadge({ userId }: { userId: string }) {
         {isLoading ? (
           <span className="mt-1 inline-block h-3 w-16 animate-pulse rounded bg-brand-foreground/20" />
         ) : (
-          formatMzn(creditsToMzn(credits))
+          formatCurrency(creditsToCurrency(credits, country), country)
         )}
       </p>
     </Link>
@@ -136,7 +136,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     return (
       <div className="flex h-full flex-col gap-6 p-5">
         <Logo showParent />
-        {user?.id ? <CreditsBadge userId={user.id} /> : null}
+        {user?.id ? <CreditsBadge userId={user.id} country={profile?.country} /> : null}
         <NavLinks onNavigate={onNavigate} />
         <div className="mt-auto space-y-3">
           <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3">

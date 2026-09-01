@@ -29,7 +29,7 @@ export function creditsToMzn(credits: number): number {
 /** Converts a credit amount into the target country's currency, unrounded
  *  decisions left to the caller's formatter (some currencies, like EUR here,
  *  are shown with 2 decimals; MZN and AOA are shown as whole units). */
-export function creditsToCurrency(credits: number, country?: string | null): number {
+export function creditsToCurrency(credits: number, country?: string | null | undefined): number {
   const config = getCountryConfig(country);
   const raw = credits * config.creditPrice;
   return config.decimals === 0 ? Math.round(raw) : Math.round(raw * 100) / 100;
@@ -43,7 +43,7 @@ export function formatMzn(value: number): string {
 /** Formats a monetary value in the given country's currency, e.g. "210 MT",
  *  "2.400 Kz", or "4,50 €" — locale, symbol and decimals all come from
  *  `COUNTRY_CONFIG`, so a new country never needs a new formatting function. */
-export function formatCurrency(value: number, country?: string | null): string {
+export function formatCurrency(value: number, country?: string | null | undefined): string {
   const config = getCountryConfig(country);
   const formatted = new Intl.NumberFormat(config.locale, {
     minimumFractionDigits: config.decimals,
@@ -55,17 +55,17 @@ export function formatCurrency(value: number, country?: string | null): string {
 }
 
 /** Credits may be fractional (0,39 per extra student), so show up to 2 decimals. */
-export function formatCreditsNumber(credits: number, country?: string | null): string {
+export function formatCreditsNumber(credits: number, country?: string | null | undefined): string {
   const config = getCountryConfig(country);
   return new Intl.NumberFormat(config.locale, { maximumFractionDigits: 2 }).format(credits);
 }
 
-export function formatCredits(credits: number, country?: string | null): string {
+export function formatCredits(credits: number, country?: string | null | undefined): string {
   return `${formatCreditsNumber(credits, country)} ${credits === 1 ? "crédito" : "créditos"}`;
 }
 
 /** Credits + monetary equivalent, the standard way Dokvera shows a price. */
-export function formatCreditsWithMzn(credits: number, country?: string | null): string {
+export function formatCreditsWithMzn(credits: number, country?: string | null | undefined): string {
   return `${formatCreditsNumber(credits, country)} cr · ${formatCurrency(creditsToCurrency(credits, country), country)}`;
 }
 
@@ -121,6 +121,17 @@ export function packPricePerCredit(pack: CreditPack): number {
   return pack.priceMzn / pack.credits;
 }
 
+/** Price of a pack in the given country's currency, preserving the same
+ *  volume-discount percentage the pack has in Mozambique (its canonical
+ *  price), instead of re-deriving a flat per-credit price per country. */
+export function packPriceInCountry(pack: CreditPack, country?: string | null | undefined): number {
+  const config = getCountryConfig(country);
+  const mzConfig = getCountryConfig("MZ");
+  const discountRatio = pack.priceMzn / (pack.credits * mzConfig.creditPrice);
+  const raw = pack.credits * config.creditPrice * discountRatio;
+  return config.decimals === 0 ? Math.round(raw) : Math.round(raw * 100) / 100;
+}
+
 /** How much the pack saves versus buying the same credits one by one. */
 export function packSavingsMzn(pack: CreditPack): number {
   return Math.max(0, creditsToMzn(pack.credits) - pack.priceMzn);
@@ -174,7 +185,7 @@ export function statusMeta(status: string) {
   );
 }
 
-export function formatDate(value: string | null | undefined, country?: string | null): string {
+export function formatDate(value: string | null | undefined, country?: string | null | undefined): string {
   if (!value) return "—";
   return new Intl.DateTimeFormat(getCountryConfig(country).locale, {
     day: "2-digit",
@@ -183,7 +194,7 @@ export function formatDate(value: string | null | undefined, country?: string | 
   }).format(new Date(value));
 }
 
-export function formatDateTime(value: string | null | undefined, country?: string | null): string {
+export function formatDateTime(value: string | null | undefined, country?: string | null | undefined): string {
   if (!value) return "—";
   return new Intl.DateTimeFormat(getCountryConfig(country).locale, {
     day: "2-digit",
@@ -306,7 +317,7 @@ export type AffordabilityCheck = {
   missingInMzn: number;
 };
 
-export function checkAffordability(balance: number, cost: number, country?: string | null): AffordabilityCheck {
+export function checkAffordability(balance: number, cost: number, country?: string | null | undefined): AffordabilityCheck {
   const missing = Math.max(0, Number((cost - balance).toFixed(2)));
   return {
     cost,
