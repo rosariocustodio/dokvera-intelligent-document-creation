@@ -130,7 +130,7 @@ export function exportToPdf(title: string, content: string, footer = "Dokvera â€
   const write = (
     text: string,
     { size, style, color, spacingBefore, spacingAfter, indent = 0 }:
-      { size: number; style: "normal" | "bold" | "italic"; color: number[]; spacingBefore: number; spacingAfter: number; indent?: number },
+      { size: number; style: "normal" | "bold" | "italic"; color: RGB; spacingBefore: number; spacingAfter: number; indent?: number },
   ) => {
     doc.setFont("helvetica", style);
     doc.setFontSize(size);
