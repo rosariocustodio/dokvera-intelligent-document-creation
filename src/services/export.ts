@@ -73,11 +73,11 @@ export function exportToPdf(title: string, content: string, footer = "Dokvera �
   const maxWidth = pageWidth - margin * 2;
   
   // Cores corporativas elegantes (Executivo/Profissional)
-  const COLOR_PRIMARY = [27, 54, 93];    // #1B365D - Azul Escuro Executivo
-  const COLOR_SECONDARY = [44, 82, 130];  // #2C5282 - Azul Corporativo Médio
-  const COLOR_TEXT = [45, 55, 72];       // #2D3748 - Cinza Escuro Suave (Texto Principal)
-  const COLOR_GOLD = [197, 160, 89];     // #C5A059 - Dourado Moçambicano (Timbre/Linhas)
-  const COLOR_MUTED = [113, 128, 150];   // #718096 - Cinza Muted
+  const COLOR_PRIMARY: RGB = [27, 54, 93];    // #1B365D - Azul Escuro Executivo
+  const COLOR_SECONDARY: RGB = [44, 82, 130];  // #2C5282 - Azul Corporativo Médio
+  const COLOR_TEXT: RGB = [45, 55, 72];       // #2D3748 - Cinza Escuro Suave (Texto Principal)
+  const COLOR_GOLD: RGB = [197, 160, 89];     // #C5A059 - Dourado Moçambicano (Timbre/Linhas)
+  const COLOR_MUTED: RGB = [113, 128, 150];   // #718096 - Cinza Muted
 
   // Desenhando o papel timbrado profissional (Timbre) na primeira página
   const drawLetterhead = () => {
