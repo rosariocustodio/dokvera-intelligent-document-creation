@@ -197,7 +197,7 @@ export function exportToPdf(title: string, content: string, footer = "Dokvera �
   }
 
   // --- PASSAGEM 2: Renderização de Cabeçalhos Simples, Rodapés e Numeração Dinâmica ---
-  const totalPages = doc.internal.getNumberOfPages();
+  const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
 
