@@ -19,6 +19,8 @@ export type Block =
   | { type: "h1" | "h2" | "h3" | "p"; text: string }
   | { type: "bullet" | "number"; text: string };
 
+type RGB = readonly [number, number, number];
+
 const BOLD = /\*\*(.+?)\*\*/g;
 const ITALIC = /(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g;
 
