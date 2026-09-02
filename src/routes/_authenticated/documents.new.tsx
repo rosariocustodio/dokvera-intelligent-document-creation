@@ -1,84 +1,77 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Icons from "lucide-react";
-import { AlertTriangle, Check, Coins, Loader2, Users, Sparkles } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Coins,
+  Loader2,
+  Search,
+  Sparkles,
+  Users,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/page-header";
 import { useSession } from "@/hooks/use-session";
 import { creditsQuery, documentQuery, profileQuery } from "@/lib/queries";
-import { z } from "zod";
 import { getCountryConfig } from "@/lib/countries";
+import { creditsToCurrency, formatCurrency } from "@/lib/dokvera";
 import {
-  DOCUMENT_TYPES,
-  PAGE_RANGES,
-  calculateTotalDocumentCost,
-  calculateStudentExtraCost,
-  checkAffordability,
-  creditsToCurrency,
-  formatCurrency,
-  type DocumentTypeDef,
-  type PageRangeOption,
-} from "@/lib/dokvera";
-import { getSpec } from "@/lib/document-specs";
+  DOC_CATEGORIES,
+  DOC_SPECS,
+  getSpec,
+  searchSpecs,
+  type DocSpec,
+  type FieldDef,
+} from "@/lib/document-specs";
+import { checkBalance, computeCost, studentsExtra, type DocumentDraftValues } from "@/lib/pricing";
 
 export const Route = createFileRoute("/_authenticated/documents/new")({
-  validateSearch: (search) => z.object({
-    draftId: z.string().optional(),
-    category: z.string().optional(),
-  }).parse(search),
+  validateSearch: (search) =>
+    z
+      .object({
+        draftId: z.string().optional(),
+        type: z.string().optional(),
+      })
+      .parse(search),
   head: () => ({
     meta: [
       { title: "Criar documento — Dokvera" },
-      { name: "description", content: "Escolhe o tipo de documento que queres criar no Dokvera." },
+      { name: "description", content: "Escolhe o tipo de documento e preenche apenas os campos que importam." },
       { property: "og:title", content: "Criar documento — Dokvera" },
-      { property: "og:description", content: "Escolhe o tipo de documento a criar." },
+      { property: "og:description", content: "Assistente de criação de documentos da Dokvera." },
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: NewDocument,
+  component: NewDocument;
 });
 
-function TypeIcon({ name }: { name: string }) {
+function TypeIcon({ name, className }: { name: string; className?: string }) {
   const Icon = (Icons as unknown as Record<string, Icons.LucideIcon>)[name] ?? Icons.FileText;
-  return <Icon className="size-5" />;
+  return <Icon className={className ?? "size-5"} />;
 }
 
-const CATEGORIES = [
-  { id: "academic", label: "Académico" },
-  { id: "school", label: "Escolar" },
-  { id: "pro", label: "Profissional" },
-  { id: "letters", label: "Cartas e Ofícios" },
-  { id: "personal", label: "Pessoal" },
-];
+/** Default structure ids for a spec (defaults + everything required). */
+function defaultStructure(spec: DocSpec): string[] {
+  return (spec.structure ?? []).filter((s) => s.default || s.required).map((s) => s.id);
+}
 
-const ACADEMIC_IDS = ["academic", "academic_report", "tcc", "academic_summary", "scientific_article", "research_project", "reading_sheet"];
-const SCHOOL_IDS = ["school", "school_research", "school_summary"];
-const PRO_IDS = ["cv", "cover_letter", "proposal"];
-const LETTERS_IDS = ["request", "formal_req", "formal_letter", "official_letter", "declaration"];
-const PERSONAL_IDS = ["personal_letter", "simple_cv"];
-
-function getDocumentCategory(id: string): string {
-  if (ACADEMIC_IDS.includes(id)) return "academic";
-  if (SCHOOL_IDS.includes(id)) return "school";
-  if (PRO_IDS.includes(id)) return "pro";
-  if (LETTERS_IDS.includes(id)) return "letters";
-  if (PERSONAL_IDS.includes(id)) return "personal";
-  return "academic";
+function asString(value: unknown): string {
+  if (value == null) return "";
+  if (Array.isArray(value)) return value.join("\n");
+  return String(value);
 }
 
 function NewDocument() {
@@ -86,443 +79,363 @@ function NewDocument() {
   const userId = user?.id ?? "";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { draftId, category: urlCategory } = Route.useSearch();
-  const [activeCategory, setActiveCategory] = useState<string>(urlCategory || "academic");
+  const { draftId, type: typeParam } = Route.useSearch();
+
   const { data: balance } = useQuery({ ...creditsQuery(userId), enabled: Boolean(userId) });
   const { data: profile } = useQuery({ ...profileQuery(userId), enabled: Boolean(userId) });
+  const { data: draftDoc } = useQuery({ ...documentQuery(draftId || ""), enabled: Boolean(draftId) });
+
   const country = profile?.country;
   const credits = balance ?? 0;
 
-  const { data: draftDoc } = useQuery({
-    ...documentQuery(draftId || ""),
-    enabled: Boolean(draftId),
-  });
+  const [specId, setSpecId] = useState<string | null>(typeParam ?? null);
+  const [category, setCategory] = useState<string>("all");
+  const [term, setTerm] = useState("");
 
-  const [step, setStep] = useState<number>(1);
-  const [selected, setSelected] = useState<DocumentTypeDef | null>(null);
-  const [selectedPageRange, setSelectedPageRange] = useState<PageRangeOption>((PAGE_RANGES[0] as PageRangeOption));
-  const [numberOfStudents, setNumberOfStudents] = useState<number>(1);
-  const [title, setTitle] = useState("");
-  const [subject, setSubject] = useState("");
-  const [cvTemplate, setCvTemplate] = useState<string>("classic");
-  const [cvLayout, setCvLayout] = useState<string>("one_column");
-  const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [fields, setFields] = useState<Record<string, unknown>>({});
+  const [structure, setStructure] = useState<string[]>([]);
+  const [pageTierId, setPageTierId] = useState<string | undefined>(undefined);
+  const [templateId, setTemplateId] = useState<string | undefined>(undefined);
+  const [layoutId, setLayoutId] = useState<string | undefined>(undefined);
+  const [instructions, setInstructions] = useState("");
   const [studentInput, setStudentInput] = useState("");
+  const [saving, setSaving] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [hydratedDraft, setHydratedDraft] = useState(false);
 
-  // Estados exclusivos para o Builder de Trabalho Académico
-  const [academicSubStep, setAcademicSubStep] = useState<number>(1);
-  const [academicFaculty, setAcademicFaculty] = useState("");
-  const [academicCourse, setAcademicCourse] = useState("");
-  const [academicDiscipline, setAcademicDiscipline] = useState("");
-  const [academicTeacher, setAcademicTeacher] = useState("");
-  const [academicDeliveryDate, setAcademicDeliveryDate] = useState("");
-  const [academicCity, setAcademicCity] = useState("");
+  const spec = specId ? getSpec(specId) ?? null : null;
 
+  /** Apply spec defaults whenever a new type is chosen. */
   useEffect(() => {
-    if (!academicCity && profile) {
-      setAcademicCity(getCountryConfig(country).defaultCity);
-    }
+    if (!spec) return;
+    if (draftId && !hydratedDraft) return;
+    setStructure(defaultStructure(spec));
+    setPageTierId(spec.pageTiers?.[0]?.id);
+    setTemplateId(spec.templates?.[0]?.id);
+    setLayoutId(spec.layouts?.[0]?.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile]);
-  const [academicInstitution, setAcademicInstitution] = useState("");
-  const [academicStudentsList, setAcademicStudentsList] = useState<string[]>([]);
-  const [academicStructure, setAcademicStructure] = useState<Record<string, boolean>>({
-    cover: true,
-    titlePage: true, // folha de rosto
-    index: true,
-    intro: true,
-    generalObjective: true,
-    specificObjectives: true,
-    theoreticalFramework: true,
-    methodology: true,
-    development: true,
-    conclusion: true,
-    references: true,
-    annexes: false,
-  });
-  const [academicPages, setAcademicPages] = useState<string>("10-15");
-  const [academicFormat, setAcademicFormat] = useState<"apa" | "abnt">("apa");
-  const [academicLanguage, setAcademicLanguage] = useState<"basico" | "academico" | "tecnico">("academico");
+  }, [spec?.id]);
 
-  const spec = selected ? getSpec(selected.id) : null;
-
-  const handleFieldChange = (fieldId: string, value: any) => {
-    setFieldValues((prev: Record<string, any>) => ({
-      ...prev,
-      [fieldId]: value,
-    }));
-  };
-
-  // Deriva o título do documento a partir do campo mais relevante do próprio
-  // tipo (spec.titleFieldId), em vez do antigo ecrã genérico "Tema Central"
-  // que era forçado para todos os tipos independentemente de fazer sentido.
-  // Aplica-se a TODOS os tipos, incluindo académico/escolar — não têm um
-  // fluxo dedicado próprio, usam o mesmo `fieldValues` genérico que o resto.
+  /** Prefill the "Local" field with the country default city. */
   useEffect(() => {
-    if (!selected || !spec) return;
-    const sourceFieldId = spec.titleFieldId;
-    const rawValue = sourceFieldId ? fieldValues[sourceFieldId] : undefined;
-    const derived = typeof rawValue === "string" ? rawValue.trim() : "";
-    setTitle(derived || spec.label);
+    if (!spec || !profile) return;
+    const hasCity = spec.groups.some((g) => g.fields.some((f) => f.id === "city"));
+    if (!hasCity) return;
+    setFields((prev) => (prev["city"] ? prev : { ...prev, city: getCountryConfig(country).defaultCity }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected?.id, spec?.titleFieldId, spec?.titleFieldId ? fieldValues[spec.titleFieldId] : null]);
+  }, [spec?.id, profile]);
 
-  const addStudent = (fieldId: string) => {
-    if (!studentInput.trim()) return;
-    const currentStudents = (fieldValues[fieldId] as string[]) || [];
-    const updated = [...currentStudents, studentInput.trim()];
-    handleFieldChange(fieldId, updated);
-    setStudentInput("");
-    setNumberOfStudents(updated.length);
-  };
-
-  const removeStudent = (fieldId: string, index: number) => {
-    const currentStudents = (fieldValues[fieldId] as string[]) || [];
-    const updated = currentStudents.filter((_, i) => i !== index);
-    handleFieldChange(fieldId, updated);
-    setNumberOfStudents(Math.max(1, updated.length));
-  };
-
+  /** Restore an existing draft. */
   useEffect(() => {
-    if (draftDoc) {
-      setTitle(draftDoc.title || "");
-      setSubject(draftDoc.subject || "");
-      
-      const matchedSpec = DOCUMENT_TYPES.find(t => t.id === draftDoc.doc_type);
-      if (matchedSpec) {
-        setSelected(matchedSpec);
-      }
-      
-      const draftMetadata = draftDoc.metadata || {};
-      const pageRangeId = draftMetadata["page_range"] as string | undefined;
-      const studentsCount = draftMetadata["students_count"] as number | string | undefined;
+    if (!draftDoc || hydratedDraft) return;
+    const options = (draftDoc.options ?? {}) as Record<string, unknown>;
+    setSpecId(draftDoc.doc_type);
+    setFields((options["fields"] as Record<string, unknown>) ?? {});
+    const savedStructure = options["structure"];
+    if (Array.isArray(savedStructure)) setStructure(savedStructure as string[]);
+    if (typeof options["pageTierId"] === "string") setPageTierId(options["pageTierId"] as string);
+    if (typeof options["templateId"] === "string") setTemplateId(options["templateId"] as string);
+    if (typeof options["layoutId"] === "string") setLayoutId(options["layoutId"] as string);
+    setInstructions(draftDoc.instructions ?? "");
+    setHydratedDraft(true);
+  }, [draftDoc, hydratedDraft]);
 
-      if (pageRangeId) {
-        const matchedRange = PAGE_RANGES.find(r => r.id === pageRangeId);
-        if (matchedRange) {
-          setSelectedPageRange(matchedRange as PageRangeOption);
-        }
-      }
-      if (studentsCount) {
-        setNumberOfStudents(Number(studentsCount));
-      }
+  const students = useMemo(() => {
+    const raw = fields["students"];
+    return Array.isArray(raw) ? (raw as unknown[]).map((s) => String(s)).filter(Boolean) : [];
+  }, [fields]);
 
-      const draftOptions = (draftDoc.options || {}) as Record<string, any>;
-      if (draftOptions["fields"]) {
-        const fields = draftOptions["fields"] as Record<string, any>;
-        setFieldValues(fields);
-        
-        // Carrega estados específicos do Trabalho Académico se aplicável
-        if (draftDoc.doc_type === "academic") {
-          if (fields["faculty"]) setAcademicFaculty(fields["faculty"]);
-          if (fields["course"]) setAcademicCourse(fields["course"]);
-          if (fields["subject"]) setAcademicDiscipline(fields["subject"]);
-          if (fields["teacher"]) setAcademicTeacher(fields["teacher"]);
-          if (fields["delivery_date"]) setAcademicDeliveryDate(fields["delivery_date"]);
-          if (fields["city"]) setAcademicCity(fields["city"]);
-          if (fields["institution"]) setAcademicInstitution(fields["institution"]);
-          if (Array.isArray(fields["students"])) setAcademicStudentsList(fields["students"]);
-          if (fields["structure"]) setAcademicStructure(fields["structure"]);
-          if (fields["citation_style"]) setAcademicFormat(fields["citation_style"]);
-          if (fields["language_level"]) setAcademicLanguage(fields["language_level"]);
-          if (fields["page_range"]) setAcademicPages(fields["page_range"]);
-        }
-      }
-      if (draftOptions["template"]) setCvTemplate(draftOptions["template"] as string);
-      if (draftOptions["layout"]) setCvLayout(draftOptions["layout"] as string);
-    }
-  }, [draftDoc]);
-
-  // Função auxiliar para mapear dados académicos.
-  // Os campos de identificação (curso, disciplina, docente, instituição, data,
-  // cidade) vêm de `fieldValues` — é ali que o formulário genérico do Passo 3
-  // (spec.groups) realmente os grava. Os estados academicXxx dedicados só
-  // servem agora para restaurar rascunhos antigos e para os controlos que
-  // têm UI própria (páginas, estudantes, estrutura, formatação, idioma).
-  const getAcademicFields = () => {
-    return {
-      theme: title,
-      faculty: fieldValues["faculty"] ?? academicFaculty,
-      course: fieldValues["course"] ?? academicCourse,
-      subject: fieldValues["subject"] ?? academicDiscipline,
-      teacher: fieldValues["teacher"] ?? academicTeacher,
-      delivery_date: fieldValues["delivery_date"] ?? academicDeliveryDate,
-      city: fieldValues["city"] ?? academicCity,
-      institution: fieldValues["institution"] ?? academicInstitution,
-      students: academicStudentsList,
-      structure: academicStructure,
-      citation_style: academicFormat,
-      language_level: academicLanguage,
-      page_range: academicPages,
-    };
-  };
-
-  const isAcademicOrSchool =
-    selected?.id === "academic" ||
-    selected?.id === "academic_report" ||
-    selected?.id === "tcc" ||
-    selected?.id === "scientific_article" ||
-    selected?.id === "research_project" ||
-    selected?.id === "school" ||
-    selected?.id === "school_research";
-
-  const effectiveCost = useMemo(() => {
-    if (!selected) return 0;
-    if (selected.id === "academic") {
-      const baseCost = academicPages === "16-20" ? 28 : 25; // 10-15 páginas custa 25, 16-20 custa 28
-      const extraStudentsCount = Math.max(0, academicStudentsList.length - 4);
-      const extraStudentsCost = extraStudentsCount * 0.39;
-      return Number((baseCost + extraStudentsCost).toFixed(2));
-    }
-    const base = isAcademicOrSchool ? selectedPageRange.cost : selected.cost;
-    return isAcademicOrSchool ? calculateTotalDocumentCost(base, numberOfStudents) : base;
-  }, [selected, selectedPageRange, numberOfStudents, isAcademicOrSchool, academicPages, academicStudentsList]);
-
-  const check = useMemo(
-    () => checkAffordability(credits, effectiveCost, country),
-    [credits, effectiveCost],
+  const values: DocumentDraftValues = useMemo(
+    () => ({
+      fields,
+      structure,
+      ...(pageTierId ? { pageTierId } : {}),
+      ...(spec?.students ? { studentsCount: Math.max(1, students.length) } : {}),
+      ...(templateId ? { templateId } : {}),
+      ...(layoutId ? { layoutId } : {}),
+      ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
+    }),
+    [fields, structure, pageTierId, templateId, layoutId, instructions, students.length, spec?.students],
   );
 
-  // Auto-save debounced effect
-  useEffect(() => {
-    if (!title.trim() || !selected) {
-      setAutoSaveStatus("idle");
-      return;
+  const cost = useMemo(() => (spec ? computeCost(spec, values) : null), [spec, values]);
+  const check = useMemo(() => checkBalance(credits, cost?.totalCredits ?? 0), [credits, cost]);
+
+  const title = useMemo(() => {
+    if (!spec) return "";
+    const raw = spec.titleFieldId ? asString(fields[spec.titleFieldId]).trim() : "";
+    return (raw || spec.label).slice(0, 160);
+  }, [spec, fields]);
+
+  const missingRequired = useMemo(() => {
+    if (!spec) return [];
+    const missing: string[] = [];
+    for (const group of spec.groups) {
+      for (const field of group.fields) {
+        if (!field.required) continue;
+        const value = fields[field.id];
+        const empty = field.type === "students" ? students.length === 0 : !asString(value).trim();
+        if (empty) missing.push(field.label);
+      }
     }
-    
-    setAutoSaveStatus("saving");
-    
-    const delayDebounceFn = setTimeout(async () => {
+    return missing;
+  }, [spec, fields, students.length]);
+
+  const buildPayload = () => ({
+    title,
+    doc_type: spec!.id,
+    instructions: instructions.trim() || null,
+    estimated_cost: cost?.totalCredits ?? 0,
+    options: {
+      fields,
+      structure,
+      ...(pageTierId ? { pageTierId } : {}),
+      ...(spec?.students ? { studentsCount: Math.max(1, students.length) } : {}),
+      ...(templateId ? { templateId } : {}),
+      ...(layoutId ? { layoutId } : {}),
+      ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
+    },
+    metadata: {
+      pageTierId: pageTierId ?? null,
+      studentsCount: students.length || 1,
+      costLines: cost?.lines ?? [],
+    },
+  });
+
+  /** Debounced draft autosave once a type is picked. */
+  useEffect(() => {
+    if (!spec || !userId) return;
+    if (draftId && !hydratedDraft) return;
+    setSaving("saving");
+    const timer = setTimeout(async () => {
       try {
-        const fieldsToSave = selected.id === "academic" ? getAcademicFields() : fieldValues;
-        
         if (draftId) {
-          const { error } = await supabase
-            .from("documents")
-            .update({
-              title: title.trim(),
-              subject: subject.trim() || null,
-              estimated_cost: effectiveCost,
-              options: {
-                fields: fieldsToSave,
-                template: selected?.id === "cv" || selected?.id === "simple_cv" ? cvTemplate : null,
-                layout: selected?.id === "cv" || selected?.id === "simple_cv" ? cvLayout : null,
-              },
-              metadata: {
-                estimated_cost: effectiveCost,
-                page_range: selected.id === "academic" ? academicPages : (isAcademicOrSchool ? selectedPageRange.id : null),
-                students_count: selected.id === "academic" ? Math.max(1, academicStudentsList.length) : (isAcademicOrSchool ? numberOfStudents : 1),
-              },
-            })
-            .eq("id", draftId);
-          
-          if (error) {
-            setAutoSaveStatus("error");
-          } else {
-            queryClient.invalidateQueries({ queryKey: ["documents"] });
-            queryClient.invalidateQueries({ queryKey: ["document", draftId] });
-            setAutoSaveStatus("saved");
-          }
+          const { error } = await supabase.from("documents").update(buildPayload()).eq("id", draftId);
+          if (error) throw error;
+          queryClient.invalidateQueries({ queryKey: ["document", draftId] });
         } else {
           const { data, error } = await supabase
             .from("documents")
-            .insert({
-              user_id: userId,
-              title: title.trim(),
-              doc_type: selected.id,
-              subject: subject.trim() || null,
-              status: "draft",
-              estimated_cost: effectiveCost,
-              options: {
-                fields: fieldsToSave,
-                template: selected.id === "cv" || selected.id === "simple_cv" ? cvTemplate : null,
-                layout: selected.id === "cv" || selected.id === "simple_cv" ? cvLayout : null,
-              },
-              metadata: {
-                estimated_cost: effectiveCost,
-                page_range: selected.id === "academic" ? academicPages : (isAcademicOrSchool ? selectedPageRange.id : null),
-                students_count: selected.id === "academic" ? Math.max(1, academicStudentsList.length) : (isAcademicOrSchool ? numberOfStudents : 1),
-              },
-            })
+            .insert({ user_id: userId, status: "draft", ...buildPayload() })
             .select("id")
             .single();
-          
-          if (error) {
-            setAutoSaveStatus("error");
-          } else if (data) {
-            navigate({
-              to: "/documents/new",
-              search: { draftId: data.id },
-              replace: true,
-            });
-            queryClient.invalidateQueries({ queryKey: ["documents"] });
-            setAutoSaveStatus("saved");
+          if (error) throw error;
+          if (data) {
+            setHydratedDraft(true);
+            navigate({ to: "/documents/new", search: { draftId: data.id }, replace: true });
           }
         }
-      } catch (err) {
-        console.error("Erro no salvamento automático:", err);
-        setAutoSaveStatus("error");
+        queryClient.invalidateQueries({ queryKey: ["documents"] });
+        setSaving("saved");
+      } catch {
+        setSaving("error");
       }
-    }, 1500); // 1.5 seconds debounce
+    }, 1200);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spec?.id, fields, structure, pageTierId, templateId, layoutId, instructions, draftId, hydratedDraft, userId]);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [
-    title, 
-    subject, 
-    cvTemplate, 
-    cvLayout, 
-    selected, 
-    selectedPageRange, 
-    numberOfStudents, 
-    draftId,
-    academicFaculty,
-    academicCourse,
-    academicDiscipline,
-    academicTeacher,
-    academicDeliveryDate,
-    academicCity,
-    academicInstitution,
-    academicStudentsList,
-    academicStructure,
-    academicPages,
-    academicFormat,
-    academicLanguage
-  ]);
-
-  const create = useMutation({
+  const generate = useMutation({
     mutationFn: async () => {
-      if (!selected) throw new Error("Nenhum tipo selecionado");
-      if (!title.trim()) throw new Error("Por favor, insira o título do documento.");
-      if (!check.affordable) throw new Error("Créditos insuficientes para esta operação.");
+      if (!spec) throw new Error("Escolhe primeiro o tipo de documento.");
+      if (missingRequired.length > 0) {
+        throw new Error(`Preenche os campos obrigatórios: ${missingRequired.join(", ")}.`);
+      }
+      if (!check.affordable) throw new Error("Créditos insuficientes para gerar este documento.");
 
       let documentId = draftId;
-      const fieldsToSave = selected.id === "academic" ? getAcademicFields() : fieldValues;
-
-      if (draftId) {
-        const { error } = await supabase
-          .from("documents")
-          .update({
-            title: title.trim(),
-            subject: subject.trim() || null,
-            estimated_cost: effectiveCost,
-            options: {
-              fields: fieldsToSave,
-              template: selected?.id === "cv" || selected?.id === "simple_cv" ? cvTemplate : null,
-              layout: selected?.id === "cv" || selected?.id === "simple_cv" ? cvLayout : null,
-            },
-            metadata: {
-              estimated_cost: effectiveCost,
-              page_range: selected.id === "academic" ? academicPages : (isAcademicOrSchool ? selectedPageRange.id : null),
-              students_count: selected.id === "academic" ? Math.max(1, academicStudentsList.length) : (isAcademicOrSchool ? numberOfStudents : 1),
-            },
-          })
-          .eq("id", draftId);
-
+      if (documentId) {
+        const { error } = await supabase.from("documents").update(buildPayload()).eq("id", documentId);
         if (error) throw error;
       } else {
         const { data, error } = await supabase
           .from("documents")
-          .insert({
-            user_id: userId,
-            title: title.trim(),
-            doc_type: selected.id,
-            subject: subject.trim() || null,
-            status: "draft",
-            estimated_cost: effectiveCost,
-            options: {
-              fields: fieldsToSave,
-              template: selected.id === "cv" || selected.id === "simple_cv" ? cvTemplate : null,
-              layout: selected.id === "cv" || selected.id === "simple_cv" ? cvLayout : null,
-            },
-            metadata: {
-              estimated_cost: effectiveCost,
-              page_range: selected.id === "academic" ? academicPages : (isAcademicOrSchool ? selectedPageRange.id : null),
-              students_count: selected.id === "academic" ? Math.max(1, academicStudentsList.length) : (isAcademicOrSchool ? numberOfStudents : 1),
-            },
-          })
+          .insert({ user_id: userId, status: "draft", ...buildPayload() })
           .select("id")
           .single();
-
         if (error) throw error;
-        if (data) {
-          documentId = data.id;
-        }
+        documentId = data!.id;
       }
 
-      if (!documentId) {
-        throw new Error("Não foi possível determinar o ID do documento.");
-      }
-
-      // Aciona a geração real do conteúdo do documento (IA para acadêmicos/escolares, Código local para os restantes)
       const { generateDocumentContent } = await import("@/lib/documents.functions");
-      await generateDocumentContent({ data: { documentId } });
-
-      return { id: documentId };
+      await generateDocumentContent({ data: { documentId: documentId! } });
+      return { id: documentId! };
     },
-    onSuccess: (data: { id: string }) => {
+    onSuccess: ({ id }) => {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
-      if (draftId) {
-        queryClient.invalidateQueries({ queryKey: ["document", draftId] });
-      }
       queryClient.invalidateQueries({ queryKey: ["credits"] });
-      toast.success("Documento gerado com sucesso!");
-      setSelected(null);
-      setTitle("");
-      setSubject("");
-      setNumberOfStudents(1);
-      setAcademicSubStep(1);
-      navigate({ to: `/documents/${data.id}` });
+      toast.success("Documento gerado com sucesso.");
+      navigate({ to: "/documents/$id", params: { id } });
     },
-    onError: (e: Error) => {
-      toast.error("Erro ao gerar o documento", { description: e.message });
+    onError: (error: Error) => {
+      toast.error("Não foi possível gerar o documento", { description: error.message });
     },
   });
 
+  const filtered = useMemo(() => {
+    const list = term.trim()
+      ? searchSpecs(term, category === "all" ? "all" : (category as never))
+      : category === "all"
+        ? DOC_SPECS
+        : DOC_SPECS.filter((s) => s.category === category);
+    // Deduplicate labels so the picker stays readable.
+    const seen = new Set<string>();
+    return list.filter((s) => (seen.has(s.label) ? false : (seen.add(s.label), true)));
+  }, [term, category]);
+
+  const setField = (id: string, value: unknown) => setFields((prev) => ({ ...prev, [id]: value }));
+
+  const addStudent = () => {
+    const name = studentInput.trim();
+    if (!name) return;
+    const max = spec?.students?.max ?? 7;
+    if (students.length >= max) {
+      toast.error(`Máximo de ${max} pessoas.`);
+      return;
+    }
+    setField("students", [...students, name]);
+    setStudentInput("");
+  };
+
+  const toggleStructure = (id: string) => {
+    setStructure((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
+  };
+
+  const renderField = (field: FieldDef) => {
+    const value = fields[field.id];
+    const wide = field.type === "textarea" || field.type === "list" || field.type === "students";
+
+    return (
+      <div key={field.id} className={`space-y-2 ${wide ? "sm:col-span-2" : ""}`}>
+        <Label htmlFor={field.id} className="text-sm font-medium">
+          {field.label}
+          {field.required && <span className="ml-1 text-destructive">*</span>}
+        </Label>
+
+        {field.type === "students" ? (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Input
+                value={studentInput}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStudentInput(e.target.value)}
+                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addStudent();
+                  }
+                }}
+                placeholder="Nome completo"
+                className="h-11 rounded-xl"
+              />
+              <Button type="button" variant="secondary" className="h-11 rounded-xl px-4" onClick={addStudent}>
+                Adicionar
+              </Button>
+            </div>
+            {students.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {students.map((name, index) => (
+                  <Badge key={`${name}-${index}`} variant="secondary" className="gap-1.5 rounded-lg py-1.5 pl-3 pr-1.5">
+                    {name}
+                    <button
+                      type="button"
+                      aria-label={`Remover ${name}`}
+                      className="flex size-4 items-center justify-center rounded-full text-muted-foreground hover:bg-muted-foreground/20"
+                      onClick={() => setField("students", students.filter((_, i) => i !== index))}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {spec?.students && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Users className="size-3.5" />
+                {spec.students.includedFree} incluídos · cada pessoa extra custa {spec.students.extraPerStudent} cr
+                (máx. {spec.students.max}).
+              </p>
+            )}
+          </div>
+        ) : field.type === "textarea" || field.type === "list" ? (
+          <Textarea
+            id={field.id}
+            value={asString(value)}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+              setField(field.id, field.type === "list" ? e.target.value.split("\n") : e.target.value)
+            }
+            placeholder={field.placeholder ?? (field.type === "list" ? "Um item por linha" : undefined)}
+            className="min-h-28 rounded-xl"
+          />
+        ) : field.type === "select" ? (
+          <select
+            id={field.id}
+            value={asString(value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setField(field.id, e.target.value)}
+            className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="">Selecionar…</option>
+            {field.options?.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <Input
+            id={field.id}
+            type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
+            min={field.min}
+            max={field.max}
+            value={asString(value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setField(field.id, e.target.value)}
+            placeholder={field.placeholder}
+            className="h-11 rounded-xl"
+          />
+        )}
+
+        {field.help && <p className="text-xs text-muted-foreground">{field.help}</p>}
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-16">
       <PageHeader
-        title="Criar novo documento"
-        subtitle="Siga o assistente estruturado para criar o seu documento inteligente de forma simples."
+        title={spec ? spec.label : "Criar novo documento"}
+        subtitle={
+          spec
+            ? "Preenche apenas o que este tipo de documento precisa. O custo é calculado ao lado."
+            : "Escolhe o tipo de documento — cada tipo tem o seu próprio formulário."
+        }
         action={
-          <Badge variant="secondary" className="h-9 gap-2 rounded-full px-4 text-sm font-semibold shadow-sm">
+          <Badge variant="secondary" className="h-9 gap-2 rounded-full px-4 text-sm font-semibold">
             <Coins className="size-4 text-primary" />
-            {credits} créditos · {formatCurrency(creditsToCurrency(credits, country), country)}
+            {credits} cr · {formatCurrency(creditsToCurrency(credits, country), country)}
           </Badge>
         }
       />
 
-      {/* Progress Bar */}
-      <div className="w-full bg-muted rounded-full h-2 overflow-hidden mb-6">
-        <div 
-          className="bg-primary h-full transition-all duration-300"
-          style={{ width: `${(step === 1 ? 1 : 2) / 2 * 100}%` }}
-        />
-      </div>
-
-      <div className="flex items-center justify-between text-sm font-medium text-muted-foreground px-1 mb-8">
-        <span className={step >= 1 ? "text-primary font-semibold" : ""}>1. Tipo de Documento</span>
-        <span className={step >= 3 ? "text-primary font-semibold" : ""}>2. Detalhes do Documento</span>
-      </div>
-
-      {/* STEP 1: Seleção do Tipo de Documento */}
-      {step === 1 && (
+      {!spec && (
         <div className="space-y-6">
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold">Passo 1: Escolha o Tipo de Documento</h2>
-            <p className="text-sm text-muted-foreground">Selecione uma categoria para filtrar as opções disponíveis.</p>
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={term}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTerm(e.target.value)}
+              placeholder="Pesquisar: CV, requerimento, monografia…"
+              className="h-11 rounded-xl pl-9"
+            />
           </div>
 
-          <div className="flex flex-wrap gap-1.5 p-1 bg-muted/60 rounded-2xl max-w-2xl">
-            {CATEGORIES.map((cat) => (
+          <div className="flex flex-wrap gap-1.5 rounded-2xl bg-muted/60 p-1">
+            {[{ id: "all", label: "Todos" }, ...DOC_CATEGORIES].map((cat) => (
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => setActiveCategory(cat.id)}
-                className={`flex-1 min-w-[110px] sm:flex-none px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl transition-all ${
-                  activeCategory === cat.id
+                onClick={() => setCategory(cat.id)}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                  category === cat.id
                     ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-background/40 hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {cat.label}
@@ -531,47 +444,30 @@ function NewDocument() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {DOCUMENT_TYPES.filter((t) => getDocumentCategory(t.id) === activeCategory).map((type) => {
-              const isSelected = selected?.id === type.id;
-              const affordable = credits >= type.cost;
+            {filtered.map((item) => {
+              const base = computeCost(item, { fields: {}, structure: defaultStructure(item) });
               return (
                 <button
-                  key={type.id}
+                  key={item.id}
                   type="button"
                   onClick={() => {
-                    setSelected(type);
-                    setSelectedPageRange((PAGE_RANGES[0] as PageRangeOption));
-                    setNumberOfStudents(1);
+                    setSpecId(item.id);
+                    setFields({});
+                    setInstructions("");
                   }}
-                  className={`shadow-soft group flex flex-col justify-between rounded-2xl border p-6 text-left transition-all duration-300 hover:-translate-y-1 ${
-                    isSelected
-                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                      : "border-border/70 bg-card hover:border-primary/50"
-                  }`}
+                  className="group flex flex-col rounded-2xl border border-border/70 bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg"
                 >
-                  <div>
-                    <div className="flex items-start justify-between gap-3">
-                      <span className={`flex size-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105 ${
-                        isSelected ? "bg-primary text-primary-foreground" : "bg-primary-soft text-primary"
-                      }`}>
-                        <TypeIcon name={type.icon} />
-                      </span>
-                      <Badge
-                        variant={affordable ? "secondary" : "outline"}
-                        className="rounded-full text-[11px]"
-                      >
-                        {type.id === "academic" || type.id === "tcc" || type.id === "academic_report" ? "A partir de 5" : type.cost} cr
-                      </Badge>
-                    </div>
-                    <h3 className="mt-5 text-base font-semibold">{type.label}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                      {type.description}
-                    </p>
-                  </div>
-                  <div className="mt-5 pt-4 border-t border-border/50 flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground font-medium">{formatCurrency(creditsToCurrency(type.cost, country), country)}</span>
-                    <span className="text-primary font-semibold flex items-center gap-1">
-                      {isSelected ? "Selecionado" : "Selecionar"} <Sparkles className="size-3" />
+                  <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <TypeIcon name={item.icon} />
+                  </span>
+                  <h3 className="mt-4 font-semibold">{item.label}</h3>
+                  <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
+                  <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-xs">
+                    <span className="font-medium text-muted-foreground">
+                      desde {base.totalCredits} cr · {formatCurrency(creditsToCurrency(base.totalCredits, country), country)}
+                    </span>
+                    <span className="flex items-center gap-1 font-semibold text-primary">
+                      Escolher <ArrowRight className="size-3.5" />
                     </span>
                   </div>
                 </button>
@@ -579,318 +475,240 @@ function NewDocument() {
             })}
           </div>
 
-          <div className="flex justify-end pt-4 border-t">
-            <Button
-              className="rounded-xl h-11 px-6 font-semibold"
-              disabled={!selected}
-              onClick={() => {
-                setStep(3);
-                if (isAcademicOrSchool) setAcademicSubStep(1);
-              }}
-            >
-              Avançar <Icons.ArrowRight className="ml-2 size-4" />
-            </Button>
-          </div>
+          {filtered.length === 0 && (
+            <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+              Nenhum tipo encontrado para “{term}”.
+            </p>
+          )}
         </div>
       )}
 
-      {/* STEP 3: Campos de preenchimento dinâmicos por Tipo de Documento */}
-      {step === 3 && (
-        <div className="space-y-8 max-w-3xl mx-auto">
-          {/* Informações e Detalhes Específicos */}
-          <div className="space-y-6 bg-card border border-border/70 rounded-2xl p-6 shadow-soft">
-            <div className="space-y-2">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Sparkles className="size-5 text-primary" />
-                Passo 3: Preencha os detalhes do seu {selected?.label}
-              </h2>
-              <p className="text-sm text-muted-foreground">Cada tipo de documento possui campos específicos para garantir que a estrutura final seja perfeita.</p>
-            </div>
+      {spec && (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-6">
+            <Button
+              variant="ghost"
+              className="h-9 w-fit rounded-xl px-3"
+              onClick={() => {
+                setSpecId(null);
+                setFields({});
+              }}
+            >
+              <ArrowLeft className="mr-2 size-4" /> Mudar tipo de documento
+            </Button>
 
-            <div className="space-y-6 pt-4">
-              {spec?.groups.map((group) => (
-                <div key={group.id} className="space-y-4 rounded-xl border border-border/50 bg-muted/20 p-5">
-                  <div>
-                    <h3 className="font-semibold text-base text-foreground">{group.label}</h3>
-                    {group.description && <p className="text-xs text-muted-foreground mt-0.5">{group.description}</p>}
-                  </div>
+            {spec.groups.map((group) => (
+              <section key={group.id} className="rounded-2xl border border-border/70 bg-card p-6">
+                <h2 className="text-base font-semibold">{group.label}</h2>
+                {group.description && <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>}
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">{group.fields.map(renderField)}</div>
+              </section>
+            ))}
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {group.fields.map((field) => {
-                      const value = fieldValues[field.id] ?? "";
-                      const isRequired = field.required;
-
-                      return (
-                        <div key={field.id} className={`space-y-1.5 ${field.type === "textarea" || field.type === "students" || field.type === "list" ? "sm:col-span-2" : ""}`}>
-                          <Label htmlFor={field.id} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            {field.label} {isRequired && <span className="text-destructive">*</span>}
-                          </Label>
-
-                          {field.type === "text" && (
-                            <Input
-                              id={field.id}
-                              value={value}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange(field.id, e.target.value)}
-                              placeholder={field.placeholder}
-                              className="h-11 rounded-xl"
-                              required={isRequired}
-                            />
-                          )}
-
-                          {field.type === "number" && (
-                            <Input
-                              id={field.id}
-                              type="number"
-                              min={field.min}
-                              max={field.max}
-                              value={value}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange(field.id, parseInt(e.target.value) || "")}
-                              placeholder={field.placeholder}
-                              className="h-11 rounded-xl"
-                              required={isRequired}
-                            />
-                          )}
-
-                          {field.type === "date" && (
-                            <Input
-                              id={field.id}
-                              type="date"
-                              value={value}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange(field.id, e.target.value)}
-                              className="h-11 rounded-xl"
-                              required={isRequired}
-                            />
-                          )}
-
-                          {field.type === "textarea" && (
-                            <Textarea
-                              id={field.id}
-                              value={value}
-                              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleFieldChange(field.id, e.target.value)}
-                              placeholder={field.placeholder}
-                              className="min-h-24 rounded-xl"
-                              required={isRequired}
-                            />
-                          )}
-
-                          {field.type === "select" && (
-                            <div className="relative">
-                              <select
-                                id={field.id}
-                                value={value}
-                                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFieldChange(field.id, e.target.value)}
-                                className="w-full h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                required={isRequired}
-                              >
-                                <option value="">Selecione uma opção...</option>
-                                {field.options?.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-
-                          {field.type === "list" && (
-                            <div className="space-y-1">
-                              <Textarea
-                                id={field.id}
-                                value={value}
-                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleFieldChange(field.id, e.target.value)}
-                                placeholder={field.placeholder || "Insira um item por linha..."}
-                                className="min-h-24 rounded-xl"
-                                required={isRequired}
-                              />
-                              <p className="text-[11px] text-muted-foreground">{field.help || "Insira um item por linha para o desenvolvimento."}</p>
-                            </div>
-                          )}
-
-                          {field.type === "students" && (
-                            <div className="space-y-3">
-                              <div className="flex gap-2">
-                                <Input
-                                  value={studentInput}
-                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStudentInput(e.target.value)}
-                                  placeholder="Nome do participante"
-                                  className="h-11 rounded-xl"
-                                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                                    if (e.key === "Enter") {
-                                      e.preventDefault();
-                                      addStudent(field.id);
-                                    }
-                                  }}
-                                />
-                                <Button type="button" onClick={() => addStudent(field.id)} className="h-11 rounded-xl px-4">
-                                  Adicionar
-                                </Button>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {Array.isArray(value) && value.map((std, idx) => (
-                                  <Badge key={idx} variant="secondary" className="pl-3 pr-1.5 py-1.5 gap-1.5 text-sm rounded-lg">
-                                    {std}
-                                    <button
-                                      type="button"
-                                      onClick={() => removeStudent(field.id, idx)}
-                                      className="size-4 rounded-full flex items-center justify-center hover:bg-muted-foreground/20 text-muted-foreground"
-                                    >
-                                      ×
-                                    </button>
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {field.help && field.type !== "list" && (
-                            <p className="text-[11px] text-muted-foreground mt-1">{field.help}</p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+            {spec.pageTiers && spec.pageTiers.length > 0 && (
+              <section className="rounded-2xl border border-border/70 bg-card p-6">
+                <h2 className="text-base font-semibold">Extensão do documento</h2>
+                <p className="mt-1 text-sm text-muted-foreground">O número de páginas define o preço base.</p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {spec.pageTiers.map((tier) => (
+                    <button
+                      key={tier.id}
+                      type="button"
+                      onClick={() => setPageTierId(tier.id)}
+                      className={`rounded-xl border p-4 text-left transition-colors ${
+                        pageTierId === tier.id ? "border-primary bg-primary/5" : "border-border/70 hover:border-border"
+                      }`}
+                    >
+                      <span className="block text-sm font-semibold">{tier.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {tier.credits} cr · {formatCurrency(creditsToCurrency(tier.credits, country), country)}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              ))}
+              </section>
+            )}
 
-              {/* Opções de Template e Layout se definidos */}
-              {spec?.templates && (
-                <div className="space-y-4 rounded-xl border border-border/50 bg-muted/20 p-5">
+            {(spec.templates || spec.layouts) && (
+              <section className="rounded-2xl border border-border/70 bg-card p-6 space-y-6">
+                {spec.templates && (
                   <div>
-                    <h3 className="font-semibold text-base text-foreground">Estilo e Design do Documento</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">Selecione o estilo visual que prefere para o seu documento.</p>
+                    <h2 className="text-base font-semibold">Modelo</h2>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {spec.templates.map((tpl) => (
+                        <button
+                          key={tpl.id}
+                          type="button"
+                          onClick={() => setTemplateId(tpl.id)}
+                          className={`rounded-xl border p-4 text-left transition-colors ${
+                            templateId === tpl.id ? "border-primary bg-primary/5" : "border-border/70 hover:border-border"
+                          }`}
+                        >
+                          <span className="block text-sm font-semibold">{tpl.label}</span>
+                          <span className="text-xs text-muted-foreground">{tpl.description}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {spec.templates.map((tpl) => (
-                      <button
-                        key={tpl.id}
-                        type="button"
-                        onClick={() => setCvTemplate(tpl.id)}
-                        className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
-                          cvTemplate === tpl.id
-                            ? "border-primary bg-primary/5 font-medium shadow-sm"
-                            : "border-border/70 bg-card hover:border-border"
-                        }`}
+                )}
+                {spec.layouts && (
+                  <div>
+                    <h2 className="text-base font-semibold">Layout</h2>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {spec.layouts.map((lay) => (
+                        <button
+                          key={lay.id}
+                          type="button"
+                          onClick={() => setLayoutId(lay.id)}
+                          className={`rounded-xl border p-4 text-left transition-colors ${
+                            layoutId === lay.id ? "border-primary bg-primary/5" : "border-border/70 hover:border-border"
+                          }`}
+                        >
+                          <span className="block text-sm font-semibold">{lay.label}</span>
+                          <span className="text-xs text-muted-foreground">{lay.description}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {spec.structure && spec.structure.length > 0 && (
+              <section className="rounded-2xl border border-border/70 bg-card p-6">
+                <h2 className="text-base font-semibold">O que incluir no documento</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Seleciona exactamente as partes que queres. As obrigatórias não podem ser removidas.
+                </p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {spec.structure.map((option) => {
+                    const checked = structure.includes(option.id) || Boolean(option.required);
+                    return (
+                      <label
+                        key={option.id}
+                        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                          checked ? "border-primary/60 bg-primary/5" : "border-border/70 hover:border-border"
+                        } ${option.required ? "cursor-default opacity-90" : ""}`}
                       >
-                        <span className="text-sm font-semibold">{tpl.label}</span>
-                        <span className="text-[11px] text-muted-foreground">{tpl.description}</span>
-                      </button>
-                    ))}
-                  </div>
+                        <Checkbox
+                          checked={checked}
+                          disabled={Boolean(option.required)}
+                          onCheckedChange={() => !option.required && toggleStructure(option.id)}
+                          className="mt-0.5"
+                        />
+                        <span className="min-w-0">
+                          <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                            {option.label}
+                            {option.required && <Badge variant="secondary" className="text-[10px]">obrigatório</Badge>}
+                            {option.extraCredits ? (
+                              <Badge variant="outline" className="text-[10px]">+{option.extraCredits} cr</Badge>
+                            ) : null}
+                          </span>
+                          {option.description && (
+                            <span className="mt-0.5 block text-xs text-muted-foreground">{option.description}</span>
+                          )}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
-              )}
+              </section>
+            )}
 
-              {/* Extensão de Páginas se aplicável (Trabalhos Académicos) */}
-              {isAcademicOrSchool && (
-                <div className="space-y-4 rounded-xl border border-border/50 bg-muted/20 p-5">
-                  <div>
-                    <h3 className="font-semibold text-base text-foreground">Extensão do documento (Páginas)</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">Selecione o tamanho que deseja que o seu documento tenha.</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {PAGE_RANGES.map((range) => (
-                      <button
-                        key={range.id}
-                        type="button"
-                        onClick={() => setSelectedPageRange(range)}
-                        className={`flex flex-col items-start rounded-xl border p-3 text-left transition-all ${
-                          selectedPageRange.id === range.id
-                            ? "border-primary bg-primary/5 font-medium shadow-sm"
-                            : "border-border/70 bg-card hover:border-border"
-                        }`}
-                      >
-                        <span className="text-sm font-semibold">{range.label}</span>
-                        <span className="text-xs text-muted-foreground">{range.cost} créditos ({formatCurrency(creditsToCurrency(range.cost, country), country)})</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Caixa de Texto Livre Opcional para IA */}
-              <div className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-5">
-                <Label htmlFor="doc-subject" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Instruções Adicionais para IA (Opcional)
-                </Label>
-                <Textarea
-                  id="doc-subject"
-                  value={subject}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setSubject(e.target.value)}
-                  placeholder={spec?.instructionsPlaceholder || "Descreva como quer o documento..."}
-                  className="min-h-24 rounded-xl"
-                />
-              </div>
-
-              {/* Painel de Resumo Financeiro */}
-              <div className="rounded-2xl border border-border/70 bg-muted/10 p-5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Custo total estimado</span>
-                  <span className="font-bold text-primary text-base">
-                    {effectiveCost} créditos · {formatCurrency(creditsToCurrency(effectiveCost, country), country)}
-                  </span>
-                </div>
-                <div className="mt-2 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Saldo atual na conta</span>
-                  <span className="font-semibold">
-                    {check.balance} créditos · {formatCurrency(creditsToCurrency(check.balance, country), country)}
-                  </span>
-                </div>
-                <div className="mt-3 border-t border-border/70 pt-3">
-                  {check.affordable ? (
-                    <p className="flex items-center gap-2 text-sm font-medium text-success">
-                      <Check className="size-4 shrink-0" />
-                      Saldo suficiente para processar este documento.
-                    </p>
-                  ) : (
-                    <p className="flex items-center gap-2 text-sm font-medium text-destructive">
-                      <AlertTriangle className="size-4 shrink-0" />
-                      Faltam {check.missing} créditos ({formatCurrency(check.missingInMzn, country)}).
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center pt-6 border-t">
-              <div className="flex items-center gap-1.5 min-h-5">
-                {autoSaveStatus === "saving" && (
-                  <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Loader2 className="size-3 animate-spin text-primary" /> A gravar rascunho...
-                  </span>
-                )}
-                {autoSaveStatus === "saved" && (
-                  <span className="text-xs text-success flex items-center gap-1">
-                    <Check className="size-3.5" /> Rascunho gravado automaticamente
-                  </span>
-                )}
-                {autoSaveStatus === "error" && (
-                  <span className="text-xs text-destructive">Erro ao gravar rascunho</span>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button variant="ghost" className="rounded-xl h-11 px-5" onClick={() => setStep(1)}>
-                  <Icons.ArrowLeft className="mr-2 size-4" /> Voltar
-                </Button>
-                {check.affordable ? (
-                  <Button
-                    className="rounded-xl h-11 px-6 font-semibold shadow-sm"
-                    disabled={!title.trim() || create.isPending}
-                    onClick={() => create.mutate()}
-                  >
-                    {create.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Sparkles className="mr-2 size-4" />}
-                    {draftId ? "Concluir Rascunho" : "Gerar Documento"}
-                  </Button>
-                ) : (
-                  <Button asChild className="rounded-xl h-11 px-6">
-                    <Link to="/credits">
-                      <Coins className="mr-2 size-4" />
-                      Adquirir Créditos
-                    </Link>
-                  </Button>
-                )}
-              </div>
-            </div>
+            <section className="rounded-2xl border border-border/70 bg-card p-6">
+              <Label htmlFor="instructions" className="text-base font-semibold">
+                Como gostaria que o documento fosse?
+              </Label>
+              <Textarea
+                id="instructions"
+                value={instructions}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInstructions(e.target.value)}
+                placeholder={spec.instructionsPlaceholder}
+                className="mt-3 min-h-28 rounded-xl"
+              />
+            </section>
           </div>
+
+          {/* Resumo lateral */}
+          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+            <div className="rounded-2xl border border-border/70 bg-card p-6">
+              <h2 className="text-base font-semibold">Resumo do custo</h2>
+              <ul className="mt-4 space-y-2 text-sm">
+                {cost?.lines.map((line) => (
+                  <li key={line.id} className="flex items-start justify-between gap-3">
+                    <span className="text-muted-foreground">{line.label}</span>
+                    <span className="whitespace-nowrap font-medium">{line.credits} cr</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-4">
+                <span className="text-sm text-muted-foreground">Total</span>
+                <span className="text-right">
+                  <span className="block font-semibold text-primary">{cost?.totalCredits ?? 0} créditos</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {formatCurrency(creditsToCurrency(cost?.totalCredits ?? 0, country), country)}
+                  </span>
+                </span>
+              </div>
+
+              {spec.students && students.length > spec.students.includedFree && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {studentsExtra(spec, students.length).extraStudents} pessoa(s) além das incluídas.
+                </p>
+              )}
+
+              <div className="mt-4 rounded-xl bg-muted/40 p-3 text-sm">
+                {check.affordable ? (
+                  <p className="flex items-center gap-2 text-success">
+                    <Check className="size-4 shrink-0" /> Saldo suficiente ({check.balance} cr).
+                  </p>
+                ) : (
+                  <p className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="size-4 shrink-0" />
+                    Faltam {check.missingCredits} cr ({formatCurrency(check.missingMzn, country)}).
+                  </p>
+                )}
+              </div>
+
+              {missingRequired.length > 0 && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Falta preencher: {missingRequired.join(", ")}.
+                </p>
+              )}
+
+              {check.affordable ? (
+                <Button
+                  className="mt-4 h-11 w-full rounded-xl font-semibold"
+                  disabled={generate.isPending || missingRequired.length > 0}
+                  onClick={() => generate.mutate()}
+                >
+                  {generate.isPending ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 size-4" />
+                  )}
+                  Gerar documento
+                </Button>
+              ) : (
+                <Button asChild className="mt-4 h-11 w-full rounded-xl font-semibold">
+                  <Link to="/credits">
+                    <Coins className="mr-2 size-4" /> Comprar créditos
+                  </Link>
+                </Button>
+              )}
+
+              <p className="mt-3 min-h-4 text-center text-xs text-muted-foreground">
+                {saving === "saving" && "A gravar rascunho…"}
+                {saving === "saved" && "Rascunho gravado"}
+                {saving === "error" && "Erro ao gravar rascunho"}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-dashed border-border/70 p-5 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">Título do documento</p>
+              <p className="mt-1 break-words">{title || "—"}</p>
+            </div>
+          </aside>
         </div>
       )}
     </div>
