@@ -157,10 +157,10 @@ function NewDocument() {
   // Deriva o título do documento a partir do campo mais relevante do próprio
   // tipo (spec.titleFieldId), em vez do antigo ecrã genérico "Tema Central"
   // que era forçado para todos os tipos independentemente de fazer sentido.
-  // Os tipos académicos/escolares têm o seu próprio fluxo dedicado e continuam
-  // a definir `title` diretamente, por isso ficam de fora aqui.
+  // Aplica-se a TODOS os tipos, incluindo académico/escolar — não têm um
+  // fluxo dedicado próprio, usam o mesmo `fieldValues` genérico que o resto.
   useEffect(() => {
-    if (!selected || !spec || isAcademicOrSchool) return;
+    if (!selected || !spec) return;
     const sourceFieldId = spec.titleFieldId;
     const rawValue = sourceFieldId ? fieldValues[sourceFieldId] : undefined;
     const derived = typeof rawValue === "string" ? rawValue.trim() : "";
@@ -234,17 +234,22 @@ function NewDocument() {
     }
   }, [draftDoc]);
 
-  // Função auxiliar para mapear dados académicos
+  // Função auxiliar para mapear dados académicos.
+  // Os campos de identificação (curso, disciplina, docente, instituição, data,
+  // cidade) vêm de `fieldValues` — é ali que o formulário genérico do Passo 3
+  // (spec.groups) realmente os grava. Os estados academicXxx dedicados só
+  // servem agora para restaurar rascunhos antigos e para os controlos que
+  // têm UI própria (páginas, estudantes, estrutura, formatação, idioma).
   const getAcademicFields = () => {
     return {
       theme: title,
-      faculty: academicFaculty,
-      course: academicCourse,
-      subject: academicDiscipline,
-      teacher: academicTeacher,
-      delivery_date: academicDeliveryDate,
-      city: academicCity,
-      institution: academicInstitution,
+      faculty: fieldValues["faculty"] ?? academicFaculty,
+      course: fieldValues["course"] ?? academicCourse,
+      subject: fieldValues["subject"] ?? academicDiscipline,
+      teacher: fieldValues["teacher"] ?? academicTeacher,
+      delivery_date: fieldValues["delivery_date"] ?? academicDeliveryDate,
+      city: fieldValues["city"] ?? academicCity,
+      institution: fieldValues["institution"] ?? academicInstitution,
       students: academicStudentsList,
       structure: academicStructure,
       citation_style: academicFormat,
