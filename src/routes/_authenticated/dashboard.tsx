@@ -129,7 +129,7 @@ function Dashboard() {
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <Link
             to="/documents/new"
-            search={{ category: "academic" }}
+            search={{ type: "academic" }}
             className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-blue-500/50 hover:shadow-md flex items-center gap-4"
           >
             <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform">
@@ -143,7 +143,7 @@ function Dashboard() {
 
           <Link
             to="/documents/new"
-            search={{ category: "school" }}
+            search={{ type: "school" }}
             className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-amber-500/50 hover:shadow-md flex items-center gap-4"
           >
             <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
@@ -157,7 +157,7 @@ function Dashboard() {
 
           <Link
             to="/documents/new"
-            search={{ category: "pro" }}
+            search={{ type: "cv" }}
             className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-indigo-500/50 hover:shadow-md flex items-center gap-4"
           >
             <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform">
@@ -171,7 +171,7 @@ function Dashboard() {
 
           <Link
             to="/documents/new"
-            search={{ category: "letters" }}
+            search={{ type: "request" }}
             className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-emerald-500/50 hover:shadow-md flex items-center gap-4"
           >
             <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform">
@@ -185,7 +185,7 @@ function Dashboard() {
 
           <Link
             to="/documents/new"
-            search={{ category: "personal" }}
+            search={{ type: "letter" }}
             className="shadow-soft group rounded-2xl border border-border/70 bg-card p-5 transition-all hover:border-purple-500/50 hover:shadow-md flex items-center gap-4 animate-fade-in"
           >
             <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform">
