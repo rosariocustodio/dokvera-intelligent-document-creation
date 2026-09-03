@@ -37,6 +37,13 @@ import {
   type FieldDef,
 } from "@/lib/document-specs";
 import { checkBalance, computeCost, studentsExtra, type DocumentDraftValues } from "@/lib/pricing";
+import {
+  CvDocumentSheet,
+  CvTemplateSelector,
+  CvLivePreview,
+  extractCvDataFromFields,
+  type CvAccentColor,
+} from "@/components/cv";
 
 export const Route = createFileRoute("/_authenticated/documents/new")({
   validateSearch: (search) =>
@@ -97,12 +104,18 @@ function NewDocument() {
   const [pageTierId, setPageTierId] = useState<string | undefined>(undefined);
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [layoutId, setLayoutId] = useState<string | undefined>(undefined);
+  const [cvAccent, setCvAccent] = useState<CvAccentColor>("indigo");
+  const [cvTab, setCvTab] = useState<"edit" | "preview">("edit");
   const [instructions, setInstructions] = useState("");
   const [studentInput, setStudentInput] = useState("");
   const [saving, setSaving] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [hydratedDraft, setHydratedDraft] = useState(false);
 
   const spec = specId ? getSpec(specId) ?? null : null;
+
+  const cvData = useMemo(() => {
+    return extractCvDataFromFields(fields, (fields.full_name as string) || "Seu Nome Completo");
+  }, [fields]);
 
   /** Apply spec defaults whenever a new type is chosen. */
   useEffect(() => {
@@ -529,7 +542,18 @@ function NewDocument() {
               </section>
             )}
 
-            {(spec.templates || spec.layouts) && (
+            {/* Para CVs: Seletor Visual de Templates e Cores com Miniaturas Reais */}
+            {spec.id === "cv" && (
+              <CvTemplateSelector
+                selectedTemplate={templateId || "modern"}
+                onSelectTemplate={(t) => setTemplateId(t)}
+                selectedAccent={cvAccent}
+                onSelectAccent={(c) => setCvAccent(c)}
+              />
+            )}
+
+            {/* Para outros documentos com templates ou layouts genéricos */}
+            {spec.id !== "cv" && (spec.templates || spec.layouts) && (
               <section className="rounded-2xl border border-border/70 bg-card p-6 space-y-6">
                 {spec.templates && (
                   <div>
@@ -572,6 +596,28 @@ function NewDocument() {
                   </div>
                 )}
               </section>
+            )}
+
+            {/* Pré-visualização ao Vivo para CV */}
+            {spec.id === "cv" && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display text-base font-bold text-foreground">
+                    Folha A4 em Tempo Real
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    Atualiza instantaneamente conforme preenche
+                  </span>
+                </div>
+                <CvLivePreview
+                  data={cvData}
+                  template={templateId || "modern"}
+                  onSelectTemplate={(t) => setTemplateId(t)}
+                  accentColor={cvAccent}
+                  onSelectAccent={(c) => setCvAccent(c)}
+                  country={country}
+                />
+              </div>
             )}
 
             {spec.structure && spec.structure.length > 0 && (

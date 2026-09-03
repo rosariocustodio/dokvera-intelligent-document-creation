@@ -169,3 +169,197 @@ export const creditOrdersQuery = (userId: string) =>
       })) as CreditOrderRow[];
     },
   });
+
+export type AdminCreditOrderRow = {
+  id: string;
+  user_id: string;
+  kind: string;
+  pack_id: string | null;
+  credits: number;
+  amount_mzn: number;
+  status: string;
+  payer_note: string | null;
+  provider: string | null;
+  provider_reference: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  profile?: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
+};
+
+export type AdminUserRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  country: string;
+  phone: string | null;
+  created_at: string;
+  balance: number;
+};
+
+export type AdminDocumentRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  doc_type: string;
+  status: string;
+  credits_spent: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export const isAdminQuery = (userId?: string | null, email?: string | null) =>
+  queryOptions({
+    queryKey: ["is-admin", userId, email],
+    queryFn: async (): Promise<boolean> => {
+      if (!userId) return false;
+      const normalizedEmail = email?.toLowerCase().trim();
+      if (normalizedEmail === "rosariocustodio006@gmail.com") return true;
+
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (error) {
+        // Fallback for safety in dev
+        return normalizedEmail === "rosariocustodio006@gmail.com";
+      }
+      return Boolean(data);
+    },
+  });
+
+export const adminCreditOrdersQuery = (statusFilter?: string | null) =>
+  queryOptions({
+    queryKey: ["admin-credit-orders", statusFilter ?? "all"],
+    queryFn: async (): Promise<AdminCreditOrderRow[]> => {
+      let query = supabase
+        .from("credit_orders")
+        .select(`
+          id, user_id, kind, pack_id, credits, amount_mzn, status,
+          payer_note, provider, provider_reference, reviewed_by, reviewed_at,
+          created_at, updated_at
+        `)
+        .order("created_at", { ascending: false });
+
+      if (statusFilter && statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Fetch corresponding user profiles
+      const userIds = Array.from(new Set((data ?? []).map((o) => o.user_id)));
+      let profileMap: Record<string, { full_name: string | null; email: string | null }> = {};
+
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", userIds);
+
+        if (profiles) {
+          profileMap = Object.fromEntries(
+            profiles.map((p) => [p.id, { full_name: p.full_name, email: p.email }])
+          );
+        }
+      }
+
+      return (data ?? []).map((row) => ({
+        ...row,
+        credits: Number(row.credits),
+        amount_mzn: Number(row.amount_mzn),
+        profile: profileMap[row.user_id] ?? null,
+      })) as AdminCreditOrderRow[];
+    },
+  });
+
+export const adminUsersQuery = () =>
+  queryOptions({
+    queryKey: ["admin-users"],
+    queryFn: async (): Promise<AdminUserRow[]> => {
+      const { data: profiles, error: profileErr } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, country, phone, created_at")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (profileErr) throw profileErr;
+
+      const userIds = (profiles ?? []).map((p) => p.id);
+      let creditMap: Record<string, number> = {};
+
+      if (userIds.length > 0) {
+        const { data: credits } = await supabase
+          .from("credits")
+          .select("user_id, balance")
+          .in("user_id", userIds);
+
+        if (credits) {
+          creditMap = Object.fromEntries(credits.map((c) => [c.user_id, Number(c.balance)]));
+        }
+      }
+
+      return (profiles ?? []).map((p) => ({
+        ...p,
+        balance: creditMap[p.id] ?? 0,
+      }));
+    },
+  });
+
+export const adminDocumentsQuery = () =>
+  queryOptions({
+    queryKey: ["admin-documents"],
+    queryFn: async (): Promise<AdminDocumentRow[]> => {
+      const { data, error } = await supabase
+        .from("documents")
+        .select("id, user_id, title, doc_type, status, credits_spent, created_at, updated_at")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      return (data ?? []) as AdminDocumentRow[];
+    },
+  });
+
+export const adminStatsQuery = () =>
+  queryOptions({
+    queryKey: ["admin-stats"],
+    queryFn: async () => {
+      const [ordersRes, profilesRes, docsRes] = await Promise.all([
+        supabase.from("credit_orders").select("id, status, amount_mzn, credits"),
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("documents").select("id, status, credits_spent"),
+      ]);
+
+      const orders = ordersRes.data ?? [];
+      const totalRevenue = orders
+        .filter((o) => o.status === "paid")
+        .reduce((sum, o) => sum + Number(o.amount_mzn || 0), 0);
+      const totalCreditsSold = orders
+        .filter((o) => o.status === "paid")
+        .reduce((sum, o) => sum + Number(o.credits || 0), 0);
+      const pendingOrdersCount = orders.filter((o) => o.status === "pending").length;
+
+      const docs = docsRes.data ?? [];
+      const totalDocuments = docs.length;
+      const totalCreditsConsumed = docs.reduce((sum, d) => sum + Number(d.credits_spent || 0), 0);
+      const totalUsers = profilesRes.count ?? 0;
+
+      return {
+        totalRevenue,
+        totalCreditsSold,
+        pendingOrdersCount,
+        totalUsers,
+        totalDocuments,
+        totalCreditsConsumed,
+      };
+    },
+  });

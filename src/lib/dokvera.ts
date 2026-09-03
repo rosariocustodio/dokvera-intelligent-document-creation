@@ -10,6 +10,15 @@ export const BRAND = {
   signature: "Dokvera by Ruqzora",
 } as const;
 
+export const ADMIN_EMAILS = [
+  "rosariocustodio006@gmail.com",
+] as const;
+
+export function isSuperAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return ADMIN_EMAILS.includes(email.toLowerCase().trim() as typeof ADMIN_EMAILS[number]);
+}
+
 import { getCountryConfig, type CountryCode } from "@/lib/countries";
 
 /**

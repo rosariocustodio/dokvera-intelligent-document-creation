@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useSession } from "@/hooks/use-session";
-import { creditsQuery, profileQuery } from "@/lib/queries";
+import { creditsQuery, profileQuery, isAdminQuery, adminStatsQuery } from "@/lib/queries";
 import { creditsToCurrency, formatCurrency } from "@/lib/dokvera";
 import { cn } from "@/lib/utils";
 
@@ -35,8 +36,9 @@ const NAV = [
 // sub-route like "/documents/123" highlights "Meus Documentos" while
 // "/documents/new" — itself a NAV entry — never falls through to it.
 function getActiveNavPath(pathname: string): string | null {
+  const allNav = [...NAV, { to: "/admin", label: "Administração", icon: ShieldCheck }];
   let match: string | null = null;
-  for (const item of NAV) {
+  for (const item of allNav) {
     const isMatch = pathname === item.to || pathname.startsWith(`${item.to}/`);
     if (isMatch && (!match || item.to.length > match.length)) {
       match = item.to;
@@ -55,6 +57,16 @@ function getInitials(name: string): string {
 }
 
 function NavLinks({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
+  const { user } = useSession();
+  const { data: isAdmin } = useQuery({
+    ...isAdminQuery(user?.id, user?.email),
+    enabled: Boolean(user?.id),
+  });
+  const { data: stats } = useQuery({
+    ...adminStatsQuery(),
+    enabled: Boolean(isAdmin),
+  });
+
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const activePath = getActiveNavPath(pathname);
 
@@ -80,6 +92,33 @@ function NavLinks({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
           </Link>
         );
       })}
+
+      {isAdmin && (
+        <div className="pt-2">
+          <div className="my-1 border-t border-sidebar-border/60" />
+          <Link
+            to="/admin"
+            onClick={onNavigate}
+            aria-current={"/admin" === activePath ? "page" : undefined}
+            className={cn(
+              "flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+              "/admin" === activePath
+                ? "bg-primary/10 text-primary border border-primary/30 shadow-soft"
+                : "text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 hover:text-amber-500",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="size-4.5 text-amber-500" />
+              <span>Administração</span>
+            </div>
+            {(stats?.pendingOrdersCount ?? 0) > 0 && (
+              <span className="flex size-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
+                {stats?.pendingOrdersCount}
+              </span>
+            )}
+          </Link>
+        </div>
+      )}
     </nav>
   );
 }
