@@ -29,16 +29,30 @@ export type DocumentRecord = {
 };
 
 const SYSTEM_PROMPT = [
-  "És um redactor profissional e experiente que escreve documentos de alta qualidade.",
-  "Escreves o documento final completo em Markdown, pronto a exportar.",
+  "És um redactor profissional moçambicano que escreve documentos finais de alta qualidade em português europeu.",
+  "Devolves apenas o documento final em Markdown, pronto a exportar para PDF/DOCX.",
   "Regras obrigatórias:",
-  "- Usa exactamente as secções pedidas, na ordem indicada, cada uma como um cabeçalho '## '.",
-  "- Adapta a linguagem e o tom ao contexto fornecido pelo utilizador.",
-  "- Não inventes dados pessoais, instituições, nomes ou datas que não foram fornecidos.",
+  "- Começa com '# ' e o título do documento.",
+  "- Usa exactamente as secções pedidas, na ordem indicada, cada uma como cabeçalho '## '.",
+  "- Escreve conteúdo real e desenvolvido em cada secção; nunca deixes uma secção vazia nem escrevas 'lorem ipsum'.",
+  "- Nunca uses marcadores de preenchimento entre parêntesis rectos (ex.: [nome]); usa os dados fornecidos ou reformula a frase.",
+  "- Não inventes nomes de pessoas, instituições, datas ou números que não foram fornecidos.",
+  "- Em cartas, requerimentos, ofícios e declarações usa a linguagem administrativa correcta, com destinatário, corpo, fórmula de encerramento, local, data e linha de assinatura.",
+  "- Em trabalhos académicos respeita a norma de citação indicada e mantém tom académico coerente.",
   "- Não escrevas comentários sobre o teu próprio trabalho nem instruções ao utilizador.",
-  "- Nunca menciones preços, créditos ou custos.",
-  "- Se a informação fornecida for insuficiente numa secção, escreve conteúdo genérico profissional, coerente e de alta relevância para o tema.",
+  "- Nunca menciones preços, créditos, IA ou custos.",
 ].join("\n");
+
+const CV_TYPES = ["cv", "simple_cv"];
+
+/** ~330 palavras por página — usado para dimensionar o texto pedido à IA. */
+function lengthBrief(outline: { pages: string | null }): string {
+  if (!outline.pages) return "Extensão: texto completo e bem desenvolvido, sem enchimento.";
+  const match = outline.pages.match(/(\d+)(?!.*\d)/);
+  const maxPages = match ? Number(match[1]) : 5;
+  const words = Math.max(300, Math.round(maxPages * 330));
+  return `Extensão pretendida: ${outline.pages} (aproximadamente ${words} palavras no total, distribuídas pelas secções).`;
+}
 
 export async function generateDocument(supabase: AnyClient, documentId: string) {
   const { data: doc, error } = await supabase
