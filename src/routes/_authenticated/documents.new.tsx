@@ -55,7 +55,7 @@ export const Route = createFileRoute("/_authenticated/documents/new")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: NewDocument;
+  component: NewDocument,
 });
 
 function TypeIcon({ name, className }: { name: string; className?: string }) {
