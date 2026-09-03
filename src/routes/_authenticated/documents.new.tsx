@@ -209,13 +209,13 @@ function NewDocument() {
     const timer = setTimeout(async () => {
       try {
         if (draftId) {
-          const { error } = await supabase.from("documents").update(buildPayload()).eq("id", draftId);
+          const { error } = await supabase.from("documents").update(buildPayload() as never).eq("id", draftId);
           if (error) throw error;
           queryClient.invalidateQueries({ queryKey: ["document", draftId] });
         } else {
           const { data, error } = await supabase
             .from("documents")
-            .insert({ user_id: userId, status: "draft", ...buildPayload() })
+            .insert({ user_id: userId, status: "draft", ...buildPayload() } as never)
             .select("id")
             .single();
           if (error) throw error;
@@ -244,12 +244,12 @@ function NewDocument() {
 
       let documentId = draftId;
       if (documentId) {
-        const { error } = await supabase.from("documents").update(buildPayload()).eq("id", documentId);
+        const { error } = await supabase.from("documents").update(buildPayload() as never).eq("id", documentId);
         if (error) throw error;
       } else {
         const { data, error } = await supabase
           .from("documents")
-          .insert({ user_id: userId, status: "draft", ...buildPayload() })
+          .insert({ user_id: userId, status: "draft", ...buildPayload() } as never)
           .select("id")
           .single();
         if (error) throw error;
