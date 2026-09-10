@@ -26,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/page-header";
 import { useSession } from "@/hooks/use-session";
 import { creditsQuery, documentQuery, profileQuery } from "@/lib/queries";
+import { CvPreview, type CvTemplateId } from "@/components/cv-preview";
 import { getCountryConfig } from "@/lib/countries";
 import { creditsToCurrency, formatCurrency } from "@/lib/dokvera";
 import {
@@ -484,7 +485,7 @@ function NewDocument() {
       )}
 
       {spec && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className={`grid gap-6 ${spec.id === "cv" || spec.id === "simple_cv" ? "lg:grid-cols-[minmax(0,1fr)_420px]" : "lg:grid-cols-[minmax(0,1fr)_320px]"}`}>
           <div className="space-y-6">
             <Button
               variant="ghost"
@@ -631,6 +632,17 @@ function NewDocument() {
 
           {/* Resumo lateral */}
           <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+            {(spec.id === "cv" || spec.id === "simple_cv") && (
+              <div className="h-[480px]">
+                <CvPreview
+                  fields={fields}
+                  templateId={(templateId as CvTemplateId) ?? "classic"}
+                  structure={structure}
+                  country={country}
+                />
+              </div>
+            )}
+
             <div className="rounded-2xl border border-border/70 bg-card p-6">
               <h2 className="text-base font-semibold">Resumo do custo</h2>
               <ul className="mt-4 space-y-2 text-sm">

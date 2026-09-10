@@ -14,6 +14,7 @@ import { getSpec } from "@/lib/document-specs";
 import { computeCost } from "@/lib/pricing";
 import { formatDate } from "@/lib/dokvera";
 import { getCountryConfig } from "@/lib/countries";
+import { buildCvMarkdown } from "@/services/cv-builder";
 import { buildOutline, outlineToBrief } from "@/services/document-outline";
 import { requestCompletion } from "@/services/ai.server";
 
@@ -119,7 +120,8 @@ export async function generateDocument(supabase: AnyClient, documentId: string) 
       "official_letter",
       "declaration",
       "personal_letter",
-      "simple_cv"
+      "simple_cv",
+      "cv"
     ].includes(record.doc_type);
 
     if (isLocalDoc) {
@@ -177,33 +179,8 @@ export async function generateDocument(supabase: AnyClient, documentId: string) 
           `${t("sender") || "Atentamente"}\n`,
           `${t("city") || defaultCity}, ${t("letter_date") ? formatDate(t("letter_date"), country) : formatDate(new Date().toISOString(), country)}`,
         ].filter(Boolean).join("\n");
-      } else if (record.doc_type === "simple_cv") {
-        const listText = (key: string) => {
-          const val = fields[key];
-          if (Array.isArray(val)) return val.map(v => `- ${v}`).join("\n");
-          return val ? String(val) : "";
-        };
-        content = [
-          `# ${t("full_name") || record.title}`,
-          `## ${t("headline") || "Profissional"}\n`,
-          `**Contactos:**`,
-          t("email") ? `- Email: ${t("email")}` : "",
-          t("phone") ? `- Telefone: ${t("phone")}` : "",
-          t("address") ? `- Endereço: ${t("address")}` : "",
-          t("linkedin") ? `- LinkedIn: ${t("linkedin")}` : "",
-          `\n**Dados Pessoais:**`,
-          t("birth_date") ? `- Data de Nascimento: ${formatDate(t("birth_date"), country)}` : "",
-          t("nationality") ? `- Nacionalidade: ${t("nationality")}` : "",
-          t("bi_number") ? `- BI: ${t("bi_number")}` : "",
-          t("nuit_number") ? `- NUIT: ${t("nuit_number")}` : "",
-          t("driving_license") ? `- Carta de Condução: ${t("driving_license")}` : "",
-          t("travel_availability") ? `- Disponibilidade: ${t("travel_availability")}` : "",
-          t("profile") ? `\n---\n\n### Perfil Profissional\n${t("profile")}` : "",
-          t("experience") ? `\n---\n\n### Experiência Profissional\n${listText("experience")}` : "",
-          t("education") ? `\n---\n\n### Formação Académica\n${listText("education")}` : "",
-          t("skills") ? `\n---\n\n### Competências\n${listText("skills")}` : "",
-          t("languages") ? `\n---\n\n### Idiomas\n${listText("languages")}` : "",
-        ].filter(Boolean).join("\n");
+      } else if (record.doc_type === "simple_cv" || record.doc_type === "cv") {
+        content = buildCvMarkdown(outline, country);
       }
     } else {
       // IA generation
