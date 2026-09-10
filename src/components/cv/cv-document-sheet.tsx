@@ -33,6 +33,7 @@ export const CV_ACCENT_COLORS: { id: CvAccentColor; label: string; bg: string; t
 export type CvData = {
   fullName?: string;
   headline?: string;
+  photoUrl?: string;
   email?: string;
   phone?: string;
   location?: string;
@@ -66,19 +67,31 @@ export interface CvDocumentSheetProps {
 function parseList(input: unknown): string[] {
   if (!input) return [];
   if (Array.isArray(input)) return input.map((i) => String(i).trim()).filter(Boolean);
-  return String(input)
-    .split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const str = String(input).trim();
+  if (!str) return [];
+  if (str.includes("\n")) {
+    return str
+      .split("\n")
+      .map((s) => s.replace(/^[•\-\*]\s*/, "").trim())
+      .filter(Boolean);
+  }
+  if (str.includes(",") || str.includes(";")) {
+    return str
+      .split(/[,;]/)
+      .map((s) => s.replace(/^[•\-\*]\s*/, "").trim())
+      .filter(Boolean);
+  }
+  return [str];
 }
 
 export function extractCvDataFromFields(fields: Record<string, unknown>, title?: string): CvData {
   return {
     fullName: String(fields.full_name || title || "").trim() || "Seu Nome Completo",
     headline: String(fields.headline || "").trim() || "Título Profissional / Área Pretendida",
+    photoUrl: String(fields.photo_url || fields.photo || "").trim() || undefined,
     email: String(fields.email || "").trim(),
     phone: String(fields.phone || "").trim(),
-    location: String(fields.address || fields.location || "").trim(),
+    location: String(fields.address || fields.location || fields.city || "").trim(),
     birthDate: String(fields.birth_date || "").trim(),
     nationality: String(fields.nationality || "").trim(),
     linkedin: String(fields.linkedin || "").trim(),
@@ -175,18 +188,24 @@ export function CvDocumentSheet({
             <div className="space-y-6">
               {/* Avatar / Iniciais Estilizadas */}
               <div className="flex flex-col items-center text-center">
-                <div
-                  className="flex size-20 items-center justify-center rounded-2xl text-2xl font-bold tracking-tight text-white shadow-lg"
-                  style={{ backgroundColor: accent.hex }}
-                >
-                  {data.fullName
-                    .split(" ")
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase() || "CV"}
-                </div>
+                {data.photoUrl ? (
+                  <div className="relative size-20 rounded-2xl overflow-hidden border-2 border-white/30 shadow-lg shrink-0">
+                    <img src={data.photoUrl} alt={data.fullName} className="size-full object-cover" />
+                  </div>
+                ) : (
+                  <div
+                    className="flex size-20 items-center justify-center rounded-2xl text-2xl font-bold tracking-tight text-white shadow-lg"
+                    style={{ backgroundColor: accent.hex }}
+                  >
+                    {data.fullName
+                      .split(" ")
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase() || "CV"}
+                  </div>
+                )}
                 <h2 className="mt-3 text-sm font-semibold tracking-wide text-slate-200">
                   {data.fullName}
                 </h2>
@@ -442,8 +461,13 @@ export function CvDocumentSheet({
       {template === "classic" && (
         <div className="p-10 flex flex-col justify-between min-h-[297mm] space-y-6">
           <div className="space-y-6">
-            {/* Cabeçalho Centralizado */}
+            {/* Cabeçalho Centralizado com Foto Opcional */}
             <header className="text-center space-y-2 border-b-2 pb-5" style={{ borderColor: accent.hex }}>
+              {data.photoUrl && (
+                <div className="mx-auto mb-2 relative size-16 rounded-full overflow-hidden border-2 shadow-sm" style={{ borderColor: accent.hex }}>
+                  <img src={data.photoUrl} alt={data.fullName} className="size-full object-cover" />
+                </div>
+              )}
               <h1 className="text-3xl font-extrabold uppercase tracking-tight text-slate-900 font-display">
                 {data.fullName}
               </h1>
@@ -650,15 +674,22 @@ export function CvDocumentSheet({
       {template === "bold" && (
         <div className="min-h-[297mm] flex flex-col justify-between">
           <div className="space-y-6">
-            {/* Header com Faixa de Cor */}
-            <header className="p-8 text-white" style={{ backgroundColor: accent.hex }}>
-              <h1 className="text-3xl font-extrabold font-display tracking-tight">{data.fullName}</h1>
-              <p className="mt-1 text-sm font-medium tracking-wide opacity-90">{data.headline}</p>
-              <div className="mt-4 flex flex-wrap gap-4 text-[11px] opacity-85">
-                {data.email && <span>{data.email}</span>}
-                {data.phone && <span>• {data.phone}</span>}
-                {data.location && <span>• {data.location}</span>}
+            {/* Header com Faixa de Cor e Foto Opcional */}
+            <header className="p-8 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6" style={{ backgroundColor: accent.hex }}>
+              <div className="space-y-1 flex-1">
+                <h1 className="text-3xl font-extrabold font-display tracking-tight">{data.fullName}</h1>
+                <p className="mt-1 text-sm font-medium tracking-wide opacity-90">{data.headline}</p>
+                <div className="mt-4 flex flex-wrap gap-4 text-[11px] opacity-85">
+                  {data.email && <span>{data.email}</span>}
+                  {data.phone && <span>• {data.phone}</span>}
+                  {data.location && <span>• {data.location}</span>}
+                </div>
               </div>
+              {data.photoUrl && (
+                <div className="relative size-20 rounded-2xl overflow-hidden border-2 border-white/40 shadow-xl shrink-0">
+                  <img src={data.photoUrl} alt={data.fullName} className="size-full object-cover" />
+                </div>
+              )}
             </header>
 
             <div className="px-8 space-y-6">

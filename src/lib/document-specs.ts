@@ -57,7 +57,8 @@ export type FieldType =
   | "date"
   | "select"
   | "students"
-  | "list";
+  | "list"
+  | "photo";
 
 export type FieldDef = {
   id: string;
@@ -385,6 +386,7 @@ const baseSpecs: DocSpec[] = [
         fields: [
           { id: "full_name", label: "Nome completo", type: "text", required: true },
           { id: "headline", label: "Cargo / área pretendida", type: "text", placeholder: "Ex.: Técnico de Contabilidade" },
+          { id: "photo_url", label: "Fotografia / Foto de Perfil", type: "photo", help: "Opcional. Foto profissional com fundo neutro." },
           { id: "email", label: "Email", type: "text" },
           { id: "phone", label: "Telefone", type: "text", placeholder: "+258 8x xxx xxxx" },
           { id: "address", label: "Cidade / província", type: "text", placeholder: "Ex.: Maputo, Moçambique" },

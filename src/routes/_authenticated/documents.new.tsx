@@ -148,6 +148,7 @@ function NewDocument() {
     if (typeof options["pageTierId"] === "string") setPageTierId(options["pageTierId"] as string);
     if (typeof options["templateId"] === "string") setTemplateId(options["templateId"] as string);
     if (typeof options["layoutId"] === "string") setLayoutId(options["layoutId"] as string);
+    if (typeof options["cvAccent"] === "string") setCvAccent(options["cvAccent"] as CvAccentColor);
     setInstructions(draftDoc.instructions ?? "");
     setHydratedDraft(true);
   }, [draftDoc, hydratedDraft]);
@@ -165,9 +166,10 @@ function NewDocument() {
       ...(spec?.students ? { studentsCount: Math.max(1, students.length) } : {}),
       ...(templateId ? { templateId } : {}),
       ...(layoutId ? { layoutId } : {}),
+      ...(cvAccent ? { cvAccent } : {}),
       ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
     }),
-    [fields, structure, pageTierId, templateId, layoutId, instructions, students.length, spec?.students],
+    [fields, structure, pageTierId, templateId, layoutId, cvAccent, instructions, students.length, spec?.students],
   );
 
   const cost = useMemo(() => (spec ? computeCost(spec, values) : null), [spec, values]);
@@ -205,12 +207,16 @@ function NewDocument() {
       ...(spec?.students ? { studentsCount: Math.max(1, students.length) } : {}),
       ...(templateId ? { templateId } : {}),
       ...(layoutId ? { layoutId } : {}),
+      ...(cvAccent ? { cvAccent } : {}),
       ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
     },
     metadata: {
       pageTierId: pageTierId ?? null,
       studentsCount: students.length || 1,
       costLines: cost?.lines ?? [],
+      templateId: templateId ?? null,
+      accentColor: cvAccent,
+      cvData: spec?.id === "cv" ? cvData : null,
     },
   });
 
@@ -245,7 +251,7 @@ function NewDocument() {
     }, 1200);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec?.id, fields, structure, pageTierId, templateId, layoutId, instructions, draftId, hydratedDraft, userId]);
+  }, [spec?.id, fields, structure, pageTierId, templateId, layoutId, cvAccent, instructions, draftId, hydratedDraft, userId]);
 
   const generate = useMutation({
     mutationFn: async () => {
@@ -311,11 +317,32 @@ function NewDocument() {
 
   const toggleStructure = (id: string) => {
     setStructure((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
+  const scrollToField = (label: string) => {
+    if (!spec) return;
+    if (cvTab === "preview") setCvTab("edit");
+    for (const group of spec.groups) {
+      for (const f of group.fields) {
+        if (f.label === label) {
+          setTimeout(() => {
+            const el = document.getElementById(f.id);
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+              el.focus();
+              el.classList.add("ring-2", "ring-destructive", "animate-pulse");
+              setTimeout(() => {
+                el.classList.remove("ring-2", "ring-destructive", "animate-pulse");
+              }, 2500);
+            }
+          }, 60);
+          return;
+        }
+      }
+    }
   };
 
   const renderField = (field: FieldDef) => {
     const value = fields[field.id];
-    const wide = field.type === "textarea" || field.type === "list" || field.type === "students";
+    const wide = field.type === "textarea" || field.type === "list" || field.type === "students" || field.type === "photo";
 
     return (
       <div key={field.id} className={`space-y-2 ${wide ? "sm:col-span-2" : ""}`}>
@@ -324,7 +351,71 @@ function NewDocument() {
           {field.required && <span className="ml-1 text-destructive">*</span>}
         </Label>
 
-        {field.type === "students" ? (
+        {field.type === "photo" ? (
+          <div className="rounded-2xl border border-border/80 bg-muted/20 p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              {value ? (
+                <div className="relative size-20 rounded-2xl overflow-hidden border-2 border-primary shadow-sm shrink-0 bg-muted">
+                  <img src={String(value)} alt="Fotografia de Perfil" className="size-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setField(field.id, "")}
+                    className="absolute inset-0 bg-black/60 text-white opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity"
+                    title="Remover foto"
+                  >
+                    <X className="size-5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="size-20 rounded-2xl bg-muted/60 border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground shrink-0">
+                  <Icons.User className="size-8 opacity-50" />
+                  <span className="text-[10px] text-muted-foreground/80 mt-1">Sem foto</span>
+                </div>
+              )}
+
+              <div className="flex-1 space-y-1.5">
+                <label className="cursor-pointer inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2 text-xs font-semibold shadow-xs hover:bg-muted transition-colors gap-2">
+                  <Icons.Camera className="size-4 text-primary" />
+                  <span>{value ? "Substituir fotografia" : "Carregar fotografia de perfil"}</span>
+                  <input
+                    id={field.id}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 4 * 1024 * 1024) {
+                        toast.error("A fotografia deve ter no máximo 4MB.");
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const base64 = event.target?.result as string;
+                        setField(field.id, base64);
+                        toast.success("Fotografia carregada com sucesso!");
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </label>
+                {value ? (
+                  <button
+                    type="button"
+                    onClick={() => setField(field.id, "")}
+                    className="block text-[11px] text-destructive hover:underline"
+                  >
+                    Remover fotografia
+                  </button>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    Formatos JPG, PNG ou WEBP. A foto será exibida no cabeçalho do CV.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : field.type === "students" ? (
           <div className="space-y-3">
             <div className="flex gap-2">
               <Input
@@ -610,9 +701,9 @@ function NewDocument() {
               </div>
 
               {/* COLUNA DIREITA (6/12 no Desktop): PRÉ-VISUALIZAÇÃO AO VIVO + AÇÃO */}
-              <div className={`space-y-6 lg:col-span-6 lg:sticky lg:top-6 ${cvTab === "edit" ? "hidden lg:block" : "block"}`}>
+              <div className={`space-y-6 lg:col-span-6 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1 ${cvTab === "edit" ? "hidden lg:block" : "block"}`}>
                 <CvLivePreview
-                  data={cvData}
+                  data={deferredCvData}
                   template={templateId || "modern"}
                   onSelectTemplate={(t) => setTemplateId(t)}
                   accentColor={cvAccent}
@@ -655,9 +746,24 @@ function NewDocument() {
                   </div>
 
                   {missingRequired.length > 0 && (
-                    <p className="text-xs text-amber-600 font-medium">
-                      ⚠️ Preencha os campos obrigatórios: {missingRequired.join(", ")}.
-                    </p>
+                    <div className="space-y-1.5 rounded-2xl bg-amber-500/10 p-3.5 border border-amber-500/20">
+                      <p className="text-xs font-bold text-amber-700 dark:text-amber-300">
+                        ⚠️ Campos obrigatórios em falta:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {missingRequired.map((label) => (
+                          <button
+                            key={label}
+                            type="button"
+                            onClick={() => scrollToField(label)}
+                            className="rounded-lg bg-background px-2.5 py-1 text-[11px] font-semibold text-amber-800 dark:text-amber-200 border border-amber-500/30 hover:bg-amber-500/20 transition-all shadow-xs flex items-center gap-1"
+                          >
+                            <span>{label}</span>
+                            <ArrowRight className="size-2.5" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   )}
 
                   {check.affordable ? (

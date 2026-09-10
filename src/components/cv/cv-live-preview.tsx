@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ZoomIn,
   ZoomOut,
@@ -9,9 +9,18 @@ import {
   RotateCcw,
   Palette,
   Check,
+  Expand,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   CvDocumentSheet,
@@ -40,15 +49,37 @@ export function CvLivePreview({
   country,
   className,
 }: CvLivePreviewProps) {
-  // Zoom level state (0.5 to 1.0)
-  const [scale, setScale] = useState<number>(0.65);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState<number>(0.60);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [modalScale, setModalScale] = useState<number>(0.90);
 
-  const zoomLevels = [0.45, 0.55, 0.65, 0.75, 0.85, 1.0];
+  const zoomLevels = [0.45, 0.52, 0.60, 0.70, 0.80, 0.90, 1.0];
+
+  // Auto-fit inicial baseado na largura disponível do container
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = entry.contentRect.width;
+        if (width > 0) {
+          // A4 largura padrão = 210mm (~794px a 96 DPI)
+          const targetScale = Math.min(0.85, Math.max(0.42, (width - 48) / 794));
+          setScale(Number(targetScale.toFixed(2)));
+        }
+      }
+    });
+
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   function handleZoomIn() {
     const currentIdx = zoomLevels.findIndex((z) => Math.abs(z - scale) < 0.05);
     if (currentIdx < zoomLevels.length - 1) {
       setScale(zoomLevels[currentIdx + 1]);
+    } else {
+      setScale((prev) => Math.min(1.1, prev + 0.05));
     }
   }
 
@@ -56,11 +87,19 @@ export function CvLivePreview({
     const currentIdx = zoomLevels.findIndex((z) => Math.abs(z - scale) < 0.05);
     if (currentIdx > 0) {
       setScale(zoomLevels[currentIdx - 1]);
+    } else {
+      setScale((prev) => Math.max(0.40, prev - 0.05));
     }
   }
 
   function handleFit() {
-    setScale(0.65);
+    if (containerRef.current) {
+      const width = containerRef.current.clientWidth;
+      const targetScale = Math.min(0.85, Math.max(0.42, (width - 48) / 794));
+      setScale(Number(targetScale.toFixed(2)));
+    } else {
+      setScale(0.60);
+    }
   }
 
   return (
@@ -80,7 +119,7 @@ export function CvLivePreview({
           </span>
         </div>
 
-        {/* Controles de Zoom e Ajuste */}
+        {/* Controles de Zoom, Ajuste e Tela Cheia */}
         <div className="flex items-center gap-1.5 bg-background/80 rounded-xl p-1 border border-border/60">
           <Button
             type="button"
@@ -88,7 +127,7 @@ export function CvLivePreview({
             size="icon"
             className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
             onClick={handleZoomOut}
-            disabled={scale <= zoomLevels[0]}
+            disabled={scale <= 0.40}
             title="Reduzir Zoom"
           >
             <ZoomOut className="size-3.5" />
@@ -102,7 +141,7 @@ export function CvLivePreview({
             size="icon"
             className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
             onClick={handleZoomIn}
-            disabled={scale >= zoomLevels[zoomLevels.length - 1]}
+            disabled={scale >= 1.1}
             title="Aumentar Zoom"
           >
             <ZoomIn className="size-3.5" />
@@ -114,10 +153,75 @@ export function CvLivePreview({
             size="icon"
             className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
             onClick={handleFit}
-            title="Ajustar à Janela"
+            title="Auto-Ajustar à Largura"
           >
             <Maximize2 className="size-3.5" />
           </Button>
+
+          {/* Modal de Inspeção em Alta Resolução (100%) */}
+          <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+            <DialogTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
+                title="Abrir em Modo Tela Cheia"
+              >
+                <Expand className="size-3.5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[95vw] lg:max-w-4xl max-h-[95vh] overflow-hidden flex flex-col p-0 rounded-3xl">
+              <DialogHeader className="p-4 border-b bg-muted/30 flex flex-row items-center justify-between">
+                <div>
+                  <DialogTitle className="text-base font-bold font-display">
+                    Inspeção de Alta Fidelidade (Impressão A4)
+                  </DialogTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Visualize o layout final em tamanho original antes de gerar.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 mr-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-xl text-xs"
+                    onClick={() => setModalScale((s) => Math.max(0.6, s - 0.1))}
+                  >
+                    -
+                  </Button>
+                  <span className="font-mono text-xs">{Math.round(modalScale * 100)}%</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-xl text-xs"
+                    onClick={() => setModalScale((s) => Math.min(1.2, s + 0.1))}
+                  >
+                    +
+                  </Button>
+                </div>
+              </DialogHeader>
+              <div className="flex-1 overflow-auto bg-slate-900/10 dark:bg-slate-950 p-6 flex justify-center items-start min-h-[600px]">
+                <div
+                  style={{
+                    width: `${210 * modalScale}mm`,
+                    height: `${297 * modalScale}mm`,
+                  }}
+                  className="transition-all duration-200"
+                >
+                  <CvDocumentSheet
+                    data={data}
+                    template={template}
+                    accentColor={accentColor}
+                    country={country}
+                    scale={modalScale}
+                  />
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -164,14 +268,17 @@ export function CvLivePreview({
         )}
       </div>
 
-      {/* Área da Folha A4 com Scroll e Background Texturizado */}
-      <div className="relative flex-1 overflow-auto bg-slate-900/5 dark:bg-slate-950/40 p-4 sm:p-8 flex justify-center items-start min-h-[600px] max-h-[850px]">
+      {/* Área da Folha A4 com Scroll Suave e Background Texturizado */}
+      <div
+        ref={containerRef}
+        className="relative flex-1 overflow-auto bg-slate-900/5 dark:bg-slate-950/40 p-4 sm:p-6 flex justify-center items-start min-h-[520px] max-h-[780px]"
+      >
         <div
           style={{
             width: `${210 * scale}mm`,
             height: `${297 * scale}mm`,
           }}
-          className="relative transition-all duration-200"
+          className="relative transition-all duration-200 shrink-0"
         >
           <CvDocumentSheet
             data={data}
@@ -185,8 +292,8 @@ export function CvLivePreview({
 
       {/* Rodapé da Pré-visualização */}
       <div className="flex items-center justify-between border-t border-border/60 bg-muted/20 px-5 py-2.5 text-[11px] text-muted-foreground">
-        <span>Pré-visualização gerada em alta fidelidade</span>
-        <span>A4 • 210 x 297 mm</span>
+        <span>Folha A4 Oficial • 210 x 297 mm</span>
+        <span className="text-[10px] text-primary font-medium">Renderização em Tempo Real</span>
       </div>
     </div>
   );
