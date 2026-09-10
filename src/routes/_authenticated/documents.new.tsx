@@ -497,118 +497,120 @@ function NewDocument() {
       )}
 
       {spec && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-6">
-            <Button
-              variant="ghost"
-              className="h-9 w-fit rounded-xl px-3"
-              onClick={() => {
-                setSpecId(null);
-                setFields({});
-              }}
-            >
-              <ArrowLeft className="mr-2 size-4" /> Mudar tipo de documento
-            </Button>
+        <div>
+          {/* Alternador de Abas Mobile para CV (Editar vs Ver Folha) */}
+          {spec.id === "cv" && (
+            <div className="mb-6 flex lg:hidden items-center justify-center gap-2 rounded-2xl bg-muted/70 p-1.5 border border-border/60">
+              <Button
+                type="button"
+                size="sm"
+                variant={cvTab === "edit" ? "default" : "ghost"}
+                onClick={() => setCvTab("edit")}
+                className="flex-1 rounded-xl text-xs font-semibold gap-2"
+              >
+                ✏️ Formulário de Edição
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={cvTab === "preview" ? "default" : "ghost"}
+                onClick={() => setCvTab("preview")}
+                className="flex-1 rounded-xl text-xs font-semibold gap-2"
+              >
+                📄 Pré-visualização A4
+              </Button>
+            </div>
+          )}
 
-            {spec.groups.map((group) => (
-              <section key={group.id} className="rounded-2xl border border-border/70 bg-card p-6">
-                <h2 className="text-base font-semibold">{group.label}</h2>
-                {group.description && <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>}
-                <div className="mt-5 grid gap-5 sm:grid-cols-2">{group.fields.map(renderField)}</div>
-              </section>
-            ))}
+          {/* LAYOUT PARA CV: ECRÃ DIVIDIDO (SPLIT-SCREEN 50/50 NO DESKTOP) */}
+          {spec.id === "cv" ? (
+            <div className="grid gap-8 lg:grid-cols-12 items-start">
+              {/* COLUNA ESQUERDA (6/12 no Desktop): FORMULÁRIO */}
+              <div className={`space-y-6 lg:col-span-6 ${cvTab === "preview" ? "hidden lg:block" : "block"}`}>
+                <Button
+                  variant="ghost"
+                  className="h-9 w-fit rounded-xl px-3"
+                  onClick={() => {
+                    setSpecId(null);
+                    setFields({});
+                  }}
+                >
+                  <ArrowLeft className="mr-2 size-4" /> Mudar tipo de documento
+                </Button>
 
-            {spec.pageTiers && spec.pageTiers.length > 0 && (
-              <section className="rounded-2xl border border-border/70 bg-card p-6">
-                <h2 className="text-base font-semibold">Extensão do documento</h2>
-                <p className="mt-1 text-sm text-muted-foreground">O número de páginas define o preço base.</p>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {spec.pageTiers.map((tier) => (
-                    <button
-                      key={tier.id}
-                      type="button"
-                      onClick={() => setPageTierId(tier.id)}
-                      className={`rounded-xl border p-4 text-left transition-colors ${
-                        pageTierId === tier.id ? "border-primary bg-primary/5" : "border-border/70 hover:border-border"
-                      }`}
-                    >
-                      <span className="block text-sm font-semibold">{tier.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {tier.credits} cr · {formatCurrency(creditsToCurrency(tier.credits, country), country)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
+                {/* Seletor Visual de Templates e Cores com Miniaturas Reais */}
+                <CvTemplateSelector
+                  selectedTemplate={templateId || "modern"}
+                  onSelectTemplate={(t) => setTemplateId(t)}
+                  selectedAccent={cvAccent}
+                  onSelectAccent={(c) => setCvAccent(c)}
+                />
 
-            {/* Para CVs: Seletor Visual de Templates e Cores com Miniaturas Reais */}
-            {spec.id === "cv" && (
-              <CvTemplateSelector
-                selectedTemplate={templateId || "modern"}
-                onSelectTemplate={(t) => setTemplateId(t)}
-                selectedAccent={cvAccent}
-                onSelectAccent={(c) => setCvAccent(c)}
-              />
-            )}
+                {/* Grupos de Campos */}
+                {spec.groups.map((group) => (
+                  <section key={group.id} className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft">
+                    <h2 className="text-base font-bold font-display">{group.label}</h2>
+                    {group.description && <p className="mt-1 text-xs text-muted-foreground">{group.description}</p>}
+                    <div className="mt-5 grid gap-4 sm:grid-cols-2">{group.fields.map(renderField)}</div>
+                  </section>
+                ))}
 
-            {/* Para outros documentos com templates ou layouts genéricos */}
-            {spec.id !== "cv" && (spec.templates || spec.layouts) && (
-              <section className="rounded-2xl border border-border/70 bg-card p-6 space-y-6">
-                {spec.templates && (
-                  <div>
-                    <h2 className="text-base font-semibold">Modelo</h2>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      {spec.templates.map((tpl) => (
-                        <button
-                          key={tpl.id}
-                          type="button"
-                          onClick={() => setTemplateId(tpl.id)}
-                          className={`rounded-xl border p-4 text-left transition-colors ${
-                            templateId === tpl.id ? "border-primary bg-primary/5" : "border-border/70 hover:border-border"
-                          }`}
-                        >
-                          <span className="block text-sm font-semibold">{tpl.label}</span>
-                          <span className="text-xs text-muted-foreground">{tpl.description}</span>
-                        </button>
-                      ))}
+                {/* Secções Opcionais do CV */}
+                {spec.structure && spec.structure.length > 0 && (
+                  <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft">
+                    <h2 className="text-base font-bold font-display">Secções do Currículo</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Ative ou desative secções para personalizar o conteúdo exibido na folha.
+                    </p>
+                    <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+                      {spec.structure.map((option) => {
+                        const checked = structure.includes(option.id) || Boolean(option.required);
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors ${
+                              checked ? "border-primary/60 bg-primary/5" : "border-border/70 hover:border-border"
+                            } ${option.required ? "cursor-default opacity-90" : ""}`}
+                          >
+                            <Checkbox
+                              checked={checked}
+                              disabled={Boolean(option.required)}
+                              onCheckedChange={() => !option.required && toggleStructure(option.id)}
+                              className="mt-0.5"
+                            />
+                            <span className="min-w-0">
+                              <span className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+                                {option.label}
+                                {option.required && <Badge variant="secondary" className="text-[9px]">obrigatório</Badge>}
+                                {option.extraCredits ? (
+                                  <Badge variant="outline" className="text-[9px]">+{option.extraCredits} cr</Badge>
+                                ) : null}
+                              </span>
+                            </span>
+                          </label>
+                        );
+                      })}
                     </div>
-                  </div>
+                  </section>
                 )}
-                {spec.layouts && (
-                  <div>
-                    <h2 className="text-base font-semibold">Layout</h2>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      {spec.layouts.map((lay) => (
-                        <button
-                          key={lay.id}
-                          type="button"
-                          onClick={() => setLayoutId(lay.id)}
-                          className={`rounded-xl border p-4 text-left transition-colors ${
-                            layoutId === lay.id ? "border-primary bg-primary/5" : "border-border/70 hover:border-border"
-                          }`}
-                        >
-                          <span className="block text-sm font-semibold">{lay.label}</span>
-                          <span className="text-xs text-muted-foreground">{lay.description}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </section>
-            )}
 
-            {/* Pré-visualização ao Vivo para CV */}
-            {spec.id === "cv" && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display text-base font-bold text-foreground">
-                    Folha A4 em Tempo Real
-                  </h3>
-                  <span className="text-xs text-muted-foreground">
-                    Atualiza instantaneamente conforme preenche
-                  </span>
-                </div>
+                {/* Instruções para a IA */}
+                <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft">
+                  <Label htmlFor="instructions" className="text-base font-bold font-display">
+                    Instruções Especiais para a IA (Opcional)
+                  </Label>
+                  <Textarea
+                    id="instructions"
+                    value={instructions}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInstructions(e.target.value)}
+                    placeholder={spec.instructionsPlaceholder}
+                    className="mt-3 min-h-24 rounded-xl text-xs"
+                  />
+                </section>
+              </div>
+
+              {/* COLUNA DIREITA (6/12 no Desktop): PRÉ-VISUALIZAÇÃO AO VIVO + AÇÃO */}
+              <div className={`space-y-6 lg:col-span-6 lg:sticky lg:top-6 ${cvTab === "edit" ? "hidden lg:block" : "block"}`}>
                 <CvLivePreview
                   data={cvData}
                   template={templateId || "modern"}
@@ -617,144 +619,306 @@ function NewDocument() {
                   onSelectAccent={(c) => setCvAccent(c)}
                   country={country}
                 />
-              </div>
-            )}
 
-            {spec.structure && spec.structure.length > 0 && (
-              <section className="rounded-2xl border border-border/70 bg-card p-6">
-                <h2 className="text-base font-semibold">O que incluir no documento</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Seleciona exactamente as partes que queres. As obrigatórias não podem ser removidas.
-                </p>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {spec.structure.map((option) => {
-                    const checked = structure.includes(option.id) || Boolean(option.required);
-                    return (
-                      <label
-                        key={option.id}
-                        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
-                          checked ? "border-primary/60 bg-primary/5" : "border-border/70 hover:border-border"
-                        } ${option.required ? "cursor-default opacity-90" : ""}`}
-                      >
-                        <Checkbox
-                          checked={checked}
-                          disabled={Boolean(option.required)}
-                          onCheckedChange={() => !option.required && toggleStructure(option.id)}
-                          className="mt-0.5"
-                        />
-                        <span className="min-w-0">
-                          <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                            {option.label}
-                            {option.required && <Badge variant="secondary" className="text-[10px]">obrigatório</Badge>}
-                            {option.extraCredits ? (
-                              <Badge variant="outline" className="text-[10px]">+{option.extraCredits} cr</Badge>
-                            ) : null}
-                          </span>
-                          {option.description && (
-                            <span className="mt-0.5 block text-xs text-muted-foreground">{option.description}</span>
-                          )}
+                {/* Bloco Resumo de Custo e Botão de Finalização */}
+                <div className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-semibold">Custo da Geração</p>
+                      <p className="font-display text-2xl font-bold text-primary">
+                        {cost?.totalCredits ?? 0} créditos
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">
+                          ({formatCurrency(creditsToCurrency(cost?.totalCredits ?? 0, country), country)})
                         </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
+                      </p>
+                    </div>
 
-            <section className="rounded-2xl border border-border/70 bg-card p-6">
-              <Label htmlFor="instructions" className="text-base font-semibold">
-                Como gostaria que o documento fosse?
-              </Label>
-              <Textarea
-                id="instructions"
-                value={instructions}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInstructions(e.target.value)}
-                placeholder={spec.instructionsPlaceholder}
-                className="mt-3 min-h-28 rounded-xl"
-              />
-            </section>
-          </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground uppercase font-semibold">Seu Saldo</p>
+                      <p className="font-display text-lg font-bold">
+                        {credits} créditos
+                      </p>
+                    </div>
+                  </div>
 
-          {/* Resumo lateral */}
-          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-            <div className="rounded-2xl border border-border/70 bg-card p-6">
-              <h2 className="text-base font-semibold">Resumo do custo</h2>
-              <ul className="mt-4 space-y-2 text-sm">
-                {cost?.lines.map((line) => (
-                  <li key={line.id} className="flex items-start justify-between gap-3">
-                    <span className="text-muted-foreground">{line.label}</span>
-                    <span className="whitespace-nowrap font-medium">{line.credits} cr</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-4">
-                <span className="text-sm text-muted-foreground">Total</span>
-                <span className="text-right">
-                  <span className="block font-semibold text-primary">{cost?.totalCredits ?? 0} créditos</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {formatCurrency(creditsToCurrency(cost?.totalCredits ?? 0, country), country)}
-                  </span>
-                </span>
-              </div>
+                  <div className="rounded-xl bg-muted/40 p-3 text-xs">
+                    {check.affordable ? (
+                      <p className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium">
+                        <Check className="size-4 shrink-0" /> Saldo suficiente para gerar este CV.
+                      </p>
+                    ) : (
+                      <p className="flex items-center gap-2 text-destructive font-medium">
+                        <AlertTriangle className="size-4 shrink-0" />
+                        Faltam {check.missingCredits} cr ({formatCurrency(check.missingMzn, country)}).
+                      </p>
+                    )}
+                  </div>
 
-              {spec.students && students.length > spec.students.includedFree && (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  {studentsExtra(spec, students.length).extraStudents} pessoa(s) além das incluídas.
-                </p>
-              )}
-
-              <div className="mt-4 rounded-xl bg-muted/40 p-3 text-sm">
-                {check.affordable ? (
-                  <p className="flex items-center gap-2 text-success">
-                    <Check className="size-4 shrink-0" /> Saldo suficiente ({check.balance} cr).
-                  </p>
-                ) : (
-                  <p className="flex items-center gap-2 text-destructive">
-                    <AlertTriangle className="size-4 shrink-0" />
-                    Faltam {check.missingCredits} cr ({formatCurrency(check.missingMzn, country)}).
-                  </p>
-                )}
-              </div>
-
-              {missingRequired.length > 0 && (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Falta preencher: {missingRequired.join(", ")}.
-                </p>
-              )}
-
-              {check.affordable ? (
-                <Button
-                  className="mt-4 h-11 w-full rounded-xl font-semibold"
-                  disabled={generate.isPending || missingRequired.length > 0}
-                  onClick={() => generate.mutate()}
-                >
-                  {generate.isPending ? (
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 size-4" />
+                  {missingRequired.length > 0 && (
+                    <p className="text-xs text-amber-600 font-medium">
+                      ⚠️ Preencha os campos obrigatórios: {missingRequired.join(", ")}.
+                    </p>
                   )}
-                  Gerar documento
-                </Button>
-              ) : (
-                <Button asChild className="mt-4 h-11 w-full rounded-xl font-semibold">
-                  <Link to="/credits">
-                    <Coins className="mr-2 size-4" /> Comprar créditos
-                  </Link>
-                </Button>
-              )}
 
-              <p className="mt-3 min-h-4 text-center text-xs text-muted-foreground">
-                {saving === "saving" && "A gravar rascunho…"}
-                {saving === "saved" && "Rascunho gravado"}
-                {saving === "error" && "Erro ao gravar rascunho"}
-              </p>
-            </div>
+                  {check.affordable ? (
+                    <Button
+                      size="lg"
+                      className="h-12 w-full rounded-2xl font-semibold shadow-glow text-sm"
+                      disabled={generate.isPending || missingRequired.length > 0}
+                      onClick={() => generate.mutate()}
+                    >
+                      {generate.isPending ? (
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="mr-2 size-4" />
+                      )}
+                      Gerar Documento Oficial
+                    </Button>
+                  ) : (
+                    <Button asChild size="lg" className="h-12 w-full rounded-2xl font-semibold text-sm">
+                      <Link to="/credits">
+                        <Coins className="mr-2 size-4" /> Adquirir Mais Créditos
+                      </Link>
+                    </Button>
+                  )}
 
-            <div className="rounded-2xl border border-dashed border-border/70 p-5 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">Título do documento</p>
-              <p className="mt-1 break-words">{title || "—"}</p>
+                  <p className="text-center text-[11px] text-muted-foreground">
+                    {saving === "saving" && "A gravar rascunho automaticamente…"}
+                    {saving === "saved" && "✓ Rascunho salvo em segurança"}
+                    {saving === "error" && "Erro ao sincronizar rascunho"}
+                  </p>
+                </div>
+              </div>
             </div>
-          </aside>
+          ) : (
+            /* LAYOUT PARA OUTROS DOCUMENTOS: PADRÃO COM RESUMO LATERAL */
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="space-y-6">
+                <Button
+                  variant="ghost"
+                  className="h-9 w-fit rounded-xl px-3"
+                  onClick={() => {
+                    setSpecId(null);
+                    setFields({});
+                  }}
+                >
+                  <ArrowLeft className="mr-2 size-4" /> Mudar tipo de documento
+                </Button>
+
+                {spec.groups.map((group) => (
+                  <section key={group.id} className="rounded-2xl border border-border/70 bg-card p-6">
+                    <h2 className="text-base font-semibold">{group.label}</h2>
+                    {group.description && <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>}
+                    <div className="mt-5 grid gap-5 sm:grid-cols-2">{group.fields.map(renderField)}</div>
+                  </section>
+                ))}
+
+                {spec.pageTiers && spec.pageTiers.length > 0 && (
+                  <section className="rounded-2xl border border-border/70 bg-card p-6">
+                    <h2 className="text-base font-semibold">Extensão do documento</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">O número de páginas define o preço base.</p>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                      {spec.pageTiers.map((tier) => (
+                        <button
+                          key={tier.id}
+                          type="button"
+                          onClick={() => setPageTierId(tier.id)}
+                          className={`rounded-xl border p-4 text-left transition-colors ${
+                            pageTierId === tier.id ? "border-primary bg-primary/5" : "border-border/70 hover:border-border"
+                          }`}
+                        >
+                          <span className="block text-sm font-semibold">{tier.label}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {tier.credits} cr · {formatCurrency(creditsToCurrency(tier.credits, country), country)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {(spec.templates || spec.layouts) && (
+                  <section className="rounded-2xl border border-border/70 bg-card p-6 space-y-6">
+                    {spec.templates && (
+                      <div>
+                        <h2 className="text-base font-semibold">Modelo</h2>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          {spec.templates.map((tpl) => (
+                            <button
+                              key={tpl.id}
+                              type="button"
+                              onClick={() => setTemplateId(tpl.id)}
+                              className={`rounded-xl border p-4 text-left transition-colors ${
+                                templateId === tpl.id ? "border-primary bg-primary/5" : "border-border/70 hover:border-border"
+                              }`}
+                            >
+                              <span className="block text-sm font-semibold">{tpl.label}</span>
+                              <span className="text-xs text-muted-foreground">{tpl.description}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {spec.layouts && (
+                      <div>
+                        <h2 className="text-base font-semibold">Layout</h2>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          {spec.layouts.map((lay) => (
+                            <button
+                              key={lay.id}
+                              type="button"
+                              onClick={() => setLayoutId(lay.id)}
+                              className={`rounded-xl border p-4 text-left transition-colors ${
+                                layoutId === lay.id ? "border-primary bg-primary/5" : "border-border/70 hover:border-border"
+                              }`}
+                            >
+                              <span className="block text-sm font-semibold">{lay.label}</span>
+                              <span className="text-xs text-muted-foreground">{lay.description}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                {spec.structure && spec.structure.length > 0 && (
+                  <section className="rounded-2xl border border-border/70 bg-card p-6">
+                    <h2 className="text-base font-semibold">O que incluir no documento</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Seleciona exactamente as partes que queres. As obrigatórias não podem ser removidas.
+                    </p>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                      {spec.structure.map((option) => {
+                        const checked = structure.includes(option.id) || Boolean(option.required);
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                              checked ? "border-primary/60 bg-primary/5" : "border-border/70 hover:border-border"
+                            } ${option.required ? "cursor-default opacity-90" : ""}`}
+                          >
+                            <Checkbox
+                              checked={checked}
+                              disabled={Boolean(option.required)}
+                              onCheckedChange={() => !option.required && toggleStructure(option.id)}
+                              className="mt-0.5"
+                            />
+                            <span className="min-w-0">
+                              <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                                {option.label}
+                                {option.required && <Badge variant="secondary" className="text-[10px]">obrigatório</Badge>}
+                                {option.extraCredits ? (
+                                  <Badge variant="outline" className="text-[10px]">+{option.extraCredits} cr</Badge>
+                                ) : null}
+                              </span>
+                              {option.description && (
+                                <span className="mt-0.5 block text-xs text-muted-foreground">{option.description}</span>
+                              )}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                <section className="rounded-2xl border border-border/70 bg-card p-6">
+                  <Label htmlFor="instructions" className="text-base font-semibold">
+                    Como gostaria que o documento fosse?
+                  </Label>
+                  <Textarea
+                    id="instructions"
+                    value={instructions}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInstructions(e.target.value)}
+                    placeholder={spec.instructionsPlaceholder}
+                    className="mt-3 min-h-28 rounded-xl"
+                  />
+                </section>
+              </div>
+
+              {/* Resumo lateral para outros documentos */}
+              <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+                <div className="rounded-2xl border border-border/70 bg-card p-6">
+                  <h2 className="text-base font-semibold">Resumo do custo</h2>
+                  <ul className="mt-4 space-y-2 text-sm">
+                    {cost?.lines.map((line) => (
+                      <li key={line.id} className="flex items-start justify-between gap-3">
+                        <span className="text-muted-foreground">{line.label}</span>
+                        <span className="whitespace-nowrap font-medium">{line.credits} cr</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-4">
+                    <span className="text-sm text-muted-foreground">Total</span>
+                    <span className="text-right">
+                      <span className="block font-semibold text-primary">{cost?.totalCredits ?? 0} créditos</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {formatCurrency(creditsToCurrency(cost?.totalCredits ?? 0, country), country)}
+                      </span>
+                    </span>
+                  </div>
+
+                  {spec.students && students.length > spec.students.includedFree && (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      {studentsExtra(spec, students.length).extraStudents} pessoa(s) além das incluídas.
+                    </p>
+                  )}
+
+                  <div className="mt-4 rounded-xl bg-muted/40 p-3 text-sm">
+                    {check.affordable ? (
+                      <p className="flex items-center gap-2 text-success">
+                        <Check className="size-4 shrink-0" /> Saldo suficiente ({check.balance} cr).
+                      </p>
+                    ) : (
+                      <p className="flex items-center gap-2 text-destructive">
+                        <AlertTriangle className="size-4 shrink-0" />
+                        Faltam {check.missingCredits} cr ({formatCurrency(check.missingMzn, country)}).
+                      </p>
+                    )}
+                  </div>
+
+                  {missingRequired.length > 0 && (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Falta preencher: {missingRequired.join(", ")}.
+                    </p>
+                  )}
+
+                  {check.affordable ? (
+                    <Button
+                      className="mt-4 h-11 w-full rounded-xl font-semibold"
+                      disabled={generate.isPending || missingRequired.length > 0}
+                      onClick={() => generate.mutate()}
+                    >
+                      {generate.isPending ? (
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="mr-2 size-4" />
+                      )}
+                      Gerar documento
+                    </Button>
+                  ) : (
+                    <Button asChild className="mt-4 h-11 w-full rounded-xl font-semibold">
+                      <Link to="/credits">
+                        <Coins className="mr-2 size-4" /> Comprar créditos
+                      </Link>
+                    </Button>
+                  )}
+
+                  <p className="mt-3 min-h-4 text-center text-xs text-muted-foreground">
+                    {saving === "saving" && "A gravar rascunho…"}
+                    {saving === "saved" && "Rascunho gravado"}
+                    {saving === "error" && "Erro ao gravar rascunho"}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-dashed border-border/70 p-5 text-sm text-muted-foreground">
+                  <p className="font-medium text-foreground">Título do documento</p>
+                  <p className="mt-1 break-words">{title || "—"}</p>
+                </div>
+              </aside>
+            </div>
+          )}
         </div>
       )}
     </div>
