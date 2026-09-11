@@ -317,6 +317,8 @@ function NewDocument() {
 
   const toggleStructure = (id: string) => {
     setStructure((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
+  };
+
   const scrollToField = (label: string) => {
     if (!spec) return;
     if (cvTab === "preview") setCvTab("edit");
