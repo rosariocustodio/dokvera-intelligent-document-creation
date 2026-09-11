@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useDeferredValue } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Icons from "lucide-react";
@@ -111,11 +111,13 @@ function NewDocument() {
   const [saving, setSaving] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [hydratedDraft, setHydratedDraft] = useState(false);
 
-  const spec = specId ? getSpec(specId) ?? null : null;
+  const spec = specId ? getSpec(specId, country) ?? null : null;
 
   const cvData = useMemo(() => {
     return extractCvDataFromFields(fields, (fields.full_name as string) || "Seu Nome Completo");
   }, [fields]);
+
+  const deferredCvData = useDeferredValue(cvData);
 
   /** Apply spec defaults whenever a new type is chosen. */
   useEffect(() => {

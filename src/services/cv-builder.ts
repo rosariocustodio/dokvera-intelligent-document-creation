@@ -8,6 +8,7 @@
 
 import type { DocumentOutline } from "@/services/document-outline";
 import { formatDate } from "@/lib/dokvera";
+import { getCountryConfig } from "@/lib/countries";
 
 function text(fields: Record<string, unknown>, key: string): string {
   const value = fields[key];
@@ -64,11 +65,12 @@ export function buildCvMarkdown(
     text(fields, "linkedin"),
   ].filter(Boolean);
 
+  const countryConfig = getCountryConfig(country);
   const personal = [
     text(fields, "birth_date") ? `Data de nascimento: ${formatDate(text(fields, "birth_date"), country)}` : "",
     text(fields, "nationality") ? `Nacionalidade: ${text(fields, "nationality")}` : "",
-    text(fields, "bi_number") ? `BI: ${text(fields, "bi_number")}` : "",
-    text(fields, "nuit_number") ? `NUIT: ${text(fields, "nuit_number")}` : "",
+    text(fields, "bi_number") ? `${countryConfig.idDocumentShort}: ${text(fields, "bi_number")}` : "",
+    text(fields, "nuit_number") ? `${countryConfig.taxNumberShort}: ${text(fields, "nuit_number")}` : "",
     text(fields, "driving_license") ? `Carta de condução: ${text(fields, "driving_license")}` : "",
     TRAVEL_LABELS[text(fields, "travel_availability")] ?? "",
   ].filter(Boolean);

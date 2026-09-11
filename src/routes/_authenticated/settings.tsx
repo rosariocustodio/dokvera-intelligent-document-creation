@@ -110,7 +110,7 @@ function SettingsPage() {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Define os preços e a moeda mostrados em todo o Dokvera.
+              Define os preços, a moeda e a terminologia dos documentos oficiais (ex: BI vs Cartão de Cidadão, NUIT vs NIF).
             </p>
           </div>
         </div>

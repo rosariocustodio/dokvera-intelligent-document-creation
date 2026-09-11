@@ -28,6 +28,7 @@ import {
   WidthType,
 } from "docx";
 import { CV_ACCENT_COLORS, extractCvDataFromFields, type CvAccentColor, type CvData } from "@/components/cv/cv-document-sheet";
+import { getCountryConfig } from "@/lib/countries";
 
 export type Block =
   | { type: "h1" | "h2" | "h3" | "p"; text: string }
@@ -132,10 +133,22 @@ function resolveCvData(title: string, content: string, options?: ExportOptions):
       else if (currentSection === "skills") cv.skills?.push(h3);
     } else if (line.startsWith("- ") || line.startsWith("* ")) {
       const item = clean(line.substring(2));
-      if (item.toLowerCase().startsWith("email:")) cv.email = item.replace(/^email:\s*/i, "");
-      else if (item.toLowerCase().startsWith("telefone:")) cv.phone = item.replace(/^telefone:\s*/i, "");
-      else if (item.toLowerCase().startsWith("endereço:") || item.toLowerCase().startsWith("cidade:")) cv.location = item.replace(/^(endereço|cidade):\s*/i, "");
-      else if (item.toLowerCase().startsWith("linkedin:")) cv.linkedin = item.replace(/^linkedin:\s*/i, "");
+      const itemLower = item.toLowerCase();
+      if (itemLower.startsWith("email:")) cv.email = item.replace(/^email:\s*/i, "");
+      else if (itemLower.startsWith("telefone:")) cv.phone = item.replace(/^telefone:\s*/i, "");
+      else if (itemLower.startsWith("endereço:") || itemLower.startsWith("cidade:")) cv.location = item.replace(/^(endereço|cidade):\s*/i, "");
+      else if (itemLower.startsWith("linkedin:")) cv.linkedin = item.replace(/^linkedin:\s*/i, "");
+      else if (itemLower.startsWith("data de nascimento:")) cv.birthDate = item.replace(/^data de nascimento:\s*/i, "");
+      else if (itemLower.startsWith("nacionalidade:")) cv.nationality = item.replace(/^nacionalidade:\s*/i, "");
+      else if (itemLower.startsWith("bi:") || itemLower.startsWith("cartão de cidadão:") || itemLower.startsWith("cc:")) {
+        cv.biNumber = item.replace(/^(bi|cartão de cidadão|cc):\s*/i, "");
+      }
+      else if (itemLower.startsWith("nuit:") || itemLower.startsWith("nif:")) {
+        cv.nuitNumber = item.replace(/^(nuit|nif):\s*/i, "");
+      }
+      else if (itemLower.startsWith("carta de condução:") || itemLower.startsWith("carta:")) {
+        cv.drivingLicense = item.replace(/^(carta de condução|carta):\s*/i, "");
+      }
       else if (currentSection === "experience") cv.experience?.push(item);
       else if (currentSection === "education") cv.education?.push(item);
       else if (currentSection === "skills") cv.skills?.push(item);
@@ -157,20 +170,27 @@ function resolveCvData(title: string, content: string, options?: ExportOptions):
 export function exportToPdf(
   title: string,
   content: string,
-  options?: ExportOptions | string
+  options?: ExportOptions | string,
+  skipSave = false
 ) {
   const opts: ExportOptions = typeof options === "string" ? { footer: options } : options || {};
   const isCv = opts.docType === "cv" || opts.docType === "simple_cv" || (opts.templateId && ["modern", "classic", "minimal", "bold"].includes(opts.templateId));
 
   if (isCv) {
-    return exportCvToPdf(title, content, opts);
+    return exportCvToPdf(title, content, opts, skipSave);
   }
 
-  return exportStandardToPdf(title, content, opts.footer || "Dokvera — Documentação Inteligente");
+  return exportStandardToPdf(title, content, opts.footer || "Dokvera — Documentação Inteligente", skipSave, opts.country);
 }
 
-/** Standard Document PDF (Academic / Administrative / Letters with Mozambican Letterhead) */
-function exportStandardToPdf(title: string, content: string, footer: string) {
+/** Standard Document PDF (Academic / Administrative / Letters with Country-specific Letterhead) */
+function exportStandardToPdf(
+  title: string,
+  content: string,
+  footer: string,
+  skipSave = false,
+  country?: string | null
+) {
   const blocks = parseContent(content);
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -178,10 +198,18 @@ function exportStandardToPdf(title: string, content: string, footer: string) {
   const margin = 56;
   const maxWidth = pageWidth - margin * 2;
 
+  const countryConfig = getCountryConfig(country);
+  const republicName =
+    countryConfig.code === "AO"
+      ? "REPÚBLICA DE ANGOLA"
+      : countryConfig.code === "PT"
+      ? "REPÚBLICA PORTUGUESA"
+      : "REPÚBLICA DE MOÇAMBIQUE";
+
   const COLOR_PRIMARY: RGB = [27, 54, 93]; // #1B365D - Azul Escuro Executivo
   const COLOR_SECONDARY: RGB = [44, 82, 130]; // #2C5282 - Azul Corporativo Médio
   const COLOR_TEXT: RGB = [45, 55, 72]; // #2D3748 - Cinza Escuro Suave
-  const COLOR_GOLD: RGB = [197, 160, 89]; // #C5A059 - Dourado Moçambicano
+  const COLOR_GOLD: RGB = [197, 160, 89]; // #C5A059 - Dourado Moçambicano / Nobre
   const COLOR_MUTED: RGB = [113, 128, 150]; // #718096 - Cinza Muted
 
   const drawLetterhead = () => {
@@ -196,7 +224,7 @@ function exportStandardToPdf(title: string, content: string, footer: string) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(COLOR_PRIMARY[0], COLOR_PRIMARY[1], COLOR_PRIMARY[2]);
-    doc.text("REPÚBLICA DE MOÇAMBIQUE", pageWidth / 2, 64, { align: "center" });
+    doc.text(republicName, pageWidth / 2, 64, { align: "center" });
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
@@ -312,12 +340,18 @@ function exportStandardToPdf(title: string, content: string, footer: string) {
     doc.text(pageNumText, pageWidth - margin - textWidth, pageHeight - 32);
   }
 
-  doc.save(`${safeFileName(title)}.pdf`);
+  if (!skipSave) {
+    try {
+      doc.save(`${safeFileName(title)}.pdf`);
+    } catch {
+      // headless / SSR environment
+    }
+  }
   return doc;
 }
 
 /** Visual CV PDF Engine rendering the 4 visual templates from cv-document-sheet.tsx */
-export function exportCvToPdf(title: string, content: string, options: ExportOptions) {
+export function exportCvToPdf(title: string, content: string, options: ExportOptions, skipSave = false) {
   const template = options.templateId || "modern";
   const accentKey = (options.accentColor || "indigo") as CvAccentColor;
   const accentConfig = CV_ACCENT_COLORS.find((c) => c.id === accentKey) ?? CV_ACCENT_COLORS[0];
@@ -329,18 +363,24 @@ export function exportCvToPdf(title: string, content: string, options: ExportOpt
   const pageHeight = doc.internal.pageSize.getHeight(); // ~841.89 pt
 
   if (template === "modern") {
-    renderModernCvPdf(doc, cvData, accentRgb, accentConfig.hex, pageWidth, pageHeight);
+    renderModernCvPdf(doc, cvData, accentRgb, accentConfig.hex, pageWidth, pageHeight, options);
   } else if (template === "classic") {
-    renderClassicCvPdf(doc, cvData, accentRgb, accentConfig.hex, pageWidth, pageHeight);
+    renderClassicCvPdf(doc, cvData, accentRgb, accentConfig.hex, pageWidth, pageHeight, options);
   } else if (template === "minimal") {
-    renderMinimalCvPdf(doc, cvData, accentRgb, accentConfig.hex, pageWidth, pageHeight);
+    renderMinimalCvPdf(doc, cvData, accentRgb, accentConfig.hex, pageWidth, pageHeight, options);
   } else if (template === "bold") {
-    renderBoldCvPdf(doc, cvData, accentRgb, accentConfig.hex, pageWidth, pageHeight);
+    renderBoldCvPdf(doc, cvData, accentRgb, accentConfig.hex, pageWidth, pageHeight, options);
   } else {
-    renderModernCvPdf(doc, cvData, accentRgb, accentConfig.hex, pageWidth, pageHeight);
+    renderModernCvPdf(doc, cvData, accentRgb, accentConfig.hex, pageWidth, pageHeight, options);
   }
 
-  doc.save(`${safeFileName(cvData.fullName || title)}-cv.pdf`);
+  if (!skipSave) {
+    try {
+      doc.save(`${safeFileName(cvData.fullName || title)}-cv.pdf`);
+    } catch {
+      // headless / SSR environment
+    }
+  }
   return doc;
 }
 
@@ -351,7 +391,8 @@ function renderModernCvPdf(
   accent: RGB,
   accentHex: string,
   pageWidth: number,
-  pageHeight: number
+  pageHeight: number,
+  options?: ExportOptions
 ) {
   const sidebarWidth = 195;
   const mainX = sidebarWidth + 24;
@@ -457,12 +498,13 @@ function renderModernCvPdf(
       doc.text(`Nac.: ${cv.nationality}`, 16, sideY);
       sideY += 11;
     }
+    const countryConfig = getCountryConfig(options.country);
     if (cv.biNumber) {
-      doc.text(`BI: ${cv.biNumber}`, 16, sideY);
+      doc.text(`${countryConfig.idDocumentShort}: ${cv.biNumber}`, 16, sideY);
       sideY += 11;
     }
     if (cv.nuitNumber) {
-      doc.text(`NUIT: ${cv.nuitNumber}`, 16, sideY);
+      doc.text(`${countryConfig.taxNumberShort}: ${cv.nuitNumber}`, 16, sideY);
       sideY += 11;
     }
     if (cv.drivingLicense) {
@@ -622,7 +664,8 @@ function renderClassicCvPdf(
   accent: RGB,
   accentHex: string,
   pageWidth: number,
-  pageHeight: number
+  pageHeight: number,
+  options?: ExportOptions
 ) {
   const margin = 48;
   const maxWidth = pageWidth - margin * 2;
@@ -758,7 +801,8 @@ function renderClassicCvPdf(
   }
 
   let y2 = savedY;
-  if (cv.languages && cv.languages.length > 0) {
+  const hasCol2 = (cv.languages && cv.languages.length > 0) || cv.biNumber || cv.nuitNumber;
+  if (hasCol2) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(accent[0], accent[1], accent[2]);
@@ -769,16 +813,19 @@ function renderClassicCvPdf(
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(51, 65, 85);
-    for (const l of cv.languages) {
-      doc.text(`•  ${l}`, col2X, y2);
-      y2 += 11.5;
+    if (cv.languages && cv.languages.length > 0) {
+      for (const l of cv.languages) {
+        doc.text(`•  ${l}`, col2X, y2);
+        y2 += 11.5;
+      }
     }
+    const countryConfig = getCountryConfig(options.country);
     if (cv.biNumber) {
-      doc.text(`•  BI: ${cv.biNumber}`, col2X, y2);
+      doc.text(`•  ${countryConfig.idDocumentShort}: ${cv.biNumber}`, col2X, y2);
       y2 += 11.5;
     }
     if (cv.nuitNumber) {
-      doc.text(`•  NUIT: ${cv.nuitNumber}`, col2X, y2);
+      doc.text(`•  ${countryConfig.taxNumberShort}: ${cv.nuitNumber}`, col2X, y2);
       y2 += 11.5;
     }
   }
@@ -791,7 +838,8 @@ function renderMinimalCvPdf(
   accent: RGB,
   accentHex: string,
   pageWidth: number,
-  pageHeight: number
+  pageHeight: number,
+  options?: ExportOptions
 ) {
   const margin = 50;
   const labelWidth = 100;
@@ -812,7 +860,11 @@ function renderMinimalCvPdf(
   doc.text(cv.headline || "Título Profissional", margin, y);
   y += 14;
 
-  const contacts = [cv.email, cv.phone, cv.location, cv.linkedin].filter(Boolean).join("   |   ");
+  const countryConfig = getCountryConfig(options?.country);
+  const contactParts = [cv.email, cv.phone, cv.location, cv.linkedin].filter(Boolean);
+  if (cv.biNumber) contactParts.push(`${countryConfig.idDocumentShort}: ${cv.biNumber}`);
+  if (cv.nuitNumber) contactParts.push(`${countryConfig.taxNumberShort}: ${cv.nuitNumber}`);
+  const contacts = contactParts.join("   |   ");
   if (contacts) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
@@ -913,7 +965,8 @@ function renderBoldCvPdf(
   accent: RGB,
   accentHex: string,
   pageWidth: number,
-  pageHeight: number
+  pageHeight: number,
+  options?: ExportOptions
 ) {
   const bannerHeight = 115;
   const margin = 45;
@@ -934,7 +987,11 @@ function renderBoldCvPdf(
   doc.setTextColor(255, 255, 255);
   doc.text(cv.headline || "Título Profissional", margin, 62);
 
-  const contacts = [cv.email, cv.phone, cv.location].filter(Boolean).join("   •   ");
+  const countryConfig = getCountryConfig(options?.country);
+  const contactParts = [cv.email, cv.phone, cv.location].filter(Boolean);
+  if (cv.biNumber) contactParts.push(`${countryConfig.idDocumentShort}: ${cv.biNumber}`);
+  if (cv.nuitNumber) contactParts.push(`${countryConfig.taxNumberShort}: ${cv.nuitNumber}`);
+  const contacts = contactParts.join("   •   ");
   if (contacts) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
@@ -1190,7 +1247,18 @@ async function exportCvToDocx(title: string, content: string, options: ExportOpt
 
     if (cv.email) leftCellParagraphs.push(new Paragraph({ children: [new TextRun({ text: cv.email, size: 18, color: "E2E8F0" })], spacing: { after: 40 } }));
     if (cv.phone) leftCellParagraphs.push(new Paragraph({ children: [new TextRun({ text: cv.phone, size: 18, color: "E2E8F0" })], spacing: { after: 40 } }));
-    if (cv.location) leftCellParagraphs.push(new Paragraph({ children: [new TextRun({ text: cv.location, size: 18, color: "E2E8F0" })], spacing: { after: 160 } }));
+    if (cv.location) leftCellParagraphs.push(new Paragraph({ children: [new TextRun({ text: cv.location, size: 18, color: "E2E8F0" })], spacing: { after: 80 } }));
+
+    const countryConfig = getCountryConfig(options.country);
+    const hasPersonal = Boolean(cv.birthDate || cv.nationality || cv.biNumber || cv.nuitNumber || cv.drivingLicense);
+    if (hasPersonal) {
+      leftCellParagraphs.push(new Paragraph({ children: [new TextRun({ text: "DADOS PESSOAIS", bold: true, size: 18, color: "94A3B8" })], spacing: { after: 80 } }));
+      if (cv.birthDate) leftCellParagraphs.push(new Paragraph({ children: [new TextRun({ text: `Nasc.: ${cv.birthDate}`, size: 18, color: "E2E8F0" })], spacing: { after: 40 } }));
+      if (cv.nationality) leftCellParagraphs.push(new Paragraph({ children: [new TextRun({ text: `Nac.: ${cv.nationality}`, size: 18, color: "E2E8F0" })], spacing: { after: 40 } }));
+      if (cv.biNumber) leftCellParagraphs.push(new Paragraph({ children: [new TextRun({ text: `${countryConfig.idDocumentShort}: ${cv.biNumber}`, size: 18, color: "E2E8F0" })], spacing: { after: 40 } }));
+      if (cv.nuitNumber) leftCellParagraphs.push(new Paragraph({ children: [new TextRun({ text: `${countryConfig.taxNumberShort}: ${cv.nuitNumber}`, size: 18, color: "E2E8F0" })], spacing: { after: 40 } }));
+      if (cv.drivingLicense) leftCellParagraphs.push(new Paragraph({ children: [new TextRun({ text: `Carta: ${cv.drivingLicense}`, size: 18, color: "E2E8F0" })], spacing: { after: 80 } }));
+    }
 
     if (cv.skills && cv.skills.length > 0) {
       leftCellParagraphs.push(new Paragraph({ children: [new TextRun({ text: "COMPETÊNCIAS", bold: true, size: 18, color: "94A3B8" })], spacing: { after: 80 } }));
@@ -1242,6 +1310,11 @@ async function exportCvToDocx(title: string, content: string, options: ExportOpt
     children.push(modernTable);
   } else if (template === "bold") {
     // Top banner shaded in accent color
+    const countryConfig = getCountryConfig(options.country);
+    const contactParts = [cv.email, cv.phone, cv.location].filter(Boolean);
+    if (cv.biNumber) contactParts.push(`${countryConfig.idDocumentShort}: ${cv.biNumber}`);
+    if (cv.nuitNumber) contactParts.push(`${countryConfig.taxNumberShort}: ${cv.nuitNumber}`);
+
     const bannerTable = new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [
@@ -1253,7 +1326,7 @@ async function exportCvToDocx(title: string, content: string, options: ExportOpt
               children: [
                 new Paragraph({ children: [new TextRun({ text: cv.fullName || "Nome Completo", bold: true, size: 36, color: "FFFFFF" })] }),
                 new Paragraph({ children: [new TextRun({ text: cv.headline || "Título Profissional", size: 24, color: "FFFFFF" })], spacing: { after: 120 } }),
-                new Paragraph({ children: [new TextRun({ text: [cv.email, cv.phone, cv.location].filter(Boolean).join("   •   "), size: 18, color: "F1F5F9" })] }),
+                new Paragraph({ children: [new TextRun({ text: contactParts.join("   •   "), size: 18, color: "F1F5F9" })] }),
               ],
             }),
           ],
@@ -1275,9 +1348,14 @@ async function exportCvToDocx(title: string, content: string, options: ExportOpt
     }
   } else {
     // Classic / Minimal
+    const countryConfig = getCountryConfig(options.country);
+    const contactParts = [cv.email, cv.phone, cv.location, cv.linkedin].filter(Boolean);
+    if (cv.biNumber) contactParts.push(`${countryConfig.idDocumentShort}: ${cv.biNumber}`);
+    if (cv.nuitNumber) contactParts.push(`${countryConfig.taxNumberShort}: ${cv.nuitNumber}`);
+
     children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: (cv.fullName || "Nome Completo").toUpperCase(), bold: true, size: 36, color: "0F172A" })] }));
     children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: (cv.headline || "Título Profissional").toUpperCase(), bold: true, size: 20, color: accentHexClean })], spacing: { after: 80 } }));
-    children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: [cv.email, cv.phone, cv.location, cv.linkedin].filter(Boolean).join("  •  "), size: 18, color: "64748B" })], spacing: { after: 200 } }));
+    children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: contactParts.join("  •  "), size: 18, color: "64748B" })], spacing: { after: 200 } }));
 
     if (cv.profile) {
       children.push(new Paragraph({ children: [new TextRun({ text: "PERFIL PROFISSIONAL", bold: true, size: 24, color: accentHexClean })], spacing: { before: 200, after: 80 } }));

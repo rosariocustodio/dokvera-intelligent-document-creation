@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/dokvera";
+import { getCountryConfig } from "@/lib/countries";
 
 export type CvAccentColor = "indigo" | "emerald" | "burgundy" | "slate" | "amber";
 
@@ -95,8 +96,8 @@ export function extractCvDataFromFields(fields: Record<string, unknown>, title?:
     birthDate: String(fields.birth_date || "").trim(),
     nationality: String(fields.nationality || "").trim(),
     linkedin: String(fields.linkedin || "").trim(),
-    biNumber: String(fields.bi_number || "").trim(),
-    nuitNumber: String(fields.nuit_number || "").trim(),
+    biNumber: String(fields.bi_number || fields.id_document || fields.id_number || fields.cartao_cidadao || "").trim(),
+    nuitNumber: String(fields.nuit_number || fields.tax_number || fields.nif_number || fields.nif || "").trim(),
     drivingLicense: String(fields.driving_license || "").trim(),
     travelAvailability: String(fields.travel_availability || "").trim(),
     profile: String(fields.profile || "").trim(),
@@ -120,6 +121,9 @@ export function CvDocumentSheet({
   scale = 1,
 }: CvDocumentSheetProps) {
   const accent = CV_ACCENT_COLORS.find((c) => c.id === accentColor) ?? CV_ACCENT_COLORS[0];
+  const countryConfig = getCountryConfig(country);
+  const idLabel = countryConfig.idDocumentShort;
+  const taxLabel = countryConfig.taxNumberShort;
 
   const travelLabels: Record<string, string> = {
     yes: "Disponibilidade total para viagens e mudanças",
@@ -266,13 +270,13 @@ export function CvDocumentSheet({
                     {data.biNumber && (
                       <li className="flex items-center gap-2">
                         <Shield className="size-3.5 shrink-0 text-slate-400" />
-                        <span>BI: {data.biNumber}</span>
+                        <span>{idLabel}: {data.biNumber}</span>
                       </li>
                     )}
                     {data.nuitNumber && (
                       <li className="flex items-center gap-2">
                         <FileCheck className="size-3.5 shrink-0 text-slate-400" />
-                        <span>NUIT: {data.nuitNumber}</span>
+                        <span>{taxLabel}: {data.nuitNumber}</span>
                       </li>
                     )}
                     {data.drivingLicense && (
@@ -568,8 +572,8 @@ export function CvDocumentSheet({
                       <span>{l}</span>
                     </li>
                   ))}
-                  {data.biNumber && <li>• BI: {data.biNumber}</li>}
-                  {data.nuitNumber && <li>• NUIT: {data.nuitNumber}</li>}
+                  {data.biNumber && <li>• {idLabel}: {data.biNumber}</li>}
+                  {data.nuitNumber && <li>• {taxLabel}: {data.nuitNumber}</li>}
                 </ul>
               </section>
             </div>

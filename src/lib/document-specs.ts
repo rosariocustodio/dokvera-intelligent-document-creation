@@ -9,6 +9,8 @@
  * `src/lib/pricing.ts`. Costs are ALWAYS computed in code, never by AI.
  */
 
+import { getCountryConfig } from "./countries";
+
 export type DocCategoryId = "academico" | "profissional" | "administrativo" | "negocios" | "comunicacao" | "personalizado";
 
 export type DocCategory = {
@@ -836,12 +838,65 @@ export const DOC_SPECS: DocSpec[] = [
   }
 ];
 
-export function getSpec(id: string): DocSpec | undefined {
-  return DOC_SPECS.find((s) => s.id === id);
+export function localizeSpec(spec: DocSpec, country?: string | null): DocSpec {
+  const config = getCountryConfig(country);
+  return {
+    ...spec,
+    groups: spec.groups.map((group) => ({
+      ...group,
+      fields: group.fields.map((field) => {
+        if (field.id === "bi_number") {
+          return {
+            ...field,
+            label: config.idDocumentLabel,
+            placeholder: config.idDocumentPlaceholder,
+          };
+        }
+        if (field.id === "nuit_number") {
+          return {
+            ...field,
+            label: config.taxNumberLabel,
+            placeholder: config.taxNumberPlaceholder,
+          };
+        }
+        if (field.id === "id_document") {
+          return {
+            ...field,
+            placeholder: config.idDocumentReqPrefix,
+          };
+        }
+        if (field.id === "phone") {
+          const phonePlaceholder =
+            config.code === "PT"
+              ? "+351 9xx xxx xxx"
+              : config.code === "AO"
+                ? "+244 9xx xxx xxx"
+                : "+258 8x xxx xxxx";
+          return {
+            ...field,
+            placeholder: phonePlaceholder,
+          };
+        }
+        if (field.id === "address") {
+          return {
+            ...field,
+            placeholder: `Ex.: ${config.defaultCity}, ${config.name}`,
+          };
+        }
+        return field;
+      }),
+    })),
+  };
+}
+
+export function getSpec(id: string, country?: string | null): DocSpec | undefined {
+  const spec = DOC_SPECS.find((s) => s.id === id);
+  if (!spec) return undefined;
+  return localizeSpec(spec, country);
 }
 
 export function specLabel(id: string): string {
-  return getSpec(id)?.label ?? "Documento";
+  return DOC_SPECS.find((s) => s.id === id)?.label ?? "Documento";
 }
 
 export function specsByCategory(category: DocCategoryId): DocSpec[] {

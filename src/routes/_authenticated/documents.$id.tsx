@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { documentQuery, documentEventsQuery } from "@/lib/queries";
+import { documentQuery, documentEventsQuery, profileQuery } from "@/lib/queries";
+import { useSession } from "@/hooks/use-session";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { exportToPdf, exportToDocx } from "@/services/export";
@@ -180,6 +181,13 @@ function DocumentView() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const { user } = useSession();
+
+  const { data: profile } = useQuery({
+    ...profileQuery(user?.id ?? ""),
+    enabled: Boolean(user?.id),
+  });
+  const country = profile?.country;
 
   const { data: doc, isLoading, error } = useQuery({
     ...documentQuery(id),
@@ -215,6 +223,7 @@ function DocumentView() {
         templateId,
         accentColor,
         fields,
+        country,
       });
       toast.success("PDF descarregado com sucesso!");
     } catch (err) {
@@ -235,6 +244,7 @@ function DocumentView() {
         templateId,
         accentColor,
         fields,
+        country,
       });
       toast.success("Documento Word descarregado com sucesso!");
     } catch (err) {

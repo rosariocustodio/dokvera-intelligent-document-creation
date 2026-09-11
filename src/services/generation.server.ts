@@ -69,9 +69,6 @@ export async function generateDocument(supabase: AnyClient, documentId: string) 
     throw new Error("Este documento já está a ser gerado.");
   }
 
-  const spec = getSpec(record.doc_type);
-  if (!spec) throw new Error("Tipo de documento inválido.");
-
   const { data: authUser } = await supabase.auth.getUser();
   const userId = authUser.user?.id;
   let country: string | null = null;
@@ -83,7 +80,11 @@ export async function generateDocument(supabase: AnyClient, documentId: string) 
       .maybeSingle();
     country = (profileRow as { country?: string } | null)?.country ?? null;
   }
-  const defaultCity = getCountryConfig(country).defaultCity;
+  const countryConfig = getCountryConfig(country);
+  const defaultCity = countryConfig.defaultCity;
+
+  const spec = getSpec(record.doc_type, country);
+  if (!spec) throw new Error("Tipo de documento inválido.");
 
   const outline = buildOutline(record.doc_type, record.title, record.options, record.instructions);
   if (!outline) throw new Error("Não foi possível preparar o documento.");
@@ -132,7 +133,7 @@ export async function generateDocument(supabase: AnyClient, documentId: string) 
           `# ${record.doc_type === "request" ? "REQUERIMENTO" : "PEDIDO FORMAL"}\n`,
           `**A:** ${t("recipient") || "Exmo. Senhor"}\n`,
           `**Requerente:** ${t("full_name") || record.title}`,
-          t("id_document") ? `**BI / DIRE n.º:** ${t("id_document")}` : "",
+          t("id_document") ? `**${countryConfig.idDocumentReqPrefix}:** ${t("id_document")}` : "",
           `\nExmo. Senhor,\n`,
           `Vem, por este meio, requerer a V. Excia. se digne autorizar a/o:\n`,
           `${t("purpose") || record.title}\n`,
@@ -147,7 +148,7 @@ export async function generateDocument(supabase: AnyClient, documentId: string) 
       } else if (record.doc_type === "declaration") {
         content = [
           `# DECLARAÇÃO\n`,
-          `Eu, **${t("declarant") || record.title}**, ${t("id_document") ? `portador do documento de identificação ${t("id_document")},` : ""} declaro para os devidos efeitos que:\n`,
+          `Eu, **${t("declarant") || record.title}**, ${t("id_document") ? `portador do ${countryConfig.idDocumentLabel} n.º ${t("id_document")},` : ""} declaro para os devidos efeitos que:\n`,
           `${t("purpose") || "o conteúdo declarado é fidedigno e conforme à verdade."}\n`,
           t("beneficiary") ? `A presente declaração é emitida a favor de **${t("beneficiary")}** por ser a pura verdade.\n` : "",
           `${t("city") || defaultCity}, ${t("letter_date") ? formatDate(t("letter_date"), country) : formatDate(new Date().toISOString(), country)}\n`,
@@ -194,8 +195,8 @@ export async function generateDocument(supabase: AnyClient, documentId: string) 
           `\n**Dados Pessoais:**`,
           t("birth_date") ? `- Data de Nascimento: ${formatDate(t("birth_date"), country)}` : "",
           t("nationality") ? `- Nacionalidade: ${t("nationality")}` : "",
-          t("bi_number") ? `- BI: ${t("bi_number")}` : "",
-          t("nuit_number") ? `- NUIT: ${t("nuit_number")}` : "",
+          t("bi_number") ? `- ${countryConfig.idDocumentShort}: ${t("bi_number")}` : "",
+          t("nuit_number") ? `- ${countryConfig.taxNumberShort}: ${t("nuit_number")}` : "",
           t("driving_license") ? `- Carta de Condução: ${t("driving_license")}` : "",
           t("travel_availability") ? `- Disponibilidade: ${t("travel_availability")}` : "",
           t("profile") ? `\n---\n\n### Perfil Profissional\n${t("profile")}` : "",

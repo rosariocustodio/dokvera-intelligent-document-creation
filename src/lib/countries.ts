@@ -29,6 +29,20 @@ export type CountryConfig = {
   defaultCity: string;
   /** How many decimal places this currency is normally shown with. */
   decimals: number;
+  /** Full official name of the primary identity document (e.g. "Bilhete de Identidade (BI)", "Cartão de Cidadão"). */
+  idDocumentLabel: string;
+  /** Short acronym or label for identity document (e.g. "BI", "Cartão de Cidadão"). */
+  idDocumentShort: string;
+  /** Suggested placeholder for the identity document field. */
+  idDocumentPlaceholder: string;
+  /** Formal prefix used in administrative requests (e.g. "BI / DIRE n.º", "Cartão de Cidadão n.º"). */
+  idDocumentReqPrefix: string;
+  /** Full official name of the tax number (e.g. "Número de NUIT", "Número de Identificação Fiscal (NIF)"). */
+  taxNumberLabel: string;
+  /** Short acronym for the tax number (e.g. "NUIT", "NIF"). */
+  taxNumberShort: string;
+  /** Suggested placeholder for the tax number field. */
+  taxNumberPlaceholder: string;
 };
 
 export const COUNTRY_CONFIG: Record<CountryCode, CountryConfig> = {
@@ -42,6 +56,13 @@ export const COUNTRY_CONFIG: Record<CountryCode, CountryConfig> = {
     monthlyProPrice: 2750,
     defaultCity: "Maputo",
     decimals: 0,
+    idDocumentLabel: "Bilhete de Identidade (BI)",
+    idDocumentShort: "BI",
+    idDocumentPlaceholder: "Número de BI",
+    idDocumentReqPrefix: "BI / DIRE n.º",
+    taxNumberLabel: "Número de NUIT",
+    taxNumberShort: "NUIT",
+    taxNumberPlaceholder: "Número de NUIT",
   },
   AO: {
     code: "AO",
@@ -53,6 +74,13 @@ export const COUNTRY_CONFIG: Record<CountryCode, CountryConfig> = {
     monthlyProPrice: 30250,
     defaultCity: "Luanda",
     decimals: 0,
+    idDocumentLabel: "Bilhete de Identidade (BI)",
+    idDocumentShort: "BI",
+    idDocumentPlaceholder: "Número de BI",
+    idDocumentReqPrefix: "BI n.º",
+    taxNumberLabel: "Número de Identificação Fiscal (NIF)",
+    taxNumberShort: "NIF",
+    taxNumberPlaceholder: "Número de NIF",
   },
   PT: {
     code: "PT",
@@ -64,6 +92,13 @@ export const COUNTRY_CONFIG: Record<CountryCode, CountryConfig> = {
     monthlyProPrice: 66,
     defaultCity: "Lisboa",
     decimals: 2,
+    idDocumentLabel: "Cartão de Cidadão",
+    idDocumentShort: "Cartão de Cidadão",
+    idDocumentPlaceholder: "Número do Cartão de Cidadão",
+    idDocumentReqPrefix: "Cartão de Cidadão n.º",
+    taxNumberLabel: "Número de Identificação Fiscal (NIF)",
+    taxNumberShort: "NIF",
+    taxNumberPlaceholder: "Número de NIF",
   },
 };
 
@@ -79,3 +114,13 @@ export function getCountryConfig(country?: string | null | undefined): CountryCo
 export function listCountries(): CountryConfig[] {
   return Object.values(COUNTRY_CONFIG);
 }
+
+export function getIdDocumentLabel(country?: string | null, short = false): string {
+  const config = getCountryConfig(country);
+  return short ? config.idDocumentShort : config.idDocumentLabel;
+}
+
+export function getTaxNumberLabel(country?: string | null, short = false): string {
+  const config = getCountryConfig(country);
+  return short ? config.taxNumberShort : config.taxNumberLabel;
+}
