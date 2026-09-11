@@ -26,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/page-header";
 import { useSession } from "@/hooks/use-session";
 import { creditsQuery, documentQuery, profileQuery } from "@/lib/queries";
+import { CvPreview, type CvTemplateId } from "@/components/cv-preview";
 import { getCountryConfig } from "@/lib/countries";
 import { creditsToCurrency, formatCurrency } from "@/lib/dokvera";
 import {
