@@ -32,7 +32,9 @@ import { getCountryConfig } from "@/lib/countries";
 
 export type Block =
   | { type: "h1" | "h2" | "h3" | "p"; text: string }
-  | { type: "bullet" | "number"; text: string };
+  | { type: "bullet"; text: string }
+  | { type: "number"; text: string; prefix?: string }
+  | { type: "quote"; text: string };
 
 export type RGB = readonly [number, number, number];
 
@@ -52,20 +54,216 @@ function clean(line: string): string {
   return line.replace(BOLD, "$1").replace(ITALIC, "$1").replace(/`/g, "").trim();
 }
 
-/** Parses stored Markdown into flat typed blocks. */
+/** Common academic / administrative section keywords in Portuguese */
+const KNOWN_SECTION_KEYWORDS = new RegExp(
+  "^(" +
+    [
+      "introdução",
+      "introducao",
+      "contextualização",
+      "contextualizacao",
+      "enquadramento",
+      "fundamentação",
+      "fundamentacao",
+      "revisão da literatura",
+      "revisao da literatura",
+      "revisão bibliográfica",
+      "revisao bibliografica",
+      "estado da arte",
+      "metodologia",
+      "métodos",
+      "metodos",
+      "materiais e métodos",
+      "materiais e metodos",
+      "desenvolvimento",
+      "resultados",
+      "discussão",
+      "discussao",
+      "análise dos dados",
+      "analise dos dados",
+      "análise e discussão",
+      "analise e discussao",
+      "conclusão",
+      "conclusao",
+      "conclusões",
+      "conclusoes",
+      "considerações finais",
+      "consideracoes finais",
+      "recomendações",
+      "recomendacoes",
+      "referências",
+      "referencias",
+      "referências bibliográficas",
+      "referencias bibliograficas",
+      "bibliografia",
+      "anexos",
+      "apêndices",
+      "apendices",
+      "resumo",
+      "abstract",
+      "sumário",
+      "sumario",
+      "capítulo",
+      "capitulo",
+      "seção",
+      "seccao",
+      "secção",
+      "objetivos",
+      "objectivos",
+      "justificativa",
+      "problematização",
+      "problematizacao",
+      "problema de pesquisa",
+      "hipóteses",
+      "hipoteses",
+      "cronograma",
+      "orçamento",
+      "orcamento",
+    ].join("|") +
+    ")",
+  "i"
+);
+
+/**
+ * Robustly parses stored Markdown into flat typed blocks.
+ * Tolerates AI deviations: bold pseudo-headings, unhashed numbered sections,
+ * all-caps headings, roman numerals, unicode bullets, and blockquotes.
+ */
 export function parseContent(content: string): Block[] {
   const blocks: Block[] = [];
-  for (const rawLine of content.split(/\r?\n/)) {
-    const line = rawLine.trim();
+  const rawLines = content.split(/\r?\n/);
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const raw = rawLines[i];
+    const line = raw.trim();
     if (!line) continue;
-    if (/^###\s+/.test(line)) blocks.push({ type: "h3", text: clean(line.replace(/^###\s+/, "")) });
-    else if (/^##\s+/.test(line)) blocks.push({ type: "h2", text: clean(line.replace(/^##\s+/, "")) });
-    else if (/^#\s+/.test(line)) blocks.push({ type: "h1", text: clean(line.replace(/^#\s+/, "")) });
-    else if (/^[-*]\s+/.test(line)) blocks.push({ type: "bullet", text: clean(line.replace(/^[-*]\s+/, "")) });
-    else if (/^\d+[.)]\s+/.test(line)) blocks.push({ type: "number", text: clean(line.replace(/^\d+[.)]\s+/, "")) });
-    else if (/^(\*\*\*|---|___)$/.test(line)) continue;
-    else blocks.push({ type: "p", text: clean(line) });
+
+    // 1. Horizontal Rules (---, ***, ___)
+    if (/^(\*{3,}|-{3,}|_{3,})$/.test(line)) continue;
+
+    // 2. Setext-style headings (e.g. Line followed by === or ---)
+    const nextLine = (rawLines[i + 1] || "").trim();
+    if (nextLine && /^={3,}$/.test(nextLine)) {
+      blocks.push({ type: "h1", text: clean(line) });
+      i++; // skip underline
+      continue;
+    }
+    if (nextLine && /^-{3,}$/.test(nextLine) && !/^\s*[-*+•–—]\s/.test(raw)) {
+      blocks.push({ type: "h2", text: clean(line) });
+      i++; // skip underline
+      continue;
+    }
+
+    // 3. Standard Markdown ATX Headings: #, ##, ###, ####+
+    if (/^####+\s+/.test(line)) {
+      blocks.push({ type: "h3", text: clean(line.replace(/^####+\s+/, "")) });
+      continue;
+    }
+    if (/^###\s+/.test(line)) {
+      blocks.push({ type: "h3", text: clean(line.replace(/^###\s+/, "")) });
+      continue;
+    }
+    if (/^##\s+/.test(line)) {
+      blocks.push({ type: "h2", text: clean(line.replace(/^##\s+/, "")) });
+      continue;
+    }
+    if (/^#\s+/.test(line)) {
+      blocks.push({ type: "h1", text: clean(line.replace(/^#\s+/, "")) });
+      continue;
+    }
+
+    // 4. Blockquotes: > quote or >> quote
+    if (/^>\s*/.test(line)) {
+      blocks.push({ type: "quote", text: clean(line.replace(/^>+\s*/, "")) });
+      continue;
+    }
+
+    // 5. Bullet Lists: -, *, +, •, –, — (supporting leading whitespace/indentation)
+    if (/^\s*[-*+•–—]\s+/.test(raw)) {
+      const text = clean(raw.replace(/^\s*[-*+•–—]\s+/, ""));
+      if (text) {
+        blocks.push({ type: "bullet", text });
+      }
+      continue;
+    }
+
+    // 6. Bold-enclosed lines acting as pseudo-headings (e.g. **1. Introdução**, **Metodologia**, **1.2. Objetivos:**)
+    const boldMatch = line.match(/^\*{2}(.+?)\*{2}:?$/);
+    if (boldMatch) {
+      const inner = boldMatch[1].trim();
+      // Only treat as heading if it is under 110 chars and doesn't look like a standard narrative sentence
+      if (inner.length > 0 && inner.length <= 110 && !inner.endsWith(".")) {
+        // Subsections like 1.1, 2.3, 1.1.1, or prefixed with ###
+        if (/^\d+\.\d+/.test(inner) || inner.startsWith("###")) {
+          blocks.push({ type: "h3", text: clean(inner.replace(/^###\s*/, "")) });
+        } else {
+          blocks.push({ type: "h2", text: clean(inner.replace(/^##\s*/, "")) });
+        }
+        continue;
+      }
+    }
+
+    // 7. Numbered hierarchical sections without markdown marks (e.g. "1.1 Contexto", "2.3.1 Instrumentos")
+    const subSectionMatch = line.match(/^(\d+\.\d+(?:\.\d+)*)\.?\s+([A-ZÁÉÍÓÚÀÂÊÔÃÕÇ].*)$/);
+    if (subSectionMatch) {
+      const subTitle = subSectionMatch[2].trim();
+      if (subTitle.length <= 110 && !subTitle.endsWith(";")) {
+        blocks.push({ type: "h3", text: clean(line) });
+        continue;
+      }
+    }
+
+    // 8. Top-level numbered sections without markdown marks (e.g. "1. Introdução", "2. Metodologia de Investigação")
+    const mainSectionMatch = line.match(/^(\d+)\.\s+([A-ZÁÉÍÓÚÀÂÊÔÃÕÇ].*)$/);
+    if (mainSectionMatch) {
+      const secTitle = mainSectionMatch[2].trim();
+      const isKnownKeyword = KNOWN_SECTION_KEYWORDS.test(secTitle);
+      const isShortTitle = secTitle.length <= 75 && !/[.;]$/.test(secTitle);
+
+      if (isKnownKeyword || (isShortTitle && !secTitle.includes(","))) {
+        blocks.push({ type: "h2", text: clean(line) });
+        continue;
+      }
+    }
+
+    // 9. Roman Numeral sections (e.g. "I. INTRODUÇÃO", "II. REVISÃO TEÓRICA", "IV. Conclusão")
+    const romanMatch = line.match(/^(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s+([A-ZÁÉÍÓÚÀÂÊÔÃÕÇ].*)$/i);
+    if (romanMatch) {
+      const romanTitle = romanMatch[2].trim();
+      if (romanTitle.length <= 80 && !/[.;]$/.test(romanTitle)) {
+        blocks.push({ type: "h2", text: clean(line) });
+        continue;
+      }
+    }
+
+    // 10. Standalone ALL-CAPS section headers (e.g. "INTRODUÇÃO", "METODOLOGIA", "CONSIDERAÇÕES FINAIS")
+    if (/^[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ0-9\s\.\-—–:]{3,65}$/.test(line) && !line.endsWith(".")) {
+      const lettersCount = (line.match(/[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ]/g) || []).length;
+      if (lettersCount >= 4) {
+        const isHeadingWord = KNOWN_SECTION_KEYWORDS.test(line);
+        const wordCount = line.split(/\s+/).length;
+        if (isHeadingWord || (wordCount <= 6 && !line.includes(","))) {
+          blocks.push({ type: "h2", text: clean(line) });
+          continue;
+        }
+      }
+    }
+
+    // 11. Numbered list items (e.g. "1. Primeiro passo...", "2) Segundo item...")
+    const listMatch = line.match(/^(\d+[.)])\s+(.+)$/);
+    if (listMatch) {
+      blocks.push({
+        type: "number",
+        prefix: listMatch[1],
+        text: clean(listMatch[2]),
+      });
+      continue;
+    }
+
+    // 12. Regular Paragraph
+    blocks.push({ type: "p", text: clean(line) });
   }
+
   return blocks;
 }
 
@@ -292,10 +490,15 @@ function exportStandardToPdf(
       ensureSpace(4);
       doc.setDrawColor(COLOR_GOLD[0], COLOR_GOLD[1], COLOR_GOLD[2]);
       doc.setLineWidth(1.5);
-      doc.line(margin, y - 4, margin + 80, y - 4);
+      doc.line(margin, y - 4, margin + 90, y - 4);
       y += 6;
     } else if (block.type === "h2") {
-      write(block.text, { size: 12, style: "bold", color: COLOR_SECONDARY, spacingBefore: 14, spacingAfter: 6 });
+      write(block.text, { size: 12, style: "bold", color: COLOR_SECONDARY, spacingBefore: 16, spacingAfter: 6 });
+      ensureSpace(4);
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.75);
+      doc.line(margin, y - 2, pageWidth - margin, y - 2);
+      y += 4;
     } else if (block.type === "h3") {
       write(block.text, { size: 10.5, style: "bold", color: COLOR_TEXT, spacingBefore: 12, spacingAfter: 5 });
     } else if (block.type === "bullet") {
@@ -303,11 +506,18 @@ function exportStandardToPdf(
       doc.circle(margin + 6, y + 5, 2.5, "F");
       write(block.text, { size: 10, style: "normal", color: COLOR_TEXT, spacingBefore: 0, spacingAfter: 4, indent: 18 });
     } else if (block.type === "number") {
-      write(block.text, { size: 10, style: "normal", color: COLOR_TEXT, spacingBefore: 0, spacingAfter: 4, indent: 18 });
+      const numPrefix = block.prefix || "•";
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
+      doc.setFontSize(9.5);
       doc.setTextColor(COLOR_PRIMARY[0], COLOR_PRIMARY[1], COLOR_PRIMARY[2]);
-      doc.text("—", margin, y - 4);
+      doc.text(numPrefix, margin + 2, y + 8);
+      write(block.text, { size: 10, style: "normal", color: COLOR_TEXT, spacingBefore: 0, spacingAfter: 4, indent: 20 });
+    } else if (block.type === "quote") {
+      const quoteStartY = y + 2;
+      write(block.text, { size: 9.5, style: "italic", color: COLOR_MUTED, spacingBefore: 4, spacingAfter: 8, indent: 20 });
+      doc.setDrawColor(COLOR_GOLD[0], COLOR_GOLD[1], COLOR_GOLD[2]);
+      doc.setLineWidth(2);
+      doc.line(margin + 6, quoteStartY, margin + 6, y - 4);
     } else {
       write(block.text, { size: 10, style: "normal", color: COLOR_TEXT, spacingBefore: 0, spacingAfter: 8 });
     }
@@ -1151,6 +1361,14 @@ async function exportStandardToDocx(title: string, content: string, footer: stri
           numbering: { reference: block.type === "bullet" ? "dokvera-bullets" : "dokvera-numbers", level: 0 },
           spacing: { after: 80 },
           children: [new TextRun({ text: block.text, font: "Arial", size: 24 })],
+        }),
+      );
+    } else if (block.type === "quote") {
+      children.push(
+        new Paragraph({
+          indent: { left: 720 },
+          spacing: { before: 140, after: 180, line: 300 },
+          children: [new TextRun({ text: block.text, italics: true, font: "Arial", size: 22, color: "475569" })],
         }),
       );
     } else {

@@ -103,9 +103,9 @@ export function outlineToBrief(outline: DocumentOutline): string {
     lines.push(`${pair.label}: ${pair.value}`);
   }
   lines.push("");
-  lines.push("Secções a incluir, exactamente nesta ordem:");
+  lines.push("Secções a incluir no documento, exactamente nesta ordem (formata obrigatoriamente cada secção principal com o prefixo '## '):");
   outline.sections.forEach((section, index) => {
-    lines.push(`${index + 1}. ${section.heading}`);
+    lines.push(`## ${index + 1}. ${section.heading}`);
   });
   if (outline.instructions) {
     lines.push("");
