@@ -786,11 +786,26 @@ function NewDocument() {
                       Gerar Documento Oficial
                     </Button>
                   ) : (
-                    <Button asChild size="lg" className="h-12 w-full rounded-2xl font-semibold text-sm">
-                      <Link to="/credits">
-                        <Coins className="mr-2 size-4" /> Adquirir Mais Créditos
-                      </Link>
-                    </Button>
+                    <div className="space-y-2.5">
+                      <Button
+                        size="lg"
+                        className="h-12 w-full rounded-2xl font-semibold text-sm shadow-md gap-2"
+                        onClick={() => {
+                          toast.info("Pagamento Direto do Documento", {
+                            description: `A solicitar pagamento pontual de ${formatCurrency(check.missingMzn, country)} para gerar apenas este documento.`,
+                          });
+                        }}
+                      >
+                        <Sparkles className="size-4" />
+                        Pagar Apenas Este Documento ({formatCurrency(check.missingMzn, country)})
+                      </Button>
+                      <Button asChild variant="outline" size="lg" className="h-11 w-full rounded-2xl font-medium text-xs gap-2">
+                        <Link to="/credits">
+                          <Coins className="size-3.5 text-primary" />
+                          Carregar Pacote de Créditos (com Bónus)
+                        </Link>
+                      </Button>
+                    </div>
                   )}
 
                   <p className="text-center text-[11px] text-muted-foreground">
