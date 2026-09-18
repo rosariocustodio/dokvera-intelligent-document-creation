@@ -9,8 +9,6 @@ import {
   Loader2,
   MailCheck,
   CheckCircle2,
-  KeyRound,
-  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -135,10 +133,6 @@ function AuthPage() {
   const [signedUp, setSignedUp] = useState(false);
 
   // Guided Password Recovery State (4 Steps)
-  // Step 1: Enter email
-  // Step 2: Enter 6-digit OTP code
-  // Step 3: Create new password
-  // Step 4: Success confirmation
   const [recoveryStep, setRecoveryStep] = useState<1 | 2 | 3 | 4>(1);
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
@@ -163,6 +157,17 @@ function AuthPage() {
       }
       setCheckingSession(false);
     });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setMode("recovery");
+        setRecoveryStep(3);
+        setCheckingSession(false);
+        sessionStorage.setItem("inPasswordRecovery", "true");
+      }
+    });
+
+    return () => sub.subscription.unsubscribe();
   }, [navigate]);
 
   const step1Valid = useMemo(
@@ -220,7 +225,7 @@ function AuthPage() {
     toast.success(lang === "PT" ? "Conta criada. Confirme o seu email para entrar." : "Account created. Confirm your email to sign in.");
   }
 
-  // Recovery Step 1: Send Reset OTP / Magic Link
+  // Recovery Step 1: Send Reset OTP Code
   async function sendRecoveryCode(e?: React.FormEvent) {
     if (e) e.preventDefault();
     if (!/^\S+@\S+\.\S+$/.test(recoveryEmail)) {
@@ -241,7 +246,7 @@ function AuthPage() {
     setResendTimer(30);
   }
 
-  // Recovery Step 2: Verify OTP
+  // Recovery Step 2: Verify 6-Digit OTP Token
   async function verifyOtpCode(codeToVerify?: string) {
     const code = codeToVerify || otpCode;
     if (code.length !== 6) {
@@ -249,7 +254,7 @@ function AuthPage() {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.auth.verifyOtp({
+    const { error } = await supabase.auth.verifyOtp({
       email: recoveryEmail,
       token: code,
       type: "recovery",
@@ -268,7 +273,7 @@ function AuthPage() {
     toast.success(lang === "PT" ? "Código verificado com sucesso." : "Code verified successfully.");
   }
 
-  // Recovery Step 3: Update Password
+  // Recovery Step 3: Update Password in Supabase Session
   async function updatePassword(e: React.FormEvent) {
     e.preventDefault();
     if (newPassword.length < 8) {
