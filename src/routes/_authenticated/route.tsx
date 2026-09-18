@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_authenticated")({
     // Block access if user is in password recovery flow
     // They must complete password reset before accessing the app
     if (typeof window !== "undefined" && sessionStorage.getItem("inPasswordRecovery") === "true") {
-      throw redirect({ to: "/reset-password" });
+      throw redirect({ to: "/auth" });
     }
     
     return { user: data.user };

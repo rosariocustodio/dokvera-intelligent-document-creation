@@ -150,8 +150,23 @@ function AuthPage() {
   }, [resendTimer]);
 
   useEffect(() => {
+    const isRecovery =
+      (typeof window !== "undefined" &&
+        (window.location.hash.includes("type=recovery") ||
+          window.location.search.includes("type=recovery") ||
+          sessionStorage.getItem("inPasswordRecovery") === "true")) ||
+      false;
+
+    if (isRecovery) {
+      setMode("recovery");
+      setRecoveryStep(3);
+      setCheckingSession(false);
+      sessionStorage.setItem("inPasswordRecovery", "true");
+    }
+
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session && !sessionStorage.getItem("inPasswordRecovery")) {
+      const currentlyInRecovery = sessionStorage.getItem("inPasswordRecovery") === "true" || isRecovery;
+      if (data.session && !currentlyInRecovery) {
         navigate({ to: "/dashboard", replace: true });
         return;
       }

@@ -119,7 +119,22 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
+    // Check if URL hash or search params indicate password recovery
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash || "";
+      const search = window.location.search || "";
+      if (hash.includes("type=recovery") || search.includes("type=recovery")) {
+        sessionStorage.setItem("inPasswordRecovery", "true");
+        router.navigate({ to: "/auth", replace: true });
+      }
+    }
+
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        sessionStorage.setItem("inPasswordRecovery", "true");
+        router.navigate({ to: "/auth", replace: true });
+        return;
+      }
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
