@@ -1,36 +1,39 @@
 import { FileCheck, Sparkles, FileText } from "lucide-react";
-
-const BENEFITS = [
-  {
-    icon: FileCheck,
-    title: "Formatação Estruturada Automática",
-    desc: "Aplique normas de formatação (ABNT, APA ou tom executivo) sem precisar ajustar margens, fontes ou espaçamentos manualmente.",
-  },
-  {
-    icon: Sparkles,
-    title: "Sem Começar do Zero",
-    desc: "Transforme enunciados, tópicos ou rascunhos soltos em capítulos coerentes e bem estruturados através da nossa IA.",
-  },
-  {
-    icon: FileText,
-    title: "Exportação Fiel em Word e PDF",
-    desc: "Descarregue ficheiros editáveis em formato Microsoft Word (.docx) ou PDF pronto para impressão e envio oficial.",
-  },
-];
+import { useLanguage } from "@/lib/landing-i18n";
 
 export function KeyBenefits() {
+  const { t } = useLanguage();
+
+  const BENEFITS = [
+    {
+      icon: FileCheck,
+      title: t.benefits.b1Title,
+      desc: t.benefits.b1Desc,
+    },
+    {
+      icon: Sparkles,
+      title: t.benefits.b2Title,
+      desc: t.benefits.b2Desc,
+    },
+    {
+      icon: FileText,
+      title: t.benefits.b3Title,
+      desc: t.benefits.b3Desc,
+    },
+  ];
+
   return (
     <section id="beneficios" className="py-16 md:py-24 bg-card/40 border-y border-border/50">
       <div className="mx-auto max-w-6xl px-5">
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-14">
           <span className="text-xs font-mono uppercase font-bold text-primary tracking-widest">
-            Vantagens do Dokvera
+            {t.benefits.tagline}
           </span>
           <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
-            Os 3 principais benefícios
+            {t.benefits.title}
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Concebido para poupar tempo e garantir qualidade em todos os seus documentos.
+            {t.benefits.subtitle}
           </p>
         </div>
 

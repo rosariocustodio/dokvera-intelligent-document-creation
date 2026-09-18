@@ -1,43 +1,46 @@
 import { LayoutTemplate, Wand2, Download } from "lucide-react";
-
-const STEPS = [
-  {
-    number: "01",
-    icon: LayoutTemplate,
-    title: "Escolha o tipo de documento",
-    desc: "Selecione o modelo desejado (académico, profissional ou administrativo). Cada tipo possui o seu próprio formato pré-configurado.",
-  },
-  {
-    number: "02",
-    icon: Wand2,
-    title: "Preencha ou cole os dados",
-    desc: "Insira as informações nos campos ou cole o enunciado do seu trabalho. A nossa IA extrai os tópicos e estrutura os capítulos.",
-  },
-  {
-    number: "03",
-    icon: Download,
-    title: "Exporte em Word (.docx) ou PDF",
-    desc: "Descarregue o documento final devidamente formatado, pronto para entregar ou editar livremente no Microsoft Word.",
-  },
-];
+import { useLanguage } from "@/lib/landing-i18n";
 
 export function HowItWorks() {
+  const { t } = useLanguage();
+
+  const STEPS = [
+    {
+      number: "01",
+      icon: LayoutTemplate,
+      title: t.howItWorks.step1Title,
+      desc: t.howItWorks.step1Desc,
+    },
+    {
+      number: "02",
+      icon: Wand2,
+      title: t.howItWorks.step2Title,
+      desc: t.howItWorks.step2Desc,
+    },
+    {
+      number: "03",
+      icon: Download,
+      title: t.howItWorks.step3Title,
+      desc: t.howItWorks.step3Desc,
+    },
+  ];
+
   return (
     <section id="como-funciona" className="py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-5">
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-14">
           <span className="text-xs font-mono uppercase font-bold text-primary tracking-widest">
-            Fluxo Simples
+            {t.howItWorks.tagline}
           </span>
           <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
-            Como funciona em 3 passos
+            {t.howItWorks.title}
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Sem complicações ou processos longos. De uma simples ideia ao documento oficial finalizado.
+            {t.howItWorks.subtitle}
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3 items-stretch relative">
+        <div className="grid gap-8 md:grid-cols-3 items-stretch">
           {STEPS.map((s) => {
             const Icon = s.icon;
             return (

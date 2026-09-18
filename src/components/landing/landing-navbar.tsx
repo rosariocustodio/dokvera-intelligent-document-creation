@@ -5,13 +5,14 @@ import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/use-session";
+import { useLanguage } from "@/lib/landing-i18n";
 import { cn } from "@/lib/utils";
 
 export function LandingNavbar() {
   const { user } = useSession();
+  const { language, setLanguage, t } = useLanguage();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [lang, setLang] = useState<"PT" | "EN">("PT");
 
   useEffect(() => {
     const handleScroll = () => {
@@ -35,51 +36,56 @@ export function LandingNavbar() {
 
         {/* Desktop Navigation Links */}
         <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
-          <a
-            href="#produto"
-            className="transition-colors hover:text-foreground"
-          >
-            Produto
+          <a href="#produto" className="transition-colors hover:text-foreground">
+            {t.nav.product}
           </a>
-          <a
-            href="#como-funciona"
-            className="transition-colors hover:text-foreground"
-          >
-            Como Funciona
+          <a href="#como-funciona" className="transition-colors hover:text-foreground">
+            {t.nav.howItWorks}
           </a>
-          <a
-            href="#beneficios"
-            className="transition-colors hover:text-foreground"
-          >
-            Benefícios
+          <a href="#beneficios" className="transition-colors hover:text-foreground">
+            {t.nav.benefits}
           </a>
-          <a
-            href="#precos"
-            className="transition-colors hover:text-foreground"
-          >
-            Preços
+          <a href="#precos" className="transition-colors hover:text-foreground">
+            {t.nav.pricing}
           </a>
         </nav>
 
         {/* Right Controls */}
         <div className="hidden items-center gap-3 md:flex">
-          {/* Language Switcher */}
-          <button
-            type="button"
-            onClick={() => setLang(lang === "PT" ? "EN" : "PT")}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 bg-muted/40 px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            title="Alterar idioma"
-          >
-            <Globe className="size-3.5 text-primary" />
-            <span>{lang}</span>
-          </button>
+          {/* Functional PT / EN Switcher Button */}
+          <div className="flex items-center rounded-xl border border-border/70 bg-muted/40 p-1 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setLanguage("PT")}
+              className={cn(
+                "rounded-lg px-2.5 py-1 transition-all cursor-pointer",
+                language === "PT"
+                  ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              PT
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage("EN")}
+              className={cn(
+                "rounded-lg px-2.5 py-1 transition-all cursor-pointer",
+                language === "EN"
+                  ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              EN
+            </button>
+          </div>
 
           <ThemeToggle />
 
           {user ? (
             <Button asChild size="sm" className="rounded-xl px-4 text-xs font-semibold shadow-soft">
               <Link to="/dashboard">
-                Ir para o Painel
+                {t.nav.dashboard}
                 <ArrowRight className="ml-1.5 size-3.5" />
               </Link>
             </Button>
@@ -91,20 +97,28 @@ export function LandingNavbar() {
                 size="sm"
                 className="rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground"
               >
-                <Link to="/auth">Entrar</Link>
+                <Link to="/auth">{t.nav.login}</Link>
               </Button>
 
               <Button asChild size="sm" className="rounded-xl px-4 text-xs font-bold shadow-glow">
                 <Link to="/auth">
-                  Começar grátis
+                  {t.nav.startFree}
                 </Link>
               </Button>
             </>
           )}
         </div>
 
-        {/* Mobile Hamburger */}
+        {/* Mobile Hamburger & Lang Switcher */}
         <div className="flex items-center gap-2 md:hidden">
+          {/* Mobile PT/EN toggle */}
+          <button
+            type="button"
+            onClick={() => setLanguage(language === "PT" ? "EN" : "PT")}
+            className="rounded-lg border border-border/70 bg-muted/50 px-2 py-1 text-xs font-bold text-primary"
+          >
+            {language}
+          </button>
           <ThemeToggle />
           <Button
             variant="ghost"
@@ -127,35 +141,35 @@ export function LandingNavbar() {
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
-              Produto
+              {t.nav.product}
             </a>
             <a
               href="#como-funciona"
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
-              Como Funciona
+              {t.nav.howItWorks}
             </a>
             <a
               href="#beneficios"
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
-              Benefícios
+              {t.nav.benefits}
             </a>
             <a
               href="#precos"
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
-              Preços
+              {t.nav.pricing}
             </a>
 
             <div className="mt-4 pt-4 border-t border-border/60 flex flex-col gap-2.5">
               {user ? (
                 <Button asChild className="w-full rounded-xl text-xs font-bold">
                   <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                    Ir para o Painel
+                    {t.nav.dashboard}
                     <ArrowRight className="ml-1.5 size-3.5" />
                   </Link>
                 </Button>
@@ -167,12 +181,12 @@ export function LandingNavbar() {
                     className="w-full rounded-xl text-xs font-semibold"
                   >
                     <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                      Entrar
+                      {t.nav.login}
                     </Link>
                   </Button>
                   <Button asChild className="w-full rounded-xl text-xs font-bold shadow-soft">
                     <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                      Começar grátis
+                      {t.nav.startFree}
                     </Link>
                   </Button>
                 </>
