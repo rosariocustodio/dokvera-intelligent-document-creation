@@ -1,13 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LandingNavbar } from "@/components/landing/landing-navbar";
 import { LandingHero } from "@/components/landing/landing-hero";
-import { Capabilities } from "@/components/landing/capabilities";
+import { DocTypesSection } from "@/components/landing/doc-types-section";
+import { HowItWorks } from "@/components/landing/how-it-works";
+import { KeyBenefits } from "@/components/landing/key-benefits";
+import { SimplePricing } from "@/components/landing/simple-pricing";
 import { FinalCTA } from "@/components/landing/final-cta";
 import { LandingFooter } from "@/components/landing/landing-footer";
 
-const title = "Dokvera — Documentos Académicos e Profissionais com Inteligência Artificial";
+const title = "Dokvera — Crie qualquer documento com IA";
 const description =
-  "Estruture e formate trabalhos académicos, relatórios executivos e currículos em minutos. Exportação fiel em Microsoft Word (.docx) e PDF.";
+  "Estruture e formate trabalhos académicos, relatórios executivos e currículos em minutos. Exportação em Microsoft Word (.docx) e PDF.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -27,7 +30,10 @@ function LandingPage() {
       <LandingNavbar />
       <main>
         <LandingHero />
-        <Capabilities />
+        <DocTypesSection />
+        <HowItWorks />
+        <KeyBenefits />
+        <SimplePricing />
         <FinalCTA />
       </main>
       <LandingFooter />

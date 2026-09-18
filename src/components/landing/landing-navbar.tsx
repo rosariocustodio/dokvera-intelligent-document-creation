@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Menu, X, Sparkles } from "lucide-react";
+import { ArrowRight, Menu, X, Globe } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ export function LandingNavbar() {
   const { user } = useSession();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [lang, setLang] = useState<"PT" | "EN">("PT");
 
   useEffect(() => {
     const handleScroll = () => {
@@ -33,51 +34,50 @@ export function LandingNavbar() {
         <Logo showParent />
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden items-center gap-7 text-sm font-medium text-muted-foreground lg:flex">
+        <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
           <a
-            href="#demonstracao"
-            className="transition-colors hover:text-foreground hover:underline underline-offset-8"
+            href="#produto"
+            className="transition-colors hover:text-foreground"
           >
-            Demonstração
+            Produto
           </a>
           <a
             href="#como-funciona"
-            className="transition-colors hover:text-foreground hover:underline underline-offset-8"
+            className="transition-colors hover:text-foreground"
           >
             Como Funciona
           </a>
           <a
-            href="#solucoes"
-            className="transition-colors hover:text-foreground hover:underline underline-offset-8"
+            href="#beneficios"
+            className="transition-colors hover:text-foreground"
           >
-            Soluções
+            Benefícios
           </a>
           <a
-            href="#capacidades"
-            className="transition-colors hover:text-foreground hover:underline underline-offset-8"
+            href="#precos"
+            className="transition-colors hover:text-foreground"
           >
-            Capacidades
-          </a>
-          <a
-            href="#comparativo"
-            className="transition-colors hover:text-foreground hover:underline underline-offset-8"
-          >
-            Por Que Dokvera
-          </a>
-          <a
-            href="#faq"
-            className="transition-colors hover:text-foreground hover:underline underline-offset-8"
-          >
-            FAQ
+            Preços
           </a>
         </nav>
 
-        {/* Action Controls */}
-        <div className="hidden items-center gap-3 sm:flex">
+        {/* Right Controls */}
+        <div className="hidden items-center gap-3 md:flex">
+          {/* Language Switcher */}
+          <button
+            type="button"
+            onClick={() => setLang(lang === "PT" ? "EN" : "PT")}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 bg-muted/40 px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Alterar idioma"
+          >
+            <Globe className="size-3.5 text-primary" />
+            <span>{lang}</span>
+          </button>
+
           <ThemeToggle />
 
           {user ? (
-            <Button asChild size="sm" className="rounded-xl px-4 text-xs font-bold shadow-soft">
+            <Button asChild size="sm" className="rounded-xl px-4 text-xs font-semibold shadow-soft">
               <Link to="/dashboard">
                 Ir para o Painel
                 <ArrowRight className="ml-1.5 size-3.5" />
@@ -96,16 +96,15 @@ export function LandingNavbar() {
 
               <Button asChild size="sm" className="rounded-xl px-4 text-xs font-bold shadow-glow">
                 <Link to="/auth">
-                  Começar gratuitamente
-                  <ArrowRight className="ml-1.5 size-3.5" />
+                  Começar grátis
                 </Link>
               </Button>
             </>
           )}
         </div>
 
-        {/* Mobile Hamburger Button */}
-        <div className="flex items-center gap-2 lg:hidden">
+        {/* Mobile Hamburger */}
+        <div className="flex items-center gap-2 md:hidden">
           <ThemeToggle />
           <Button
             variant="ghost"
@@ -121,14 +120,14 @@ export function LandingNavbar() {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="border-b border-border/80 bg-background/95 px-5 py-6 backdrop-blur-2xl lg:hidden animate-fade-in">
+        <div className="border-b border-border/80 bg-background/95 px-5 py-6 backdrop-blur-2xl md:hidden animate-fade-in">
           <nav className="flex flex-col gap-4 text-sm font-medium">
             <a
-              href="#demonstracao"
+              href="#produto"
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
-              Demonstração do Produto
+              Produto
             </a>
             <a
               href="#como-funciona"
@@ -138,32 +137,18 @@ export function LandingNavbar() {
               Como Funciona
             </a>
             <a
-              href="#solucoes"
+              href="#beneficios"
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
-              Soluções & Casos de Uso
+              Benefícios
             </a>
             <a
-              href="#capacidades"
+              href="#precos"
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
-              Capacidades & Recursos
-            </a>
-            <a
-              href="#comparativo"
-              onClick={() => setMobileMenuOpen(false)}
-              className="rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              Por Que Dokvera
-            </a>
-            <a
-              href="#faq"
-              onClick={() => setMobileMenuOpen(false)}
-              className="rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              Perguntas Frequentes
+              Preços
             </a>
 
             <div className="mt-4 pt-4 border-t border-border/60 flex flex-col gap-2.5">
@@ -182,13 +167,12 @@ export function LandingNavbar() {
                     className="w-full rounded-xl text-xs font-semibold"
                   >
                     <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                      Entrar na Conta
+                      Entrar
                     </Link>
                   </Button>
                   <Button asChild className="w-full rounded-xl text-xs font-bold shadow-soft">
                     <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                      <Sparkles className="mr-1.5 size-3.5" />
-                      Começar gratuitamente
+                      Começar grátis
                     </Link>
                   </Button>
                 </>
