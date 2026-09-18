@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 
 export type Language = "PT" | "EN";
 
@@ -94,6 +94,29 @@ export const TRANSLATIONS = {
       rights: "Todos os direitos reservados.",
       tagline: "Plataforma Inteligente de Engenharia Documental",
     },
+    auth: {
+      titleLogin: "Entrar na sua conta",
+      titleSignup: "Criar a sua conta",
+      emailLabel: "Email",
+      emailPlaceholder: "tu@exemplo.com",
+      passwordLabel: "Palavra-passe",
+      confirmPasswordLabel: "Confirmar palavra-passe",
+      fullNameLabel: "Nome completo",
+      fullNamePlaceholder: "O seu nome",
+      forgotPassword: "Esqueci-me da palavra-passe",
+      loginBtn: "Entrar",
+      signupBtn: "Criar conta",
+      continue: "Continuar",
+      back: "Voltar",
+      toggleToSignup: "Não tem uma conta? Criar conta",
+      toggleToLogin: "Já tem uma conta? Entrar",
+      terms: "Aceito os termos de utilização e política de privacidade do Dokvera.",
+      verifyEmailTitle: "Verifique o seu email",
+      verifyEmailDesc: "Enviámos um link de confirmação para",
+      backToLogin: "Voltar ao início de sessão",
+      sending: "A enviar…",
+      backToHome: "Voltar à página inicial",
+    },
   },
   EN: {
     nav: {
@@ -186,8 +209,43 @@ export const TRANSLATIONS = {
       rights: "All rights reserved.",
       tagline: "Intelligent Document Engineering Platform",
     },
+    auth: {
+      titleLogin: "Sign in to your account",
+      titleSignup: "Create your account",
+      emailLabel: "Email",
+      emailPlaceholder: "you@example.com",
+      passwordLabel: "Password",
+      confirmPasswordLabel: "Confirm password",
+      fullNameLabel: "Full name",
+      fullNamePlaceholder: "Your name",
+      forgotPassword: "Forgot password?",
+      loginBtn: "Sign in",
+      signupBtn: "Create account",
+      continue: "Continue",
+      back: "Back",
+      toggleToSignup: "Don't have an account? Sign up",
+      toggleToLogin: "Already have an account? Sign in",
+      terms: "I accept the Dokvera terms of service and privacy policy.",
+      verifyEmailTitle: "Check your email",
+      verifyEmailDesc: "We sent a confirmation link to",
+      backToLogin: "Back to sign in",
+      sending: "Sending…",
+      backToHome: "Back to home page",
+    },
   },
 } as const;
+
+export function getStoredLanguage(): Language {
+  if (typeof window === "undefined") return "PT";
+  const saved = localStorage.getItem("dokvera_lang");
+  return saved === "EN" ? "EN" : "PT";
+}
+
+export function setStoredLanguage(lang: Language) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("dokvera_lang", lang);
+  }
+}
 
 interface LanguageContextType {
   language: Language;

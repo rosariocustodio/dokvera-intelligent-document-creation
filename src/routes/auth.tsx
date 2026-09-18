@@ -3,13 +3,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
   Eye,
   EyeOff,
   Loader2,
   MailCheck,
-  ShieldCheck,
-  Sparkles,
+  Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,14 +15,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  getStoredLanguage,
+  setStoredLanguage,
+  TRANSLATIONS,
+  type Language,
+} from "@/lib/landing-i18n";
 import { cn } from "@/lib/utils";
 
-const title = "Entrar no Dokvera — cria a tua conta";
-const description =
-  "Entra ou cria a tua conta Dokvera para criar e organizar documentos académicos e profissionais.";
+const title = "Autenticação — Dokvera";
+const description = "Entrar ou criar conta na plataforma Dokvera.";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -48,29 +50,6 @@ function passwordScore(value: string) {
   return score;
 }
 
-const scoreLabels = ["Muito fraca", "Fraca", "Razoável", "Boa", "Forte"];
-
-function PasswordStrength({ value }: { value: string }) {
-  const score = passwordScore(value);
-  if (!value) return null;
-  return (
-    <div className="space-y-1.5">
-      <div className="flex gap-1.5">
-        {[0, 1, 2, 3].map((i) => (
-          <span
-            key={i}
-            className={cn(
-              "h-1.5 flex-1 rounded-full transition-colors",
-              i < score ? "bg-primary" : "bg-border",
-            )}
-          />
-        ))}
-      </div>
-      <p className="text-xs text-muted-foreground">Segurança: {scoreLabels[score]}</p>
-    </div>
-  );
-}
-
 function PasswordField({
   id,
   label,
@@ -88,8 +67,10 @@ function PasswordField({
 }) {
   const [show, setShow] = useState(false);
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="text-xs font-semibold text-foreground">
+        {label}
+      </Label>
       <div className="relative">
         <Input
           id={id}
@@ -99,7 +80,7 @@ function PasswordField({
           autoComplete={autoComplete}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-11 rounded-xl pr-11"
+          className="h-11 rounded-xl pr-11 text-xs"
         />
         <button
           type="button"
@@ -118,6 +99,19 @@ type Mode = "login" | "signup";
 
 function AuthPage() {
   const navigate = useNavigate();
+  const [lang, setLangState] = useState<Language>("PT");
+
+  useEffect(() => {
+    setLangState(getStoredLanguage());
+  }, []);
+
+  const changeLanguage = (newLang: Language) => {
+    setLangState(newLang);
+    setStoredLanguage(newLang);
+  };
+
+  const t = TRANSLATIONS[lang].auth;
+
   const [mode, setMode] = useState<Mode>("login");
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -162,8 +156,8 @@ function AuthPage() {
     if (error) {
       toast.error(
         error.message.toLowerCase().includes("confirm")
-          ? "Confirma o teu email antes de entrar."
-          : "Email ou palavra-passe incorrectos.",
+          ? (lang === "PT" ? "Confirme o seu email antes de entrar." : "Please confirm your email before signing in.")
+          : (lang === "PT" ? "Email ou palavra-passe incorretos." : "Incorrect email or password."),
       );
       return;
     }
@@ -186,7 +180,7 @@ function AuthPage() {
     if (error) {
       toast.error(
         error.message.toLowerCase().includes("already")
-          ? "Já existe uma conta com este email. Entra em vez de criar."
+          ? (lang === "PT" ? "Já existe uma conta com este email. Entre em vez de criar." : "An account already exists with this email.")
           : error.message,
       );
       return;
@@ -196,12 +190,12 @@ function AuthPage() {
       return;
     }
     setSignedUp(true);
-    toast.success("Conta criada. Confirma o teu email para entrar.");
+    toast.success(lang === "PT" ? "Conta criada. Confirme o seu email para entrar." : "Account created. Confirm your email to sign in.");
   }
 
   async function sendRecovery() {
     if (!/^\S+@\S+\.\S+$/.test(email)) {
-      toast.error("Escreve o teu email primeiro.");
+      toast.error(lang === "PT" ? "Escreva o seu email primeiro." : "Enter your email first.");
       return;
     }
     setRecovering(true);
@@ -213,7 +207,7 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
-    toast.success("Enviámos um link de recuperação para o teu email.");
+    toast.success(lang === "PT" ? "Enviamos um link de recuperação para o seu email." : "We sent a recovery link to your email.");
   }
 
   if (checkingSession) {
@@ -225,302 +219,276 @@ function AuthPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-background">
-      <div className="glow-backdrop pointer-events-none absolute inset-x-0 top-0 h-96" />
+    <div className="relative min-h-screen bg-background flex flex-col justify-between selection:bg-primary/20 selection:text-primary antialiased">
+      {/* Subtle Background Glow */}
+      <div className="glow-backdrop pointer-events-none absolute inset-x-0 top-0 h-96 opacity-40" />
 
-      <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-6xl grid-cols-1 gap-10 px-5 py-6 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16">
-        <div className="flex flex-col">
-          <div className="flex items-center justify-between">
-            <Logo showParent />
-            <div className="lg:hidden">
-              <ThemeToggle />
-            </div>
+      {/* Top Header */}
+      <header className="relative z-20 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
+        <Logo showParent />
+
+        <div className="flex items-center gap-3">
+          {/* PT / EN Language Toggle */}
+          <div className="flex items-center rounded-xl border border-border/70 bg-muted/40 p-1 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => changeLanguage("PT")}
+              className={cn(
+                "rounded-lg px-2.5 py-1 transition-all cursor-pointer",
+                lang === "PT"
+                  ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              PT
+            </button>
+            <button
+              type="button"
+              onClick={() => changeLanguage("EN")}
+              className={cn(
+                "rounded-lg px-2.5 py-1 transition-all cursor-pointer",
+                lang === "EN"
+                  ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              EN
+            </button>
           </div>
 
-          <div className="mt-10 hidden lg:block">
-            <h2 className="font-display text-4xl font-bold leading-tight tracking-tight">
-              Documentos profissionais,
-              <br />
-              prontos em minutos.
-            </h2>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
-              Cria trabalhos académicos, CVs, relatórios e cartas com estrutura correcta, custo
-              transparente em créditos e exportação em PDF ou DOCX.
-            </p>
-            <ul className="mt-8 space-y-3.5">
-              {[
-                "Preço calculado antes de gerar — sem surpresas",
-                "Capa, índice, objectivos, referências e anexos opcionais",
-                "Exportação PDF e DOCX com formatação limpa",
-                "Histórico de documentos e de créditos sempre acessível",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm">
-                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
-                    <Check className="size-3.5" />
-                  </span>
-                  <span className="text-muted-foreground">{item}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-10 flex items-center gap-2 text-xs text-muted-foreground">
-              <ShieldCheck className="size-4 text-primary" />
-              Sessão protegida. Os teus documentos são privados.
-            </div>
-          </div>
+          <ThemeToggle />
         </div>
+      </header>
 
-        <div className="flex flex-col">
-          <div className="mb-4 hidden justify-end lg:flex">
-            <ThemeToggle />
-          </div>
-
-          <div className="glass shadow-elevated w-full rounded-3xl p-6 md:p-8">
-            {signedUp ? (
-              <div className="text-center">
-                <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-                  <MailCheck className="size-6" />
-                </span>
-                <h1 className="mt-5 font-display text-2xl font-bold">Verifica o teu email</h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Enviámos um link de confirmação para <strong>{signupEmail}</strong>. Depois de
-                  confirmar, volta aqui para entrar.
-                </p>
-                <Button
-                  variant="outline"
-                  className="mt-6 h-11 w-full rounded-xl"
-                  onClick={() => {
-                    setSignedUp(false);
-                    setMode("login");
-                    setEmail(signupEmail);
-                    setStep(1);
-                  }}
-                >
-                  Voltar ao início de sessão
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 text-xs font-medium text-primary">
-                  <Sparkles className="size-3.5" />
-                  {mode === "login" ? "Bem-vindo de volta" : "Criar conta Dokvera"}
-                </div>
-                <h1 className="mt-2 font-display text-2xl font-bold">
-                  {mode === "login" ? "Entrar na tua conta" : "Começa em dois passos"}
+      {/* Main Centered Minimalist Auth Card */}
+      <main className="relative z-10 mx-auto w-full max-w-md px-5 py-8 my-auto">
+        <div className="rounded-3xl border border-border/70 bg-card/90 p-7 sm:p-9 shadow-soft space-y-6 backdrop-blur-xl">
+          {signedUp ? (
+            <div className="text-center space-y-4 py-2">
+              <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <MailCheck className="size-6" />
+              </span>
+              <h1 className="font-display text-xl font-bold text-foreground">{t.verifyEmailTitle}</h1>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {t.verifyEmailDesc} <strong className="text-foreground">{signupEmail}</strong>.
+              </p>
+              <Button
+                variant="outline"
+                className="mt-4 h-11 w-full rounded-2xl text-xs font-semibold"
+                onClick={() => {
+                  setSignedUp(false);
+                  setMode("login");
+                  setEmail(signupEmail);
+                  setStep(1);
+                }}
+              >
+                {t.backToLogin}
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="text-center space-y-1.5">
+                <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
+                  {mode === "login" ? t.titleLogin : t.titleSignup}
                 </h1>
-                <p className="mt-1.5 text-sm text-muted-foreground">
-                  {mode === "login"
-                    ? "Usa as tuas credenciais para aceder."
-                    : "Confirmamos os teus dados antes de concluir o registo."}
-                </p>
+              </div>
 
-                <div className="mt-6 flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="h-px flex-1 bg-border" />
-                  Entrar com email
-                  <span className="h-px flex-1 bg-border" />
-                </div>
+              {/* MODE = LOGIN */}
+              {mode === "login" ? (
+                <form onSubmit={signIn} className="space-y-4 pt-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="login-email" className="text-xs font-semibold text-foreground">
+                      {t.emailLabel}
+                    </Label>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      required
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder={t.emailPlaceholder}
+                      className="h-11 rounded-xl text-xs"
+                    />
+                  </div>
 
-                <Tabs
-                  value={mode}
-                  onValueChange={(v) => {
-                    setMode(v as Mode);
-                    setStep(1);
-                  }}
-                >
-                  <TabsList className="grid w-full grid-cols-2 rounded-xl">
-                    <TabsTrigger value="login" className="rounded-lg">
-                      Entrar
-                    </TabsTrigger>
-                    <TabsTrigger value="signup" className="rounded-lg">
-                      Criar conta
-                    </TabsTrigger>
-                  </TabsList>
+                  <PasswordField
+                    id="login-password"
+                    label={t.passwordLabel}
+                    value={password}
+                    onChange={setPassword}
+                    autoComplete="current-password"
+                  />
 
-                  <TabsContent value="login">
-                    <form onSubmit={signIn} className="mt-5 space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="login-email">Email</Label>
+                  <div className="flex justify-end pt-0.5">
+                    <button
+                      type="button"
+                      onClick={sendRecovery}
+                      disabled={recovering}
+                      className="text-xs font-medium text-primary hover:underline underline-offset-4 disabled:opacity-60"
+                    >
+                      {recovering ? t.sending : t.forgotPassword}
+                    </button>
+                  </div>
+
+                  <Button type="submit" disabled={loading} size="lg" className="h-11 w-full rounded-2xl font-bold text-xs shadow-glow">
+                    {loading ? <Loader2 className="size-4 animate-spin" /> : t.loginBtn}
+                  </Button>
+
+                  <div className="pt-4 text-center border-t border-border/50">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("signup");
+                        setStep(1);
+                      }}
+                      className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {t.toggleToSignup}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* MODE = SIGNUP */
+                <div className="pt-2">
+                  {step === 1 ? (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="signup-name" className="text-xs font-semibold text-foreground">
+                          {t.fullNameLabel}
+                        </Label>
                         <Input
-                          id="login-email"
+                          id="signup-name"
+                          required
+                          autoComplete="name"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder={t.fullNamePlaceholder}
+                          className="h-11 rounded-xl text-xs"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="signup-email" className="text-xs font-semibold text-foreground">
+                          {t.emailLabel}
+                        </Label>
+                        <Input
+                          id="signup-email"
                           type="email"
                           required
                           autoComplete="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="tu@exemplo.com"
-                          className="h-11 rounded-xl"
+                          value={signupEmail}
+                          onChange={(e) => setSignupEmail(e.target.value)}
+                          placeholder={t.emailPlaceholder}
+                          className="h-11 rounded-xl text-xs"
                         />
                       </div>
-                      <PasswordField
-                        id="login-password"
-                        label="Palavra-passe"
-                        value={password}
-                        onChange={setPassword}
-                        autoComplete="current-password"
-                      />
-                      <div className="flex justify-end">
+
+                      <Button
+                        type="button"
+                        disabled={!step1Valid}
+                        onClick={() => setStep(2)}
+                        size="lg"
+                        className="h-11 w-full gap-2 rounded-2xl font-bold text-xs shadow-glow"
+                      >
+                        {t.continue}
+                        <ArrowRight className="size-4" />
+                      </Button>
+
+                      <div className="pt-4 text-center border-t border-border/50">
                         <button
                           type="button"
-                          onClick={sendRecovery}
-                          disabled={recovering}
-                          className="text-xs font-medium text-primary underline-offset-4 hover:underline disabled:opacity-60"
+                          onClick={() => setMode("login")}
+                          className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          {recovering ? "A enviar…" : "Esqueci-me da palavra-passe"}
+                          {t.toggleToLogin}
                         </button>
                       </div>
-                      <Button type="submit" disabled={loading} className="h-11 w-full rounded-xl">
-                        {loading ? <Loader2 className="size-4 animate-spin" /> : "Entrar"}
-                      </Button>
-                    </form>
-                  </TabsContent>
-
-                  <TabsContent value="signup">
-                    <div className="mt-5">
-                      <div className="mb-5 flex items-center gap-3">
-                        {[1, 2].map((s) => (
-                          <div key={s} className="flex flex-1 items-center gap-2">
-                            <span
-                              className={cn(
-                                "flex size-6 items-center justify-center rounded-full text-[11px] font-semibold",
-                                step >= s
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-muted text-muted-foreground",
-                              )}
-                            >
-                              {s}
-                            </span>
-                            <span
-                              className={cn(
-                                "h-1 flex-1 rounded-full",
-                                step > s ? "bg-primary" : "bg-border",
-                              )}
-                            />
-                          </div>
-                        ))}
+                    </div>
+                  ) : (
+                    <form onSubmit={signUp} className="space-y-4">
+                      <div className="rounded-xl border border-border/60 bg-muted/30 p-3 text-xs">
+                        <p className="font-bold text-foreground">{name}</p>
+                        <p className="text-muted-foreground">{signupEmail}</p>
                       </div>
 
-                      {step === 1 ? (
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="signup-name">Nome completo</Label>
-                            <Input
-                              id="signup-name"
-                              required
-                              autoComplete="name"
-                              value={name}
-                              onChange={(e) => setName(e.target.value)}
-                              placeholder="O teu nome"
-                              className="h-11 rounded-xl"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="signup-email">Email</Label>
-                            <Input
-                              id="signup-email"
-                              type="email"
-                              required
-                              autoComplete="email"
-                              value={signupEmail}
-                              onChange={(e) => setSignupEmail(e.target.value)}
-                              placeholder="tu@exemplo.com"
-                              className="h-11 rounded-xl"
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            disabled={!step1Valid}
-                            onClick={() => setStep(2)}
-                            className="h-11 w-full gap-2 rounded-xl"
-                          >
-                            Continuar
-                            <ArrowRight className="size-4" />
-                          </Button>
-                          {!step1Valid && (name || signupEmail) ? (
-                            <p className="text-xs text-muted-foreground">
-                              Escreve o nome completo e um email válido.
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <form onSubmit={signUp} className="space-y-4">
-                          <div className="rounded-2xl border border-border/70 bg-card/60 p-3.5 text-xs">
-                            <p className="font-semibold">{name}</p>
-                            <p className="mt-0.5 text-muted-foreground">{signupEmail}</p>
-                          </div>
-                          <PasswordField
-                            id="signup-password"
-                            label="Palavra-passe"
-                            value={signupPassword}
-                            onChange={setSignupPassword}
-                            autoComplete="new-password"
-                            minLength={8}
-                          />
-                          <PasswordStrength value={signupPassword} />
-                          <PasswordField
-                            id="signup-confirm"
-                            label="Confirmar palavra-passe"
-                            value={confirmPassword}
-                            onChange={setConfirmPassword}
-                            autoComplete="new-password"
-                            minLength={8}
-                          />
-                          {confirmPassword && confirmPassword !== signupPassword ? (
-                            <p className="text-xs text-destructive">
-                              As palavras-passe não coincidem.
-                            </p>
-                          ) : null}
-                          <label className="flex items-start gap-2.5 text-xs text-muted-foreground">
-                            <Checkbox
-                              checked={terms}
-                              onCheckedChange={(v) => setTerms(v === true)}
-                              className="mt-0.5"
-                            />
-                            <span>
-                              Aceito os termos de utilização e a política de privacidade do Dokvera.
-                            </span>
-                          </label>
-                          <div className="flex gap-2.5">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => setStep(1)}
-                              className="h-11 gap-1.5 rounded-xl px-4"
-                            >
-                              <ArrowLeft className="size-4" />
-                              Voltar
-                            </Button>
-                            <Button
-                              type="submit"
-                              disabled={loading || !step2Valid}
-                              className="h-11 flex-1 rounded-xl"
-                            >
-                              {loading ? (
-                                <Loader2 className="size-4 animate-spin" />
-                              ) : (
-                                "Criar conta"
-                              )}
-                            </Button>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground">
-                            A palavra-passe precisa de 8+ caracteres, com maiúscula e número.
-                          </p>
-                        </form>
-                      )}
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </>
-            )}
+                      <PasswordField
+                        id="signup-password"
+                        label={t.passwordLabel}
+                        value={signupPassword}
+                        onChange={setSignupPassword}
+                        autoComplete="new-password"
+                        minLength={8}
+                      />
 
-            <p className="mt-6 text-center text-xs text-muted-foreground">
-              <Link to="/" className="underline-offset-4 hover:underline">
-                Voltar à página inicial
-              </Link>
-            </p>
-          </div>
+                      <PasswordField
+                        id="signup-confirm"
+                        label={t.confirmPasswordLabel}
+                        value={confirmPassword}
+                        onChange={setConfirmPassword}
+                        autoComplete="new-password"
+                        minLength={8}
+                      />
 
-          <p className="mt-5 text-center text-xs text-muted-foreground">Dokvera by Ruqzora</p>
+                      <label className="flex items-start gap-2.5 text-xs text-muted-foreground cursor-pointer pt-1">
+                        <Checkbox
+                          checked={terms}
+                          onCheckedChange={(v) => setTerms(v === true)}
+                          className="mt-0.5"
+                        />
+                        <span>{t.terms}</span>
+                      </label>
+
+                      <div className="flex gap-2.5 pt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setStep(1)}
+                          className="h-11 gap-1.5 rounded-2xl px-4 text-xs font-semibold"
+                        >
+                          <ArrowLeft className="size-4" />
+                          {t.back}
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={loading || !step2Valid}
+                          className="h-11 flex-1 rounded-2xl font-bold text-xs shadow-glow"
+                        >
+                          {loading ? <Loader2 className="size-4 animate-spin" /> : t.signupBtn}
+                        </Button>
+                      </div>
+
+                      <div className="pt-4 text-center border-t border-border/50">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMode("login");
+                            setStep(1);
+                          }}
+                          className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {t.toggleToLogin}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
-      </div>
+
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          <Link to="/" className="underline-offset-4 hover:underline">
+            {t.backToHome}
+          </Link>
+        </p>
+      </main>
+
+      {/* Footer */}
+      <footer className="relative z-20 py-6 text-center text-xs text-muted-foreground border-t border-border/40">
+        Dokvera by Ruqzora
+      </footer>
     </div>
   );
 }
