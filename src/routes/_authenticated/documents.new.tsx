@@ -13,6 +13,11 @@ import {
   Sparkles,
   Users,
   X,
+  FileText,
+  SlidersHorizontal,
+  Wand2,
+  Layers,
+  LayoutTemplate,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -23,10 +28,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/page-header";
 import { useSession } from "@/hooks/use-session";
 import { creditsQuery, documentQuery, profileQuery } from "@/lib/queries";
-import { CvPreview, type CvTemplateId } from "@/components/cv-preview";
 import { getCountryConfig } from "@/lib/countries";
 import { creditsToCurrency, formatCurrency } from "@/lib/dokvera";
 import {
@@ -39,12 +44,13 @@ import {
 } from "@/lib/document-specs";
 import { checkBalance, computeCost, studentsExtra, type DocumentDraftValues } from "@/lib/pricing";
 import {
-  CvDocumentSheet,
   CvTemplateSelector,
   CvLivePreview,
   extractCvDataFromFields,
   type CvAccentColor,
 } from "@/components/cv";
+import { DocumentSkeletonPreview } from "@/components/studio/DocumentSkeletonPreview";
+import { MagicFill } from "@/components/studio/MagicFill";
 
 export const Route = createFileRoute("/_authenticated/documents/new")({
   validateSearch: (search) =>
@@ -56,10 +62,10 @@ export const Route = createFileRoute("/_authenticated/documents/new")({
       .parse(search),
   head: () => ({
     meta: [
-      { title: "Criar documento — Dokvera" },
-      { name: "description", content: "Escolhe o tipo de documento e preenche apenas os campos que importam." },
-      { property: "og:title", content: "Criar documento — Dokvera" },
-      { property: "og:description", content: "Assistente de criação de documentos da Dokvera." },
+      { title: "Estúdio de Engenharia Documental — Dokvera" },
+      { name: "description", content: "Criador de documentos profissionais com assistente de IA." },
+      { property: "og:title", content: "Estúdio de Engenharia Documental — Dokvera" },
+      { property: "og:description", content: "Assistente avançado de criação de documentos Dokvera." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -71,7 +77,6 @@ function TypeIcon({ name, className }: { name: string; className?: string }) {
   return <Icon className={className ?? "size-5"} />;
 }
 
-/** Default structure ids for a spec (defaults + everything required). */
 function defaultStructure(spec: DocSpec): string[] {
   return (spec.structure ?? []).filter((s) => s.default || s.required).map((s) => s.id);
 }
@@ -106,7 +111,8 @@ function NewDocument() {
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [layoutId, setLayoutId] = useState<string | undefined>(undefined);
   const [cvAccent, setCvAccent] = useState<CvAccentColor>("indigo");
-  const [cvTab, setCvTab] = useState<"edit" | "preview">("edit");
+  const [mobileTab, setMobileTab] = useState<"studio" | "preview">("studio");
+  const [studioTab, setStudioTab] = useState<string>("dados");
   const [instructions, setInstructions] = useState("");
   const [studentInput, setStudentInput] = useState("");
   const [saving, setSaving] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -128,10 +134,11 @@ function NewDocument() {
     setPageTierId(spec.pageTiers?.[0]?.id);
     setTemplateId(spec.templates?.[0]?.id);
     setLayoutId(spec.layouts?.[0]?.id);
+    setStudioTab("dados");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spec?.id]);
 
-  /** Prefill the "Local" field with the country default city. */
+  /** Prefill default city */
   useEffect(() => {
     if (!spec || !profile) return;
     const hasCity = spec.groups.some((g) => g.fields.some((f) => f.id === "city"));
@@ -140,7 +147,7 @@ function NewDocument() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spec?.id, profile]);
 
-  /** Restore an existing draft. */
+  /** Restore existing draft. */
   useEffect(() => {
     if (!draftDoc || hydratedDraft) return;
     const options = (draftDoc.options ?? {}) as Record<string, unknown>;
@@ -223,7 +230,7 @@ function NewDocument() {
     },
   });
 
-  /** Debounced draft autosave once a type is picked. */
+  /** Debounced draft autosave */
   useEffect(() => {
     if (!spec || !userId) return;
     if (draftId && !hydratedDraft) return;
@@ -299,7 +306,6 @@ function NewDocument() {
       : category === "all"
         ? DOC_SPECS
         : DOC_SPECS.filter((s) => s.category === category);
-    // Deduplicate labels so the picker stays readable.
     const seen = new Set<string>();
     return list.filter((s) => (seen.has(s.label) ? false : (seen.add(s.label), true)));
   }, [term, category]);
@@ -324,7 +330,8 @@ function NewDocument() {
 
   const scrollToField = (label: string) => {
     if (!spec) return;
-    if (cvTab === "preview") setCvTab("edit");
+    if (mobileTab === "preview") setMobileTab("studio");
+    setStudioTab("dados");
     for (const group of spec.groups) {
       for (const f of group.fields) {
         if (f.label === label) {
@@ -351,7 +358,7 @@ function NewDocument() {
 
     return (
       <div key={field.id} className={`space-y-2 ${wide ? "sm:col-span-2" : ""}`}>
-        <Label htmlFor={field.id} className="text-sm font-medium">
+        <Label htmlFor={field.id} className="text-xs font-semibold text-foreground">
           {field.label}
           {field.required && <span className="ml-1 text-destructive">*</span>}
         </Label>
@@ -414,7 +421,7 @@ function NewDocument() {
                   </button>
                 ) : (
                   <p className="text-[11px] text-muted-foreground">
-                    Formatos JPG, PNG ou WEBP. A foto será exibida no cabeçalho do CV.
+                    Formatos JPG, PNG ou WEBP.
                   </p>
                 )}
               </div>
@@ -432,17 +439,17 @@ function NewDocument() {
                     addStudent();
                   }
                 }}
-                placeholder="Nome completo"
-                className="h-11 rounded-xl"
+                placeholder="Nome completo do autor"
+                className="h-10 rounded-xl text-xs"
               />
-              <Button type="button" variant="secondary" className="h-11 rounded-xl px-4" onClick={addStudent}>
+              <Button type="button" variant="secondary" className="h-10 rounded-xl px-4 text-xs font-semibold" onClick={addStudent}>
                 Adicionar
               </Button>
             </div>
             {students.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {students.map((name, index) => (
-                  <Badge key={`${name}-${index}`} variant="secondary" className="gap-1.5 rounded-lg py-1.5 pl-3 pr-1.5">
+                  <Badge key={`${name}-${index}`} variant="secondary" className="gap-1.5 rounded-lg py-1.5 pl-3 pr-1.5 text-xs font-medium">
                     {name}
                     <button
                       type="button"
@@ -458,7 +465,7 @@ function NewDocument() {
             )}
             {spec?.students && (
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Users className="size-3.5" />
+                <Users className="size-3.5 text-primary" />
                 {spec.students.includedFree} incluídos · cada pessoa extra custa {spec.students.extraPerStudent} cr
                 (máx. {spec.students.max}).
               </p>
@@ -472,14 +479,14 @@ function NewDocument() {
               setField(field.id, field.type === "list" ? e.target.value.split("\n") : e.target.value)
             }
             placeholder={field.placeholder ?? (field.type === "list" ? "Um item por linha" : undefined)}
-            className="min-h-28 rounded-xl"
+            className="min-h-24 rounded-xl text-xs"
           />
         ) : field.type === "select" ? (
           <select
             id={field.id}
             value={asString(value)}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setField(field.id, e.target.value)}
-            className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="">Selecionar…</option>
             {field.options?.map((option) => (
@@ -497,32 +504,33 @@ function NewDocument() {
             value={asString(value)}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setField(field.id, e.target.value)}
             placeholder={field.placeholder}
-            className="h-11 rounded-xl"
+            className="h-10 rounded-xl text-xs"
           />
         )}
 
-        {field.help && <p className="text-xs text-muted-foreground">{field.help}</p>}
+        {field.help && <p className="text-[11px] text-muted-foreground">{field.help}</p>}
       </div>
     );
   };
 
   return (
-    <div className="space-y-8 pb-16">
+    <div className="space-y-6 pb-16">
       <PageHeader
-        title={spec ? spec.label : "Criar novo documento"}
+        title={spec ? `Estúdio: ${spec.label}` : "Estúdio de Engenharia Documental"}
         subtitle={
           spec
-            ? "Preenche apenas o que este tipo de documento precisa. O custo é calculado ao lado."
-            : "Escolhe o tipo de documento — cada tipo tem o seu próprio formulário."
+            ? "Configura a estrutura, o tom e os conteúdos. Acompanha a pré-visualização em tempo real."
+            : "Escolhe o tipo de documento para abrir o estúdio de edição."
         }
         action={
-          <Badge variant="secondary" className="h-9 gap-2 rounded-full px-4 text-sm font-semibold">
+          <Badge variant="secondary" className="h-9 gap-2 rounded-full px-4 text-xs font-semibold">
             <Coins className="size-4 text-primary" />
             {credits} cr · {formatCurrency(creditsToCurrency(credits, country), country)}
           </Badge>
         }
       />
 
+      {/* DOCUMENT TYPE PICKER (WHEN NO SPEC SELECTED) */}
       {!spec && (
         <div className="space-y-6">
           <div className="relative max-w-md">
@@ -530,8 +538,8 @@ function NewDocument() {
             <Input
               value={term}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTerm(e.target.value)}
-              placeholder="Pesquisar: CV, requerimento, monografia…"
-              className="h-11 rounded-xl pl-9"
+              placeholder="Pesquisar: CV, requerimento, monografia, relatório..."
+              className="h-11 rounded-xl pl-9 text-xs"
             />
           </div>
 
@@ -541,9 +549,9 @@ function NewDocument() {
                 key={cat.id}
                 type="button"
                 onClick={() => setCategory(cat.id)}
-                className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                className={`rounded-xl px-4 py-2 text-xs font-semibold transition-colors ${
                   category === cat.id
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "bg-background text-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -569,14 +577,14 @@ function NewDocument() {
                   <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <TypeIcon name={item.icon} />
                   </span>
-                  <h3 className="mt-4 font-semibold">{item.label}</h3>
-                  <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
+                  <h3 className="mt-4 font-bold font-display text-foreground">{item.label}</h3>
+                  <p className="mt-1.5 flex-1 text-xs leading-relaxed text-muted-foreground">{item.description}</p>
                   <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-xs">
                     <span className="font-medium text-muted-foreground">
                       desde {base.totalCredits} cr · {formatCurrency(creditsToCurrency(base.totalCredits, country), country)}
                     </span>
                     <span className="flex items-center gap-1 font-semibold text-primary">
-                      Escolher <ArrowRight className="size-3.5" />
+                      Abrir Estúdio <ArrowRight className="size-3.5" />
                     </span>
                   </div>
                 </button>
@@ -585,128 +593,228 @@ function NewDocument() {
           </div>
 
           {filtered.length === 0 && (
-            <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+            <p className="rounded-2xl border border-dashed p-8 text-center text-xs text-muted-foreground">
               Nenhum tipo encontrado para “{term}”.
             </p>
           )}
         </div>
       )}
 
+      {/* UNIFIED DOCUMENT ENGINEERING STUDIO (WHEN SPEC IS SELECTED) */}
       {spec && (
-        <div>
-          {/* Alternador de Abas Mobile para CV (Editar vs Ver Folha) */}
-          {spec.id === "cv" && (
-            <div className="mb-6 flex lg:hidden items-center justify-center gap-2 rounded-2xl bg-muted/70 p-1.5 border border-border/60">
+        <div className="space-y-6">
+          {/* Top Bar for Studio: Navigation & Mobile View Switcher */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 w-fit rounded-xl px-3 text-xs font-semibold"
+              onClick={() => {
+                setSpecId(null);
+                setFields({});
+              }}
+            >
+              <ArrowLeft className="mr-2 size-4" /> Mudar tipo de documento
+            </Button>
+
+            {/* Mobile View Switcher */}
+            <div className="flex lg:hidden items-center justify-center gap-2 rounded-2xl bg-muted/70 p-1.5 border border-border/60">
               <Button
                 type="button"
                 size="sm"
-                variant={cvTab === "edit" ? "default" : "ghost"}
-                onClick={() => setCvTab("edit")}
-                className="flex-1 rounded-xl text-xs font-semibold gap-2"
+                variant={mobileTab === "studio" ? "default" : "ghost"}
+                onClick={() => setMobileTab("studio")}
+                className="flex-1 rounded-xl text-xs font-semibold gap-1.5"
               >
-                ✏️ Formulário de Edição
+                <SlidersHorizontal className="size-3.5" /> Estúdio de Edição
               </Button>
               <Button
                 type="button"
                 size="sm"
-                variant={cvTab === "preview" ? "default" : "ghost"}
-                onClick={() => setCvTab("preview")}
-                className="flex-1 rounded-xl text-xs font-semibold gap-2"
+                variant={mobileTab === "preview" ? "default" : "ghost"}
+                onClick={() => setMobileTab("preview")}
+                className="flex-1 rounded-xl text-xs font-semibold gap-1.5"
               >
-                📄 Pré-visualização A4
+                <FileText className="size-3.5" /> Pré-visualização A4
               </Button>
             </div>
-          )}
+          </div>
 
-          {/* LAYOUT PARA CV: ECRÃ DIVIDIDO (SPLIT-SCREEN 50/50 NO DESKTOP) */}
-          {spec.id === "cv" ? (
-            <div className="grid gap-8 lg:grid-cols-12 items-start">
-              {/* COLUNA ESQUERDA (6/12 no Desktop): FORMULÁRIO */}
-              <div className={`space-y-6 lg:col-span-6 ${cvTab === "preview" ? "hidden lg:block" : "block"}`}>
-                <Button
-                  variant="ghost"
-                  className="h-9 w-fit rounded-xl px-3"
-                  onClick={() => {
-                    setSpecId(null);
-                    setFields({});
-                  }}
-                >
-                  <ArrowLeft className="mr-2 size-4" /> Mudar tipo de documento
-                </Button>
+          {/* MAIN SPLIT-SCREEN LAYOUT */}
+          <div className="grid gap-8 lg:grid-cols-12 items-start">
+            {/* LEFT PANEL (7/12): TABBED STUDIO CONTROLS */}
+            <div className={`space-y-6 lg:col-span-7 ${mobileTab === "preview" ? "hidden lg:block" : "block"}`}>
+              {/* Magic Fill Integration */}
+              <MagicFill
+                spec={spec}
+                onApplyFields={(extracted, suggestedInst) => {
+                  setFields((prev) => ({ ...prev, ...extracted }));
+                  if (suggestedInst) {
+                    setInstructions((prev) => (prev ? `${prev}\n${suggestedInst}` : suggestedInst));
+                  }
+                }}
+              />
 
-                {/* Seletor Visual de Templates e Cores com Miniaturas Reais */}
-                <CvTemplateSelector
-                  selectedTemplate={templateId || "modern"}
-                  onSelectTemplate={(t) => setTemplateId(t)}
-                  selectedAccent={cvAccent}
-                  onSelectAccent={(c) => setCvAccent(c)}
-                />
+              {/* Studio Tabs */}
+              <Tabs value={studioTab} onValueChange={setStudioTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 rounded-2xl bg-muted/60 p-1.5 h-11">
+                  <TabsTrigger value="dados" className="rounded-xl text-xs font-bold gap-1.5">
+                    <FileText className="size-3.5" /> Dados
+                  </TabsTrigger>
+                  <TabsTrigger value="estrutura" className="rounded-xl text-xs font-bold gap-1.5">
+                    <Layers className="size-3.5" /> Estrutura
+                  </TabsTrigger>
+                  <TabsTrigger value="parametros" className="rounded-xl text-xs font-bold gap-1.5">
+                    <Wand2 className="size-3.5" /> Parâmetros IA
+                  </TabsTrigger>
+                </TabsList>
 
-                {/* Grupos de Campos */}
-                {spec.groups.map((group) => (
-                  <section key={group.id} className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft">
-                    <h2 className="text-base font-bold font-display">{group.label}</h2>
-                    {group.description && <p className="mt-1 text-xs text-muted-foreground">{group.description}</p>}
-                    <div className="mt-5 grid gap-4 sm:grid-cols-2">{group.fields.map(renderField)}</div>
-                  </section>
-                ))}
+                {/* TAB 1: DADOS E CAMPOS DO DOCUMENTO */}
+                <TabsContent value="dados" className="space-y-6 mt-6">
+                  {spec.id === "cv" && (
+                    <CvTemplateSelector
+                      selectedTemplate={templateId || "modern"}
+                      onSelectTemplate={(t) => setTemplateId(t)}
+                      selectedAccent={cvAccent}
+                      onSelectAccent={(c) => setCvAccent(c)}
+                    />
+                  )}
 
-                {/* Secções Opcionais do CV */}
-                {spec.structure && spec.structure.length > 0 && (
-                  <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft">
-                    <h2 className="text-base font-bold font-display">Secções do Currículo</h2>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Ative ou desative secções para personalizar o conteúdo exibido na folha.
-                    </p>
-                    <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
-                      {spec.structure.map((option) => {
-                        const checked = structure.includes(option.id) || Boolean(option.required);
-                        return (
-                          <label
-                            key={option.id}
-                            className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors ${
-                              checked ? "border-primary/60 bg-primary/5" : "border-border/70 hover:border-border"
-                            } ${option.required ? "cursor-default opacity-90" : ""}`}
+                  {spec.groups.map((group) => (
+                    <section key={group.id} className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                      <div className="border-b border-border/50 pb-3">
+                        <h2 className="text-base font-bold font-display text-foreground">{group.label}</h2>
+                        {group.description && <p className="mt-0.5 text-xs text-muted-foreground">{group.description}</p>}
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">{group.fields.map(renderField)}</div>
+                    </section>
+                  ))}
+                </TabsContent>
+
+                {/* TAB 2: ESTRUTURA E ARQUITETURA DE PÁGINAS */}
+                <TabsContent value="estrutura" className="space-y-6 mt-6">
+                  {/* Page Extension Tiers */}
+                  {spec.pageTiers && spec.pageTiers.length > 0 && (
+                    <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                      <div>
+                        <h2 className="text-base font-bold font-display text-foreground">Extensão do Documento</h2>
+                        <p className="mt-0.5 text-xs text-muted-foreground">Define o número aproximado de páginas pretendidas.</p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {spec.pageTiers.map((tier) => (
+                          <button
+                            key={tier.id}
+                            type="button"
+                            onClick={() => setPageTierId(tier.id)}
+                            className={`rounded-2xl border p-4 text-left transition-all ${
+                              pageTierId === tier.id ? "border-primary bg-primary/5 shadow-xs" : "border-border/70 hover:border-border"
+                            }`}
                           >
-                            <Checkbox
-                              checked={checked}
-                              disabled={Boolean(option.required)}
-                              onCheckedChange={() => !option.required && toggleStructure(option.id)}
-                              className="mt-0.5"
-                            />
-                            <span className="min-w-0">
-                              <span className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
-                                {option.label}
-                                {option.required && <Badge variant="secondary" className="text-[9px]">obrigatório</Badge>}
-                                {option.extraCredits ? (
-                                  <Badge variant="outline" className="text-[9px]">+{option.extraCredits} cr</Badge>
-                                ) : null}
-                              </span>
+                            <span className="block text-xs font-bold text-foreground">{tier.label}</span>
+                            <span className="text-[11px] font-semibold text-primary">
+                              {tier.credits} cr · {formatCurrency(creditsToCurrency(tier.credits, country), country)}
                             </span>
-                          </label>
-                        );
-                      })}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Templates and Layouts if available */}
+                  {(spec.templates || spec.layouts) && spec.id !== "cv" && (
+                    <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-6">
+                      {spec.templates && (
+                        <div>
+                          <h2 className="text-base font-bold font-display text-foreground">Estilo do Modelo</h2>
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            {spec.templates.map((tpl) => (
+                              <button
+                                key={tpl.id}
+                                type="button"
+                                onClick={() => setTemplateId(tpl.id)}
+                                className={`rounded-2xl border p-4 text-left transition-all ${
+                                  templateId === tpl.id ? "border-primary bg-primary/5 shadow-xs" : "border-border/70 hover:border-border"
+                                }`}
+                              >
+                                <span className="block text-xs font-bold text-foreground">{tpl.label}</span>
+                                <span className="text-[11px] text-muted-foreground">{tpl.description}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </section>
+                  )}
+
+                  {/* Document Structure Checklist */}
+                  {spec.structure && spec.structure.length > 0 && (
+                    <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                      <div>
+                        <h2 className="text-base font-bold font-display text-foreground">Secções do Documento</h2>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Ativa ou desativa elementos para personalizar o índice e corpo do documento.
+                        </p>
+                      </div>
+                      <div className="grid gap-2.5 sm:grid-cols-2">
+                        {spec.structure.map((option) => {
+                          const checked = structure.includes(option.id) || Boolean(option.required);
+                          return (
+                            <label
+                              key={option.id}
+                              className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition-colors ${
+                                checked ? "border-primary/60 bg-primary/5" : "border-border/70 hover:border-border"
+                              } ${option.required ? "cursor-default opacity-90" : ""}`}
+                            >
+                              <Checkbox
+                                checked={checked}
+                                disabled={Boolean(option.required)}
+                                onCheckedChange={() => !option.required && toggleStructure(option.id)}
+                                className="mt-0.5"
+                              />
+                              <span className="min-w-0">
+                                <span className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+                                  {option.label}
+                                  {option.required && <Badge variant="secondary" className="text-[9px]">obrigatório</Badge>}
+                                  {option.extraCredits ? (
+                                    <Badge variant="outline" className="text-[9px]">+{option.extraCredits} cr</Badge>
+                                  ) : null}
+                                </span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  )}
+                </TabsContent>
+
+                {/* TAB 3: PARÂMETROS IA & INSTRUÇÕES */}
+                <TabsContent value="parametros" className="space-y-6 mt-6">
+                  <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                    <div>
+                      <Label htmlFor="instructions" className="text-base font-bold font-display text-foreground">
+                        Instruções Especiais para a IA
+                      </Label>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Explicite regras formais, tom de voz, exemplos moçambicanos ou exigências do docente.
+                      </p>
                     </div>
+                    <Textarea
+                      id="instructions"
+                      value={instructions}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInstructions(e.target.value)}
+                      placeholder={spec.instructionsPlaceholder}
+                      className="min-h-32 rounded-xl text-xs"
+                    />
                   </section>
-                )}
+                </TabsContent>
+              </Tabs>
+            </div>
 
-                {/* Instruções para a IA */}
-                <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft">
-                  <Label htmlFor="instructions" className="text-base font-bold font-display">
-                    Instruções Especiais para a IA (Opcional)
-                  </Label>
-                  <Textarea
-                    id="instructions"
-                    value={instructions}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInstructions(e.target.value)}
-                    placeholder={spec.instructionsPlaceholder}
-                    className="mt-3 min-h-24 rounded-xl text-xs"
-                  />
-                </section>
-              </div>
-
-              {/* COLUNA DIREITA (6/12 no Desktop): PRÉ-VISUALIZAÇÃO AO VIVO + AÇÃO */}
-              <div className={`space-y-6 lg:col-span-6 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1 ${cvTab === "edit" ? "hidden lg:block" : "block"}`}>
+            {/* RIGHT PANEL (5/12): STICKY LIVE A4 PREVIEW & PRICING */}
+            <div className={`space-y-6 lg:col-span-5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1 ${mobileTab === "studio" ? "hidden lg:block" : "block"}`}>
+              {/* Dynamic Live Preview Panel */}
+              {spec.id === "cv" ? (
                 <CvLivePreview
                   data={deferredCvData}
                   template={templateId || "modern"}
@@ -715,336 +823,118 @@ function NewDocument() {
                   onSelectAccent={(c) => setCvAccent(c)}
                   country={country}
                 />
+              ) : (
+                <DocumentSkeletonPreview
+                  spec={spec}
+                  fields={fields}
+                  structure={structure}
+                  pageTierId={pageTierId}
+                  templateId={templateId}
+                  instructions={instructions}
+                  title={title}
+                />
+              )}
 
-                {/* Bloco Resumo de Custo e Botão de Finalização */}
-                <div className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase font-semibold">Custo da Geração</p>
-                      <p className="font-display text-2xl font-bold text-primary">
-                        {cost?.totalCredits ?? 0} créditos
-                        <span className="ml-2 text-xs font-normal text-muted-foreground">
-                          ({formatCurrency(creditsToCurrency(cost?.totalCredits ?? 0, country), country)})
-                        </span>
-                      </p>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground uppercase font-semibold">Seu Saldo</p>
-                      <p className="font-display text-lg font-bold">
-                        {credits} créditos
-                      </p>
-                    </div>
+              {/* Pricing & Checkout Block */}
+              <div className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">Custo da Geração</p>
+                    <p className="font-display text-2xl font-bold text-primary">
+                      {cost?.totalCredits ?? 0} créditos
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        ({formatCurrency(creditsToCurrency(cost?.totalCredits ?? 0, country), country)})
+                      </span>
+                    </p>
                   </div>
 
-                  <div className="rounded-xl bg-muted/40 p-3 text-xs">
-                    {check.affordable ? (
-                      <p className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium">
-                        <Check className="size-4 shrink-0" /> Saldo suficiente para gerar este CV.
-                      </p>
-                    ) : (
-                      <p className="flex items-center gap-2 text-destructive font-medium">
-                        <AlertTriangle className="size-4 shrink-0" />
-                        Faltam {check.missingCredits} cr ({formatCurrency(check.missingMzn, country)}).
-                      </p>
-                    )}
+                  <div className="text-right">
+                    <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">Seu Saldo</p>
+                    <p className="font-display text-lg font-bold">
+                      {credits} créditos
+                    </p>
                   </div>
-
-                  {missingRequired.length > 0 && (
-                    <div className="space-y-1.5 rounded-2xl bg-amber-500/10 p-3.5 border border-amber-500/20">
-                      <p className="text-xs font-bold text-amber-700 dark:text-amber-300">
-                        ⚠️ Campos obrigatórios em falta:
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {missingRequired.map((label) => (
-                          <button
-                            key={label}
-                            type="button"
-                            onClick={() => scrollToField(label)}
-                            className="rounded-lg bg-background px-2.5 py-1 text-[11px] font-semibold text-amber-800 dark:text-amber-200 border border-amber-500/30 hover:bg-amber-500/20 transition-all shadow-xs flex items-center gap-1"
-                          >
-                            <span>{label}</span>
-                            <ArrowRight className="size-2.5" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {check.affordable ? (
-                    <Button
-                      size="lg"
-                      className="h-12 w-full rounded-2xl font-semibold shadow-glow text-sm"
-                      disabled={generate.isPending || missingRequired.length > 0}
-                      onClick={() => generate.mutate()}
-                    >
-                      {generate.isPending ? (
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="mr-2 size-4" />
-                      )}
-                      Gerar Documento Oficial
-                    </Button>
-                  ) : (
-                    <div className="space-y-2.5">
-                      <Button
-                        size="lg"
-                        className="h-12 w-full rounded-2xl font-semibold text-sm shadow-md gap-2"
-                        onClick={() => {
-                          toast.info("Pagamento Direto do Documento", {
-                            description: `A solicitar pagamento pontual de ${formatCurrency(check.missingMzn, country)} para gerar apenas este documento.`,
-                          });
-                        }}
-                      >
-                        <Sparkles className="size-4" />
-                        Pagar Apenas Este Documento ({formatCurrency(check.missingMzn, country)})
-                      </Button>
-                      <Button asChild variant="outline" size="lg" className="h-11 w-full rounded-2xl font-medium text-xs gap-2">
-                        <Link to="/credits">
-                          <Coins className="size-3.5 text-primary" />
-                          Carregar Pacote de Créditos (com Bónus)
-                        </Link>
-                      </Button>
-                    </div>
-                  )}
-
-                  <p className="text-center text-[11px] text-muted-foreground">
-                    {saving === "saving" && "A gravar rascunho automaticamente…"}
-                    {saving === "saved" && "✓ Rascunho salvo em segurança"}
-                    {saving === "error" && "Erro ao sincronizar rascunho"}
-                  </p>
                 </div>
-              </div>
-            </div>
-          ) : (
-            /* LAYOUT PARA OUTROS DOCUMENTOS: PADRÃO COM RESUMO LATERAL */
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="space-y-6">
-                <Button
-                  variant="ghost"
-                  className="h-9 w-fit rounded-xl px-3"
-                  onClick={() => {
-                    setSpecId(null);
-                    setFields({});
-                  }}
-                >
-                  <ArrowLeft className="mr-2 size-4" /> Mudar tipo de documento
-                </Button>
 
-                {spec.groups.map((group) => (
-                  <section key={group.id} className="rounded-2xl border border-border/70 bg-card p-6">
-                    <h2 className="text-base font-semibold">{group.label}</h2>
-                    {group.description && <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>}
-                    <div className="mt-5 grid gap-5 sm:grid-cols-2">{group.fields.map(renderField)}</div>
-                  </section>
-                ))}
+                <div className="rounded-xl bg-muted/40 p-3 text-xs">
+                  {check.affordable ? (
+                    <p className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium">
+                      <Check className="size-4 shrink-0" /> Saldo suficiente para gerar este documento.
+                    </p>
+                  ) : (
+                    <p className="flex items-center gap-2 text-destructive font-medium">
+                      <AlertTriangle className="size-4 shrink-0" />
+                      Faltam {check.missingCredits} cr ({formatCurrency(check.missingMzn, country)}).
+                    </p>
+                  )}
+                </div>
 
-                {spec.pageTiers && spec.pageTiers.length > 0 && (
-                  <section className="rounded-2xl border border-border/70 bg-card p-6">
-                    <h2 className="text-base font-semibold">Extensão do documento</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">O número de páginas define o preço base.</p>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                      {spec.pageTiers.map((tier) => (
+                {missingRequired.length > 0 && (
+                  <div className="space-y-1.5 rounded-2xl bg-amber-500/10 p-3.5 border border-amber-500/20">
+                    <p className="text-xs font-bold text-amber-700 dark:text-amber-300">
+                      ⚠️ Campos obrigatórios em falta:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {missingRequired.map((label) => (
                         <button
-                          key={tier.id}
+                          key={label}
                           type="button"
-                          onClick={() => setPageTierId(tier.id)}
-                          className={`rounded-xl border p-4 text-left transition-colors ${
-                            pageTierId === tier.id ? "border-primary bg-primary/5" : "border-border/70 hover:border-border"
-                          }`}
+                          onClick={() => scrollToField(label)}
+                          className="rounded-lg bg-background px-2.5 py-1 text-[11px] font-semibold text-amber-800 dark:text-amber-200 border border-amber-500/30 hover:bg-amber-500/20 transition-all shadow-xs flex items-center gap-1"
                         >
-                          <span className="block text-sm font-semibold">{tier.label}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {tier.credits} cr · {formatCurrency(creditsToCurrency(tier.credits, country), country)}
-                          </span>
+                          <span>{label}</span>
+                          <ArrowRight className="size-2.5" />
                         </button>
                       ))}
                     </div>
-                  </section>
-                )}
-
-                {(spec.templates || spec.layouts) && (
-                  <section className="rounded-2xl border border-border/70 bg-card p-6 space-y-6">
-                    {spec.templates && (
-                      <div>
-                        <h2 className="text-base font-semibold">Modelo</h2>
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          {spec.templates.map((tpl) => (
-                            <button
-                              key={tpl.id}
-                              type="button"
-                              onClick={() => setTemplateId(tpl.id)}
-                              className={`rounded-xl border p-4 text-left transition-colors ${
-                                templateId === tpl.id ? "border-primary bg-primary/5" : "border-border/70 hover:border-border"
-                              }`}
-                            >
-                              <span className="block text-sm font-semibold">{tpl.label}</span>
-                              <span className="text-xs text-muted-foreground">{tpl.description}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {spec.layouts && (
-                      <div>
-                        <h2 className="text-base font-semibold">Layout</h2>
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          {spec.layouts.map((lay) => (
-                            <button
-                              key={lay.id}
-                              type="button"
-                              onClick={() => setLayoutId(lay.id)}
-                              className={`rounded-xl border p-4 text-left transition-colors ${
-                                layoutId === lay.id ? "border-primary bg-primary/5" : "border-border/70 hover:border-border"
-                              }`}
-                            >
-                              <span className="block text-sm font-semibold">{lay.label}</span>
-                              <span className="text-xs text-muted-foreground">{lay.description}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </section>
-                )}
-
-                {spec.structure && spec.structure.length > 0 && (
-                  <section className="rounded-2xl border border-border/70 bg-card p-6">
-                    <h2 className="text-base font-semibold">O que incluir no documento</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Seleciona exactamente as partes que queres. As obrigatórias não podem ser removidas.
-                    </p>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                      {spec.structure.map((option) => {
-                        const checked = structure.includes(option.id) || Boolean(option.required);
-                        return (
-                          <label
-                            key={option.id}
-                            className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
-                              checked ? "border-primary/60 bg-primary/5" : "border-border/70 hover:border-border"
-                            } ${option.required ? "cursor-default opacity-90" : ""}`}
-                          >
-                            <Checkbox
-                              checked={checked}
-                              disabled={Boolean(option.required)}
-                              onCheckedChange={() => !option.required && toggleStructure(option.id)}
-                              className="mt-0.5"
-                            />
-                            <span className="min-w-0">
-                              <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                                {option.label}
-                                {option.required && <Badge variant="secondary" className="text-[10px]">obrigatório</Badge>}
-                                {option.extraCredits ? (
-                                  <Badge variant="outline" className="text-[10px]">+{option.extraCredits} cr</Badge>
-                                ) : null}
-                              </span>
-                              {option.description && (
-                                <span className="mt-0.5 block text-xs text-muted-foreground">{option.description}</span>
-                              )}
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </section>
-                )}
-
-                <section className="rounded-2xl border border-border/70 bg-card p-6">
-                  <Label htmlFor="instructions" className="text-base font-semibold">
-                    Como gostaria que o documento fosse?
-                  </Label>
-                  <Textarea
-                    id="instructions"
-                    value={instructions}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInstructions(e.target.value)}
-                    placeholder={spec.instructionsPlaceholder}
-                    className="mt-3 min-h-28 rounded-xl"
-                  />
-                </section>
-              </div>
-
-              {/* Resumo lateral para outros documentos */}
-              <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-                <div className="rounded-2xl border border-border/70 bg-card p-6">
-                  <h2 className="text-base font-semibold">Resumo do custo</h2>
-                  <ul className="mt-4 space-y-2 text-sm">
-                    {cost?.lines.map((line) => (
-                      <li key={line.id} className="flex items-start justify-between gap-3">
-                        <span className="text-muted-foreground">{line.label}</span>
-                        <span className="whitespace-nowrap font-medium">{line.credits} cr</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-4">
-                    <span className="text-sm text-muted-foreground">Total</span>
-                    <span className="text-right">
-                      <span className="block font-semibold text-primary">{cost?.totalCredits ?? 0} créditos</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {formatCurrency(creditsToCurrency(cost?.totalCredits ?? 0, country), country)}
-                      </span>
-                    </span>
                   </div>
+                )}
 
-                  {spec.students && students.length > spec.students.includedFree && (
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      {studentsExtra(spec, students.length).extraStudents} pessoa(s) além das incluídas.
-                    </p>
-                  )}
-
-                  <div className="mt-4 rounded-xl bg-muted/40 p-3 text-sm">
-                    {check.affordable ? (
-                      <p className="flex items-center gap-2 text-success">
-                        <Check className="size-4 shrink-0" /> Saldo suficiente ({check.balance} cr).
-                      </p>
+                {check.affordable ? (
+                  <Button
+                    size="lg"
+                    className="h-12 w-full rounded-2xl font-semibold shadow-glow text-xs sm:text-sm"
+                    disabled={generate.isPending || missingRequired.length > 0}
+                    onClick={() => generate.mutate()}
+                  >
+                    {generate.isPending ? (
+                      <Loader2 className="mr-2 size-4 animate-spin" />
                     ) : (
-                      <p className="flex items-center gap-2 text-destructive">
-                        <AlertTriangle className="size-4 shrink-0" />
-                        Faltam {check.missingCredits} cr ({formatCurrency(check.missingMzn, country)}).
-                      </p>
+                      <Sparkles className="mr-2 size-4" />
                     )}
-                  </div>
-
-                  {missingRequired.length > 0 && (
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      Falta preencher: {missingRequired.join(", ")}.
-                    </p>
-                  )}
-
-                  {check.affordable ? (
+                    Gerar Documento Oficial
+                  </Button>
+                ) : (
+                  <div className="space-y-2.5">
                     <Button
-                      className="mt-4 h-11 w-full rounded-xl font-semibold"
-                      disabled={generate.isPending || missingRequired.length > 0}
-                      onClick={() => generate.mutate()}
+                      size="lg"
+                      className="h-12 w-full rounded-2xl font-semibold text-xs sm:text-sm shadow-md gap-2"
+                      onClick={() => {
+                        toast.info("Pagamento Direto do Documento", {
+                          description: `A solicitar pagamento pontual de ${formatCurrency(check.missingMzn, country)} para gerar apenas este documento.`,
+                        });
+                      }}
                     >
-                      {generate.isPending ? (
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="mr-2 size-4" />
-                      )}
-                      Gerar documento
+                      <Sparkles className="size-4" />
+                      Pagar Apenas Este Documento ({formatCurrency(check.missingMzn, country)})
                     </Button>
-                  ) : (
-                    <Button asChild className="mt-4 h-11 w-full rounded-xl font-semibold">
+                    <Button asChild variant="outline" size="lg" className="h-11 w-full rounded-2xl font-medium text-xs gap-2">
                       <Link to="/credits">
-                        <Coins className="mr-2 size-4" /> Comprar créditos
+                        <Coins className="size-3.5 text-primary" />
+                        Carregar Pacote de Créditos (com Bónus)
                       </Link>
                     </Button>
-                  )}
+                  </div>
+                )}
 
-                  <p className="mt-3 min-h-4 text-center text-xs text-muted-foreground">
-                    {saving === "saving" && "A gravar rascunho…"}
-                    {saving === "saved" && "Rascunho gravado"}
-                    {saving === "error" && "Erro ao gravar rascunho"}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-dashed border-border/70 p-5 text-sm text-muted-foreground">
-                  <p className="font-medium text-foreground">Título do documento</p>
-                  <p className="mt-1 break-words">{title || "—"}</p>
-                </div>
-              </aside>
+                <p className="text-center text-[11px] text-muted-foreground">
+                  {saving === "saving" && "A gravar rascunho automaticamente…"}
+                  {saving === "saved" && "✓ Rascunho salvo em segurança"}
+                  {saving === "error" && "Erro ao sincronizar rascunho"}
+                </p>
+              </div>
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>
