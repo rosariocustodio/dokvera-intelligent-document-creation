@@ -708,7 +708,7 @@ function renderModernCvPdf(
       doc.text(`Nac.: ${cv.nationality}`, 16, sideY);
       sideY += 11;
     }
-    const countryConfig = getCountryConfig(options.country);
+    const countryConfig = getCountryConfig(options?.country);
     if (cv.biNumber) {
       doc.text(`${countryConfig.idDocumentShort}: ${cv.biNumber}`, 16, sideY);
       sideY += 11;
@@ -1029,7 +1029,7 @@ function renderClassicCvPdf(
         y2 += 11.5;
       }
     }
-    const countryConfig = getCountryConfig(options.country);
+    const countryConfig = getCountryConfig(options?.country);
     if (cv.biNumber) {
       doc.text(`•  ${countryConfig.idDocumentShort}: ${cv.biNumber}`, col2X, y2);
       y2 += 11.5;
@@ -1512,7 +1512,7 @@ async function exportCvToDocx(title: string, content: string, options: ExportOpt
           children: [
             new TableCell({
               width: { size: 35, type: WidthType.PERCENTAGE },
-              shading: { fill: "0F172A", val: ShadingType.CLEAR },
+              shading: { fill: "0F172A", type: ShadingType.CLEAR },
               margins: { top: 280, bottom: 280, left: 280, right: 280 },
               children: leftCellParagraphs,
             }),
@@ -1539,7 +1539,7 @@ async function exportCvToDocx(title: string, content: string, options: ExportOpt
         new TableRow({
           children: [
             new TableCell({
-              shading: { fill: accentHexClean, val: ShadingType.CLEAR },
+              shading: { fill: accentHexClean, type: ShadingType.CLEAR },
               margins: { top: 320, bottom: 320, left: 360, right: 360 },
               children: [
                 new Paragraph({ children: [new TextRun({ text: cv.fullName || "Nome Completo", bold: true, size: 36, color: "FFFFFF" })] }),
