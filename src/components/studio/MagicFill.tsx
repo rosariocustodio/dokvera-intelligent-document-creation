@@ -17,6 +17,8 @@ function getMagicFillConfig(spec: DocSpec) {
 
   if (id === "cv" || id === "simple_cv") {
     return {
+      title: "Extrator Inteligente de Perfil & CV",
+      inputHeader: "Cola o Texto do teu CV, Perfil ou Rascunho",
       description: "Tens um CV antigo, notas de perfil ou rascunho? Cola o texto aqui e extraímos os teus dados de imediato.",
       placeholder: "Ex.: Chamo-me Maria Santos, residente em Maputo. Contabilidade e Finanças, 4 anos de experiência na Empresa X, Licenciatura na UEM...",
     };
@@ -24,6 +26,8 @@ function getMagicFillConfig(spec: DocSpec) {
 
   if (id === "request" || id === "formal_req") {
     return {
+      title: "Extrator Inteligente de Pedidos & Requerimentos",
+      inputHeader: "Cola o Texto do Rascunho ou Dados do Pedido",
       description: "Tens um rascunho ou dados do pedido? Cola o texto aqui para preencher o requerente, destinatário e o motivo.",
       placeholder: "Ex.: Eu, João Manuel Sitoe, portador do BI n.º 110293847M, venho requerer ao Exmo. Senhor Director a emissão do certificado...",
     };
@@ -31,6 +35,8 @@ function getMagicFillConfig(spec: DocSpec) {
 
   if (id === "declaration") {
     return {
+      title: "Extrator Inteligente de Declarações",
+      inputHeader: "Cola o Texto do Rascunho ou Dados da Declaração",
       description: "Tens os dados para a declaração? Cola o texto aqui para preencher o declarante, BI e o conteúdo a declarar.",
       placeholder: "Ex.: Eu, Carlos Alberto, portador do BI n.º 030495837Z, declaro para os devidos efeitos que resido na Cidade de Maputo...",
     };
@@ -39,32 +45,44 @@ function getMagicFillConfig(spec: DocSpec) {
   switch (category) {
     case "administrativo":
       return {
+        title: "Extrator Inteligente de Documentos Administrativos",
+        inputHeader: "Cola o Texto do Rascunho, Edital ou Formulário",
         description: "Tens um rascunho, edital ou formulário? Cola o texto aqui e a IA extrai os dados oficiais de imediato.",
         placeholder: "Ex.: Requerimento dirigido ao Exmo. Senhor Diretor dos Serviços de Registo, solicitando certidão de nascimento...",
       };
     case "profissional":
       return {
+        title: "Extrator Inteligente de Perfil & Candidaturas",
+        inputHeader: "Cola o Texto da Vaga, CV ou Perfil Profissional",
         description: "Tens um CV antigo, vaga de emprego ou perfil? Cola o texto aqui para preencher a tua candidatura.",
         placeholder: "Ex.: Candidatura à vaga de Técnico de Contabilidade. Nome: Ana Paula, 5 anos de experiência, Licenciada pela UP...",
       };
     case "negocios":
       return {
+        title: "Extrator Inteligente de Propostas & Negócios",
+        inputHeader: "Cola o Resumo da Proposta Comercial ou Plano",
         description: "Tens o resumo da proposta ou plano? Cola o texto aqui e a IA organiza a informação comercial.",
         placeholder: "Ex.: Proposta comercial de fornecimento de equipamento de escritório para a Empresa X, prazo de entrega 15 dias...",
       };
     case "comunicacao":
       return {
+        title: "Extrator Inteligente de Correspondência",
+        inputHeader: "Cola o Rascunho da Carta ou Comunicação",
         description: "Tens o rascunho ou assunto da carta? Cola o texto aqui para preencher o remetente, destinatário e assunto.",
         placeholder: "Ex.: Carta formal de solicitação de audiência com a Direção Geral da empresa Y, remetida por Silva & Associados...",
       };
     case "personalizado":
       return {
+        title: "Extrator Inteligente de Documentos Personalizados",
+        inputHeader: "Cola o Rascunho ou Guião do Documento",
         description: "Tens um rascunho ou guião? Cola o texto aqui e a IA extrai os pontos principais.",
         placeholder: "Ex.: Rascunho com os objetivos, secções necessárias e público-alvo para a elaboração do documento...",
       };
     case "academico":
     default:
       return {
+        title: "Importador Inteligente de Enunciados & PDFs",
+        inputHeader: "Cola o Texto do Enunciado, Edital ou Rascunho",
         description: "Tens um guia ou PDF? Cola o texto aqui e a IA extrai o tema, docente e regras de imediato.",
         placeholder: "Ex.: Trabalho de Gestão de Sistemas sobre o Impacto da Digitalização na Banca. Docente: Prof. Doutor Silva. Universidade Eduardo Mondlane...",
       };
@@ -152,7 +170,7 @@ export function MagicFill({ spec, onApplyFields }: MagicFillProps) {
             </div>
             <div>
               <h4 className="text-xs sm:text-sm font-bold font-display text-foreground flex items-center gap-2">
-                Importador Inteligente de Enunciados & PDFs
+                {config.title}
                 <span className="rounded-md bg-primary/20 px-2 py-0.5 text-[9px] font-mono font-bold text-primary border border-primary/30">
                   1-CLIQUE IA
                 </span>
@@ -178,7 +196,7 @@ export function MagicFill({ spec, onApplyFields }: MagicFillProps) {
           <div className="flex items-center justify-between border-b border-border/50 pb-3">
             <h4 className="text-xs font-bold text-foreground flex items-center gap-2">
               <Wand2 className="size-4 text-primary" />
-              Cola o Texto do Enunciado, Edital ou Rascunho
+              {config.inputHeader}
             </h4>
             <Button
               type="button"

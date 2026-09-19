@@ -818,8 +818,14 @@ function NewDocument() {
 
                   <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
                     <div className="border-b border-border/50 pb-3">
-                      <h2 className="text-base font-bold font-display text-foreground">Tema & Ideia Central</h2>
-                      <p className="text-xs text-muted-foreground">Define o assunto principal do documento.</p>
+                      <h2 className="text-base font-bold font-display text-foreground">
+                        {spec.id === "cv" || spec.id === "simple_cv" ? "Identificação & Cargo Pretendido" : "Tema & Ideia Central"}
+                      </h2>
+                      <p className="text-xs text-muted-foreground">
+                        {spec.id === "cv" || spec.id === "simple_cv"
+                          ? "Indique o seu nome completo e a posição profissional pretendida."
+                          : "Define o assunto principal do documento."}
+                      </p>
                     </div>
 
                     <div className="space-y-4">
