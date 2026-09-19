@@ -366,20 +366,23 @@ function NewDocument() {
 
   // Group fields by Step for Wizard Flow
   const isProSpec = spec?.category === "profissional";
+  const isCvSpec = spec?.id === "cv" || spec?.id === "simple_cv";
+  const isProNonCvSpec = isProSpec && !isCvSpec;
+  const totalSteps = isProNonCvSpec ? 3 : 4;
 
   const step1Fields = useMemo(() => {
     if (!spec) return [];
     if (isProSpec) {
-      if (spec.id === "cv" || spec.id === "simple_cv") {
+      if (isCvSpec) {
         const contactIds = ["full_name", "headline", "photo_url", "email", "phone", "address", "linkedin"];
         return spec.groups.flatMap((g) => g.fields).filter((f) => contactIds.includes(f.id));
       }
       if (spec.id === "cover_letter") {
-        const contactIds = ["full_name", "position", "company", "recipient", "city", "letter_date"];
+        const contactIds = ["full_name", "position", "company", "recipient"];
         return spec.groups.flatMap((g) => g.fields).filter((f) => contactIds.includes(f.id));
       }
       if (spec.id === "reference_letter") {
-        const contactIds = ["referee_name", "referee_title", "referee_organization", "referee_email", "relationship", "candidate_name", "target_role", "target_company"];
+        const contactIds = ["referee_name", "referee_title", "referee_organization", "relationship", "candidate_name", "target_role", "target_company"];
         return spec.groups.flatMap((g) => g.fields).filter((f) => contactIds.includes(f.id));
       }
       if (spec.id === "linkedin_profile") {
@@ -777,10 +780,16 @@ function NewDocument() {
 
           </div>
 
-          {/* STEP INDICATOR HEADER (PASSO 1 A 4) */}
+          {/* STEP INDICATOR HEADER */}
           <div className="rounded-2xl border border-border/70 bg-card/90 backdrop-blur-xl p-2 sm:p-3 shadow-xs">
-            <div className="grid grid-cols-4 gap-1 sm:gap-2 text-center">
-              {(isProSpec
+            <div className={cn("grid gap-1 sm:gap-2 text-center", totalSteps === 3 ? "grid-cols-3" : "grid-cols-4")}>
+              {(isProNonCvSpec
+                ? [
+                    { step: 1, label: "1. Dados Iniciais", icon: Icons.User },
+                    { step: 2, label: "2. Conteúdo Principal", icon: FileText },
+                    { step: 3, label: "3. Emissão & Cópia", icon: Sparkles },
+                  ]
+                : isProSpec
                 ? [
                     { step: 1, label: "1. Identificação", icon: Icons.User },
                     { step: 2, label: "2. Estrutura & Design", icon: Icons.LayoutTemplate },
@@ -889,10 +898,66 @@ function NewDocument() {
                 </div>
               )}
 
-              {/* PASSO 2: ESTRUTURA & DESIGN / MODELO VISUAL */}
+              {/* PASSO 2: ESTRUTURA & DESIGN / CONTEÚDO PRINCIPAL */}
               {wizardStep === 2 && (
                 <div className="space-y-6 animate-fade-in">
-                  {isProSpec ? (
+                  {isProNonCvSpec ? (
+                    <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-6">
+                      <div className="border-b border-border/50 pb-3">
+                        <h2 className="text-base font-bold font-display text-foreground">
+                          {spec.id === "linkedin_profile"
+                            ? "Conteúdo do Perfil LinkedIn"
+                            : spec.id === "cover_letter"
+                            ? "Conteúdo da Carta de Apresentação"
+                            : spec.id === "reference_letter"
+                            ? "Conteúdo da Carta de Recomendação"
+                            : "Conteúdo Principal"}
+                        </h2>
+                        <p className="text-xs text-muted-foreground">
+                          Preencha as informações principais para a compilação do seu documento.
+                        </p>
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {step3Fields.map(renderField)}
+                      </div>
+
+                      {/* Tom de Voz Executivo */}
+                      <div className="border-t border-border/50 pt-5 space-y-3">
+                        <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5 font-display">
+                          <Sparkles className="size-4 text-primary" />
+                          Tom de Voz & Estilo Executivo
+                        </h3>
+                        <div className="grid gap-2.5 sm:grid-cols-3">
+                          {[
+                            { id: "executive", label: "Liderança Executiva", desc: "Tom maduro, focado em impacto, KPIs e liderança estratégica." },
+                            { id: "technical", label: "Especialista Técnico", desc: "Foco em competências técnicas, metodologias e resultados." },
+                            { id: "persuasive", label: "Persuasivo & Confiante", desc: "Discurso envolvente, ideal para candidaturas de elevado impacto." },
+                          ].map((tone) => {
+                            const isSelected = (fields["tone"] || "executive") === tone.id;
+                            return (
+                              <button
+                                key={tone.id}
+                                type="button"
+                                onClick={() => setField("tone", tone.id)}
+                                className={cn(
+                                  "rounded-2xl border p-3.5 text-left transition-all cursor-pointer",
+                                  isSelected
+                                    ? "border-primary bg-primary/5 shadow-xs font-bold ring-1 ring-primary/30"
+                                    : "border-border/70 hover:border-border bg-card"
+                                )}
+                              >
+                                <span className="block text-xs font-bold text-foreground">{tone.label}</span>
+                                <span className="mt-0.5 block text-[10px] text-muted-foreground leading-relaxed">
+                                  {tone.desc}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </section>
+                  ) : isProSpec ? (
                     <>
                       {/* Mobile 35/65 Split View Mini-Canvas Widget */}
                       <div className="lg:hidden rounded-2xl border border-border/70 bg-card p-3 shadow-xs flex items-center justify-between">
@@ -1023,20 +1088,157 @@ function NewDocument() {
                 </div>
               )}
 
-              {/* PASSO 3: PERCURSO & CONTEÚDO */}
+              {/* PASSO 3: PERCURSO / EMISSÃO FINAL (SE PRO NON-CV) */}
               {wizardStep === 3 && (
                 <div className="space-y-6 animate-fade-in">
-                  {isProSpec ? (
+                  {isProNonCvSpec ? (
+                    <>
+                      {/* Executive Instructions Block */}
+                      <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
+                        <div>
+                          <Label htmlFor="instructions" className="text-base font-bold font-display text-foreground">
+                            Instruções Especiais para a IA
+                          </Label>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            Explicite regras formais, tom de voz ou diretrizes específicas para o documento.
+                          </p>
+                        </div>
+                        <Textarea
+                          id="instructions"
+                          value={instructions}
+                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInstructions(e.target.value)}
+                          placeholder={spec.instructionsPlaceholder}
+                          className="min-h-24 rounded-xl text-xs"
+                        />
+                      </section>
+
+                      {/* Document Specific 1-Click Export Suite */}
+                      {spec.id === "linkedin_profile" && (
+                        <section className="rounded-3xl border border-primary/30 bg-primary/5 p-6 sm:p-7 shadow-soft space-y-4">
+                          <div className="flex items-center justify-between border-b border-primary/20 pb-3">
+                            <div>
+                              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                                <Icons.Linkedin className="size-4 text-primary" />
+                                Central de Cópia em 1-Clique para LinkedIn
+                              </h3>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Copie dados formatados para colar diretamente nas secções do seu perfil LinkedIn.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="grid gap-2.5 sm:grid-cols-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const headline = asString(fields.headline);
+                                if (!headline) return toast.error("Preencha a Headline no Passo 1.");
+                                navigator.clipboard.writeText(headline);
+                                toast.success("Headline copiada!");
+                              }}
+                              className="h-10 rounded-xl justify-start px-3.5 text-xs font-semibold gap-2 border-primary/20 hover:bg-primary/10 cursor-pointer"
+                            >
+                              <Icons.Copy className="size-3.5 text-primary" />
+                              Copiar Headline
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const about = asString(fields.about);
+                                if (!about) return toast.error("Preencha a secção Sobre no Passo 2.");
+                                navigator.clipboard.writeText(about);
+                                toast.success("Resumo (About) copiado!");
+                              }}
+                              className="h-10 rounded-xl justify-start px-3.5 text-xs font-semibold gap-2 border-primary/20 hover:bg-primary/10 cursor-pointer"
+                            >
+                              <Icons.Copy className="size-3.5 text-primary" />
+                              Copiar Resumo (Sobre)
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const exp = asString(fields.experience);
+                                if (!exp) return toast.error("Preencha a Experiência no Passo 2.");
+                                navigator.clipboard.writeText(exp);
+                                toast.success("Experiência copiada!");
+                              }}
+                              className="h-10 rounded-xl justify-start px-3.5 text-xs font-semibold gap-2 border-primary/20 hover:bg-primary/10 cursor-pointer"
+                            >
+                              <Icons.Copy className="size-3.5 text-primary" />
+                              Copiar Experiência
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const all = `HEADLINE:\n${asString(fields.headline)}\n\nSOBRE:\n${asString(fields.about)}\n\nEXPERIÊNCIA:\n${asString(fields.experience)}\n\nSKILLS:\n${asString(fields.skills)}`;
+                                navigator.clipboard.writeText(all);
+                                toast.success("Perfil completo copiado!");
+                              }}
+                              className="h-10 rounded-xl justify-start px-3.5 text-xs font-bold gap-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer"
+                            >
+                              <Icons.Sparkles className="size-3.5" />
+                              Copiar Perfil Completo
+                            </Button>
+                          </div>
+                        </section>
+                      )}
+
+                      {(spec.id === "cover_letter" || spec.id === "reference_letter") && (
+                        <section className="rounded-3xl border border-primary/30 bg-primary/5 p-6 sm:p-7 shadow-soft space-y-4">
+                          <div className="flex items-center justify-between border-b border-primary/20 pb-3">
+                            <div>
+                              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                                <Icons.Mail className="size-4 text-primary" />
+                                Emissão da Carta & Envio Rápido
+                              </h3>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Exporte em PDF timbrado ou copie o texto para enviar no corpo do seu e-mail.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-3">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const text = asString(fields.purpose || fields.closing_statement);
+                                if (!text) return toast.error("Preencha o conteúdo da carta no Passo 2.");
+                                navigator.clipboard.writeText(text);
+                                toast.success("Texto da carta copiado para envio por e-mail!");
+                              }}
+                              className="h-10 rounded-xl px-4 text-xs font-semibold gap-2 border-primary/20 hover:bg-primary/10 cursor-pointer"
+                            >
+                              <Icons.Copy className="size-3.5 text-primary" />
+                              Copiar Texto para E-mail
+                            </Button>
+                          </div>
+                        </section>
+                      )}
+
+                      {/* Summary Block */}
+                      <div className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-3">
+                        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-mono">
+                          Resumo da Configuração
+                        </h3>
+                        <div className="text-xs space-y-1.5">
+                          <p><span className="font-semibold text-muted-foreground">Documento:</span> {spec.label}</p>
+                          <p><span className="font-semibold text-muted-foreground">Título:</span> {title}</p>
+                        </div>
+                      </div>
+                    </>
+                  ) : isProSpec ? (
                     <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
                       <div className="border-b border-border/50 pb-3">
                         <h2 className="text-base font-bold font-display text-foreground">
-                          {spec.id === "linkedin_profile"
-                            ? "Conteúdo do Perfil LinkedIn"
-                            : spec.id === "cover_letter"
-                            ? "Conteúdo da Carta de Apresentação"
-                            : spec.id === "reference_letter"
-                            ? "Conteúdo da Carta de Recomendação"
-                            : "Percurso Profissional & Académico"}
+                          Percurso Profissional & Académico
                         </h2>
                         <p className="text-xs text-muted-foreground">
                           Preencha as informações para as secções selecionadas no Passo 2.
