@@ -23,7 +23,7 @@ import { type DocSpec, type FieldDef } from "@/lib/document-specs";
 import { type AffordabilityResult } from "@/lib/pricing";
 import { creditsToCurrency, formatCurrency } from "@/lib/dokvera";
 import { MagicFill } from "@/components/studio/MagicFill";
-import { FORMAL_SALUTATIONS, type CategoryPreset } from "@/lib/category-presets";
+import { type CategoryPreset } from "@/lib/category-presets";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -37,10 +37,11 @@ interface SimpleDocumentFormProps {
   instructions: string;
   setInstructions: (val: string) => void;
   cost: {
+    baseCredits: number;
+    extraCredits: number;
     totalCredits: number;
-    lines: { label: string; credits: number }[];
+    lines: { label: string; amount: number }[];
   } | null;
-
   credits: number;
   check: AffordabilityResult;
   missingRequired: string[];
@@ -88,12 +89,6 @@ export function SimpleDocumentForm({
       field.type === "list" ||
       field.type === "students" ||
       field.type === "photo";
-
-    const isSalutationTarget =
-      field.id === "recipient" ||
-      field.id === "declarant" ||
-      field.id === "full_name" ||
-      field.id === "teacher";
 
     return (
       <div key={field.id} className={`space-y-1.5 ${wide ? "sm:col-span-2" : ""}`}>
@@ -170,7 +165,7 @@ export function SimpleDocumentForm({
             id={field.id}
             value={Array.isArray(value) ? value.join("\n") : typeof value === "string" ? value : ""}
             onChange={(e) => setField(field.id, e.target.value.split("\n"))}
-            placeholder={field.placeholder ?? "Um item por linha"}
+            placeholder={field.placeholder ?? "Introduza cada item por linha"}
             rows={3}
             className="text-xs rounded-xl bg-background/90 border-border/70 focus-visible:ring-primary/30 font-medium placeholder:text-muted-foreground/60 transition-all"
           />
@@ -198,27 +193,6 @@ export function SimpleDocumentForm({
               placeholder={field.placeholder}
               className="text-xs h-10 rounded-xl bg-background/90 border-border/70 focus-visible:ring-primary/30 font-medium placeholder:text-muted-foreground/60 transition-all"
             />
-            {/* Quick Salutation Pills */}
-            {isSalutationTarget && (
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                <span className="text-[10px] text-muted-foreground/80 font-medium">Tratamento rápido:</span>
-                {FORMAL_SALUTATIONS.map((salutation) => (
-                  <button
-                    key={salutation.value}
-                    type="button"
-                    onClick={() => {
-                      const current = String(fields[field.id] || "");
-                      if (current.startsWith(salutation.value)) return;
-                      setField(field.id, `${salutation.value} ${current}`.trim());
-                    }}
-                    className="rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-semibold px-2 py-0.5 transition-colors border border-primary/20 cursor-pointer"
-                  >
-                    + {salutation.label}
-                  </button>
-                ))}
-
-              </div>
-            )}
           </div>
         )}
 
@@ -245,15 +219,9 @@ export function SimpleDocumentForm({
             </Button>
 
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-base sm:text-lg font-bold font-display text-foreground">
-                  {spec.label}
-                </h1>
-                <Badge variant="secondary" className="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
-                  <Zap className="size-3 mr-1" />
-                  Rápido & Direto
-                </Badge>
-              </div>
+              <h1 className="text-base sm:text-lg font-bold font-display text-foreground">
+                {spec.label}
+              </h1>
               <p className="text-xs text-muted-foreground mt-0.5">{spec.description}</p>
             </div>
           </div>
@@ -279,25 +247,6 @@ export function SimpleDocumentForm({
           </div>
         </div>
 
-        {/* Category Presets if available */}
-        {availablePresets.length > 0 && (
-          <div className="pt-3.5 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-foreground flex items-center gap-1">
-              <Sparkles className="size-3.5 text-primary" />
-              Presets Rápidos:
-            </span>
-            {availablePresets.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => onApplyPreset(preset)}
-                className="rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition-all shadow-2xs hover:scale-102 cursor-pointer"
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* MagicFill AI Extractor */}

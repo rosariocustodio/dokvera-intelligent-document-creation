@@ -157,14 +157,7 @@ function NewDocument() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spec?.id]);
 
-  /** Prefill default city */
-  useEffect(() => {
-    if (!spec || !profile) return;
-    const hasCity = spec.groups.some((g) => g.fields.some((f) => f.id === "city"));
-    if (!hasCity) return;
-    setFields((prev) => (prev["city"] ? prev : { ...prev, city: getCountryConfig(country).defaultCity }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec?.id, profile]);
+
 
   /** Restore existing draft. */
   useEffect(() => {
@@ -664,16 +657,9 @@ function NewDocument() {
                     </span>
                     <Badge
                       variant="outline"
-                      className={cn(
-                        "text-[10px] font-bold py-0.5 px-2 rounded-lg border",
-                        item.complexity === "simple"
-                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                          : item.complexity === "advanced"
-                            ? "border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400"
-                            : "border-primary/30 bg-primary/10 text-primary"
-                      )}
+                      className="text-[10px] font-semibold py-0.5 px-2 rounded-lg border border-border bg-muted/40 text-muted-foreground"
                     >
-                      {item.complexity === "simple" ? "⚡ Simples" : item.complexity === "advanced" ? "★ Avançado" : "✦ Padrão"}
+                      {item.complexity === "simple" ? "Simples" : item.complexity === "advanced" ? "Avançado" : "Padrão"}
                     </Badge>
                   </div>
                   <h3 className="mt-4 font-bold font-display text-foreground text-sm group-hover:text-primary transition-colors">{item.label}</h3>
@@ -682,8 +668,8 @@ function NewDocument() {
                     <span className="font-medium text-muted-foreground">
                       desde {base.totalCredits} cr · {formatCurrency(creditsToCurrency(base.totalCredits, country), country)}
                     </span>
-                    <span className="flex items-center gap-1 font-bold text-primary group-hover:translate-x-0.5 transition-transform">
-                      Abrir Estúdio <ArrowRight className="size-3.5" />
+                    <span className="font-semibold text-foreground flex items-center gap-1 group-hover:text-primary transition-colors">
+                      Selecionar <ArrowRight className="size-3.5" />
                     </span>
                   </div>
                 </button>
@@ -745,17 +731,6 @@ function NewDocument() {
               <ArrowLeft className="mr-2 size-4" /> Mudar tipo de documento
             </Button>
 
-            {/* Mobile A4 Preview Trigger Button (36px Compact Height) */}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setMobileSheetOpen(true)}
-              className="lg:hidden rounded-xl text-xs font-semibold gap-1.5 h-9 border-primary/30 text-primary hover:bg-primary/5 cursor-pointer"
-            >
-              <Eye className="size-3.5" />
-              Ver Folha A4
-            </Button>
           </div>
 
           {/* STEP INDICATOR HEADER (PASSO 1 A 4) */}
@@ -1126,8 +1101,7 @@ function NewDocument() {
             country={country}
           />
         </div>
-      ) : null}
-
+      )}
     </div>
   );
 }
