@@ -683,7 +683,7 @@ function NewDocument() {
             </p>
           )}
         </div>
-      ) : null}
+      )}
 
       {/* SIMPLE SINGLE-PAGE FORM LAYOUT FOR COMPLEXITY === 'SIMPLE' */}
       {spec && spec.complexity === "simple" ? (
@@ -1101,7 +1101,7 @@ function NewDocument() {
             country={country}
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
