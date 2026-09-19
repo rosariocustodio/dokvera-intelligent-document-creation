@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { type DocSpec, type FieldDef } from "@/lib/document-specs";
-import { type AffordabilityResult } from "@/lib/pricing";
+import { type AffordabilityResult, type CostBreakdown } from "@/lib/pricing";
 import { creditsToCurrency, formatCurrency } from "@/lib/dokvera";
 import { MagicFill } from "@/components/studio/MagicFill";
 import { type CategoryPreset } from "@/lib/category-presets";
@@ -36,12 +36,7 @@ interface SimpleDocumentFormProps {
   toggleStructure: (id: string) => void;
   instructions: string;
   setInstructions: (val: string) => void;
-  cost: {
-    baseCredits: number;
-    extraCredits: number;
-    totalCredits: number;
-    lines: { label: string; amount: number }[];
-  } | null;
+  cost: CostBreakdown | null;
   credits: number;
   check: AffordabilityResult;
   missingRequired: string[];
