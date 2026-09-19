@@ -86,31 +86,39 @@ function parseList(input: unknown): string[] {
 }
 
 export function extractCvDataFromFields(fields: Record<string, unknown>, title?: string): CvData {
+  const g = (...keys: string[]): string => {
+    for (const k of keys) {
+      const v = fields[k];
+      if (v !== undefined && v !== null && String(v).trim()) return String(v).trim();
+    }
+    return "";
+  };
   return {
-    fullName: String(fields.full_name || title || "").trim() || "Seu Nome Completo",
-    headline: String(fields.headline || "").trim() || "Título Profissional / Área Pretendida",
-    photoUrl: String(fields.photo_url || fields.photo || "").trim() || undefined,
-    email: String(fields.email || "").trim(),
-    phone: String(fields.phone || "").trim(),
-    location: String(fields.address || fields.location || fields.city || "").trim(),
-    birthDate: String(fields.birth_date || "").trim(),
-    nationality: String(fields.nationality || "").trim(),
-    linkedin: String(fields.linkedin || "").trim(),
-    biNumber: String(fields.bi_number || fields.id_document || fields.id_number || fields.cartao_cidadao || "").trim(),
-    nuitNumber: String(fields.nuit_number || fields.tax_number || fields.nif_number || fields.nif || "").trim(),
-    drivingLicense: String(fields.driving_license || "").trim(),
-    travelAvailability: String(fields.travel_availability || "").trim(),
-    profile: String(fields.profile || "").trim(),
-    experience: parseList(fields.experience),
-    education: parseList(fields.education),
-    skills: parseList(fields.skills),
-    languages: parseList(fields.languages),
-    certifications: parseList(fields.certifications),
-    projects: parseList(fields.projects),
-    volunteering: parseList(fields.volunteering),
-    references: parseList(fields.references_list || fields.references),
+    fullName: g("full_name") || (title ?? "").trim() || "Seu Nome Completo",
+    headline: g("headline") || "Título Profissional / Área Pretendida",
+    photoUrl: g("photo_url", "photo"),
+    email: g("email"),
+    phone: g("phone"),
+    location: g("address", "location", "city"),
+    birthDate: g("birth_date"),
+    nationality: g("nationality"),
+    linkedin: g("linkedin"),
+    biNumber: g("bi_number", "id_document", "id_number", "cartao_cidadao"),
+    nuitNumber: g("nuit_number", "tax_number", "nif_number", "nif"),
+    drivingLicense: g("driving_license"),
+    travelAvailability: g("travel_availability"),
+    profile: g("profile"),
+    experience: parseList(fields["experience"]),
+    education: parseList(fields["education"]),
+    skills: parseList(fields["skills"]),
+    languages: parseList(fields["languages"]),
+    certifications: parseList(fields["certifications"]),
+    projects: parseList(fields["projects"]),
+    volunteering: parseList(fields["volunteering"]),
+    references: parseList(fields["references_list"] ?? fields["references"]),
   };
 }
+
 
 export function CvDocumentSheet({
   data,
@@ -201,7 +209,8 @@ export function CvDocumentSheet({
                     className="flex size-20 items-center justify-center rounded-2xl text-2xl font-bold tracking-tight text-white shadow-lg"
                     style={{ backgroundColor: accent.hex }}
                   >
-                    {data.fullName
+                    {(data.fullName ?? "")
+
                       .split(" ")
                       .filter(Boolean)
                       .slice(0, 2)
