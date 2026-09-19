@@ -20,6 +20,7 @@ import {
   Eye,
   ChevronRight,
   ChevronLeft,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -53,6 +54,7 @@ import {
 import { DocumentSkeletonPreview } from "@/components/studio/DocumentSkeletonPreview";
 import { MagicFill } from "@/components/studio/MagicFill";
 import { MobilePreviewSheet } from "@/components/studio/MobilePreviewSheet";
+import { CATEGORY_PRESETS, FORMAL_SALUTATIONS, type CategoryPreset } from "@/lib/category-presets";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/documents/new")({
@@ -221,6 +223,30 @@ function NewDocument() {
     return missing;
   }, [spec, fields, students.length]);
 
+  const availablePresets = useMemo(() => {
+    if (!spec) return [];
+    return CATEGORY_PRESETS.filter((p) => p.category === spec.category);
+  }, [spec]);
+
+  const applyPreset = (preset: CategoryPreset) => {
+    if (!spec) return;
+    const { defaults } = preset;
+    if (defaults.pageTierId) setPageTierId(defaults.pageTierId);
+    if (defaults.templateId) setTemplateId(defaults.templateId);
+    if (defaults.structure) setStructure(defaults.structure);
+    if (defaults.instructions) {
+      setInstructions((prev) => (prev ? `${prev}\n${defaults.instructions}` : defaults.instructions!));
+    }
+    if (defaults.sampleTheme) {
+      const titleId = spec.titleFieldId || "theme";
+      setField(titleId, defaults.sampleTheme);
+    }
+    if (defaults.citation_style) {
+      setField("citation_style", defaults.citation_style);
+    }
+    toast.success(`Preset "${preset.label}" aplicado com sucesso!`);
+  };
+
   const buildPayload = () => ({
     title,
     doc_type: spec!.id,
@@ -347,7 +373,6 @@ function NewDocument() {
   // Group fields by Step for Wizard Flow
   const step1Fields = useMemo(() => {
     if (!spec) return [];
-    // Primary title/theme field
     const primaryId = spec.titleFieldId || "theme";
     return spec.groups.flatMap((g) => g.fields).filter((f) => f.id === primaryId || f.id === "subject");
   }, [spec]);
@@ -366,6 +391,7 @@ function NewDocument() {
   const renderField = (field: FieldDef) => {
     const value = fields[field.id];
     const wide = field.type === "textarea" || field.type === "list" || field.type === "students" || field.type === "photo";
+    const isSalutationTarget = spec && (spec.category === "administrativo" || spec.category === "comunicacao" || field.id === "teacher");
 
     return (
       <div key={field.id} className={`space-y-1.5 ${wide ? "sm:col-span-2" : ""}`}>
@@ -530,15 +556,34 @@ function NewDocument() {
             {/* Quick Presets for Institution Field */}
             {field.id === "institution" && (
               <div className="flex flex-wrap gap-1.5 pt-1">
-                <span className="text-[10px] text-muted-foreground self-center mr-1">Sugestões:</span>
+                <span className="text-[10px] text-muted-foreground self-center mr-1">Universidades:</span>
                 {UNIVERSITY_PRESETS.map((preset) => (
                   <button
                     key={preset}
                     type="button"
                     onClick={() => setField("institution", preset)}
-                    className="rounded-lg bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    className="rounded-lg bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
                   >
                     {preset.split(" ")[0]}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Formal Salutation Protocol Pills for Recipient / Administrative Fields */}
+            {isSalutationTarget && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <span className="text-[10px] font-semibold text-primary/80 self-center mr-1 flex items-center gap-1">
+                  <Zap className="size-2.5" /> Fórmulas Oficiais:
+                </span>
+                {FORMAL_SALUTATIONS.map((salutation) => (
+                  <button
+                    key={salutation.label}
+                    type="button"
+                    onClick={() => setField(field.id, salutation.value)}
+                    className="rounded-lg border border-primary/20 bg-primary/5 px-2 py-0.5 text-[10px] font-semibold text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                  >
+                    {salutation.label}
                   </button>
                 ))}
               </div>
@@ -720,6 +765,41 @@ function NewDocument() {
                     }}
                   />
 
+                  {/* FASE 1: PRESETS RÁPIDOS DE 1-CLIQUE */}
+                  {availablePresets.length > 0 && (
+                    <section className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card p-5 shadow-soft space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Zap className="size-4 text-primary" />
+                          <h3 className="text-xs font-bold font-display text-foreground">
+                            Presets Rápidos de 1-Clique
+                          </h3>
+                        </div>
+                        <Badge variant="outline" className="text-[10px] font-mono border-primary/30 text-primary bg-primary/5">
+                          Atalhos IA
+                        </Badge>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {availablePresets.map((preset) => (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => applyPreset(preset)}
+                            className="group rounded-2xl border border-border/80 bg-background/80 p-3.5 text-left transition-all hover:border-primary hover:bg-primary/5 shadow-xs cursor-pointer"
+                          >
+                            <span className="block text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                              {preset.label}
+                            </span>
+                            <span className="mt-1 block text-[11px] text-muted-foreground leading-relaxed">
+                              {preset.description}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
                   <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
                     <div className="border-b border-border/50 pb-3">
                       <h2 className="text-base font-bold font-display text-foreground">Tema & Ideia Central</h2>
@@ -878,7 +958,7 @@ function NewDocument() {
                       <p><span className="font-semibold text-muted-foreground">Documento:</span> {spec.label}</p>
                       <p><span className="font-semibold text-muted-foreground">Título:</span> {title}</p>
                       {pageTierId && (
-                        <p><span className="font-semibold text-muted-foreground">Extensão:</span> {spec.pageTiers?.find((t) => t.id === pageTierId)?.label}</p>
+                        <p><span className="font-semibold text-muted-foreground">Extension:</span> {spec.pageTiers?.find((t) => t.id === pageTierId)?.label}</p>
                       )}
                     </div>
                   </div>
@@ -932,7 +1012,7 @@ function NewDocument() {
                     type="button"
                     variant="ghost"
                     onClick={() => setWizardStep((s) => (s - 1) as 1 | 2 | 3 | 4)}
-                    className="h-10 px-3 sm:px-4 rounded-xl text-xs font-semibold gap-1"
+                    className="h-10 px-3 sm:px-4 rounded-xl text-xs font-semibold gap-1 cursor-pointer"
                   >
                     <ChevronLeft className="size-4" />
                     Voltar
@@ -943,7 +1023,7 @@ function NewDocument() {
                   <Button
                     type="button"
                     onClick={() => setWizardStep((s) => (s + 1) as 1 | 2 | 3 | 4)}
-                    className="h-10 px-5 rounded-xl font-bold text-xs shadow-glow gap-1.5"
+                    className="h-10 px-5 rounded-xl font-bold text-xs shadow-glow gap-1.5 cursor-pointer"
                   >
                     Continuar
                     <ChevronRight className="size-4" />
@@ -953,7 +1033,7 @@ function NewDocument() {
                     type="button"
                     disabled={generate.isPending || missingRequired.length > 0 || !check.affordable}
                     onClick={() => generate.mutate()}
-                    className="h-11 px-6 rounded-xl font-bold text-xs sm:text-sm shadow-glow gap-2"
+                    className="h-11 px-6 rounded-xl font-bold text-xs sm:text-sm shadow-glow gap-2 cursor-pointer"
                   >
                     {generate.isPending ? (
                       <Loader2 className="size-4 animate-spin" />
