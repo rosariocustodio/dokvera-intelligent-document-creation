@@ -54,6 +54,7 @@ import {
 import { DocumentSkeletonPreview } from "@/components/studio/DocumentSkeletonPreview";
 import { MagicFill } from "@/components/studio/MagicFill";
 import { MobilePreviewSheet } from "@/components/studio/MobilePreviewSheet";
+import { SimpleDocumentForm } from "@/components/studio/SimpleDocumentForm";
 import { CATEGORY_PRESETS, FORMAL_SALUTATIONS, type CategoryPreset } from "@/lib/category-presets";
 import { cn } from "@/lib/utils";
 
@@ -655,18 +656,33 @@ function NewDocument() {
                     setFields({});
                     setInstructions("");
                   }}
-                  className="group flex flex-col rounded-2xl border border-border/70 bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg cursor-pointer"
+                  className="group flex flex-col rounded-3xl border border-border/70 bg-card/80 p-5 text-left transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-md cursor-pointer"
                 >
-                  <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <TypeIcon name={item.icon} />
-                  </span>
-                  <h3 className="mt-4 font-bold font-display text-foreground">{item.label}</h3>
-                  <p className="mt-1.5 flex-1 text-xs leading-relaxed text-muted-foreground">{item.description}</p>
-                  <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-xs">
+                  <div className="flex items-center justify-between w-full">
+                    <span className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-2xs">
+                      <TypeIcon name={item.icon} />
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] font-bold py-0.5 px-2 rounded-lg border",
+                        item.complexity === "simple"
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          : item.complexity === "advanced"
+                            ? "border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                            : "border-primary/30 bg-primary/10 text-primary"
+                      )}
+                    >
+                      {item.complexity === "simple" ? "⚡ Simples" : item.complexity === "advanced" ? "★ Avançado" : "✦ Padrão"}
+                    </Badge>
+                  </div>
+                  <h3 className="mt-4 font-bold font-display text-foreground text-sm group-hover:text-primary transition-colors">{item.label}</h3>
+                  <p className="mt-1.5 flex-1 text-xs leading-relaxed text-muted-foreground/90">{item.description}</p>
+                  <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3 text-xs">
                     <span className="font-medium text-muted-foreground">
                       desde {base.totalCredits} cr · {formatCurrency(creditsToCurrency(base.totalCredits, country), country)}
                     </span>
-                    <span className="flex items-center gap-1 font-semibold text-primary">
+                    <span className="flex items-center gap-1 font-bold text-primary group-hover:translate-x-0.5 transition-transform">
                       Abrir Estúdio <ArrowRight className="size-3.5" />
                     </span>
                   </div>
@@ -683,8 +699,37 @@ function NewDocument() {
         </div>
       )}
 
-      {/* UNIFIED DOCUMENT WIZARD STUDIO (WHEN SPEC IS SELECTED) */}
-      {spec && (
+      {/* SIMPLE SINGLE-PAGE FORM LAYOUT FOR COMPLEXITY === 'SIMPLE' */}
+      {spec && spec.complexity === "simple" ? (
+        <SimpleDocumentForm
+          spec={spec}
+          fields={fields}
+          setField={setField}
+          setFields={setFields}
+          structure={structure}
+          toggleStructure={toggleStructure}
+          instructions={instructions}
+          setInstructions={setInstructions}
+          cost={cost}
+          credits={credits}
+          check={check}
+          missingRequired={missingRequired}
+          saving={saving}
+          isGenerating={generate.isPending}
+          onGenerate={() => generate.mutate()}
+          onApplyMagicFields={(extracted, inst) => {
+            setFields((prev) => ({ ...prev, ...extracted }));
+            if (inst) setInstructions(inst);
+          }}
+          availablePresets={availablePresets}
+          onApplyPreset={applyPreset}
+          onSelectAnotherSpec={() => {
+            setSpecId(null);
+            setFields({});
+          }}
+          country={country}
+        />
+      ) : spec ? (
         <div className="space-y-6">
           {/* Top Bar for Studio: Navigation */}
           <div className="flex items-center justify-between gap-4 border-b border-border/60 pb-4">

@@ -11,10 +11,72 @@ interface MagicFillProps {
   onApplyFields: (extracted: Record<string, unknown>, suggestedInstructions?: string) => void;
 }
 
+function getMagicFillConfig(spec: DocSpec) {
+  const category = spec.category;
+  const id = spec.id;
+
+  if (id === "cv" || id === "simple_cv") {
+    return {
+      description: "Tens um CV antigo, notas de perfil ou rascunho? Cola o texto aqui e extraímos os teus dados de imediato.",
+      placeholder: "Ex.: Chamo-me Maria Santos, residente em Maputo. Contabilidade e Finanças, 4 anos de experiência na Empresa X, Licenciatura na UEM...",
+    };
+  }
+
+  if (id === "request" || id === "formal_req") {
+    return {
+      description: "Tens um rascunho ou dados do pedido? Cola o texto aqui para preencher o requerente, destinatário e o motivo.",
+      placeholder: "Ex.: Eu, João Manuel Sitoe, portador do BI n.º 110293847M, venho requerer ao Exmo. Senhor Director a emissão do certificado...",
+    };
+  }
+
+  if (id === "declaration") {
+    return {
+      description: "Tens os dados para a declaração? Cola o texto aqui para preencher o declarante, BI e o conteúdo a declarar.",
+      placeholder: "Ex.: Eu, Carlos Alberto, portador do BI n.º 030495837Z, declaro para os devidos efeitos que resido na Cidade de Maputo...",
+    };
+  }
+
+  switch (category) {
+    case "administrativo":
+      return {
+        description: "Tens um rascunho, edital ou formulário? Cola o texto aqui e a IA extrai os dados oficiais de imediato.",
+        placeholder: "Ex.: Requerimento dirigido ao Exmo. Senhor Diretor dos Serviços de Registo, solicitando certidão de nascimento...",
+      };
+    case "profissional":
+      return {
+        description: "Tens um CV antigo, vaga de emprego ou perfil? Cola o texto aqui para preencher a tua candidatura.",
+        placeholder: "Ex.: Candidatura à vaga de Técnico de Contabilidade. Nome: Ana Paula, 5 anos de experiência, Licenciada pela UP...",
+      };
+    case "negocios":
+      return {
+        description: "Tens o resumo da proposta ou plano? Cola o texto aqui e a IA organiza a informação comercial.",
+        placeholder: "Ex.: Proposta comercial de fornecimento de equipamento de escritório para a Empresa X, prazo de entrega 15 dias...",
+      };
+    case "comunicacao":
+      return {
+        description: "Tens o rascunho ou assunto da carta? Cola o texto aqui para preencher o remetente, destinatário e assunto.",
+        placeholder: "Ex.: Carta formal de solicitação de audiência com a Direção Geral da empresa Y, remetida por Silva & Associados...",
+      };
+    case "personalizado":
+      return {
+        description: "Tens um rascunho ou guião? Cola o texto aqui e a IA extrai os pontos principais.",
+        placeholder: "Ex.: Rascunho com os objetivos, secções necessárias e público-alvo para a elaboração do documento...",
+      };
+    case "academico":
+    default:
+      return {
+        description: "Tens um guia ou PDF? Cola o texto aqui e a IA extrai o tema, docente e regras de imediato.",
+        placeholder: "Ex.: Trabalho de Gestão de Sistemas sobre o Impacto da Digitalização na Banca. Docente: Prof. Doutor Silva. Universidade Eduardo Mondlane...",
+      };
+  }
+}
+
 export function MagicFill({ spec, onApplyFields }: MagicFillProps) {
   const [open, setOpen] = useState(false);
   const [rawText, setRawText] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const config = getMagicFillConfig(spec);
 
   const handleProcessText = () => {
     if (!rawText.trim()) {
@@ -78,7 +140,7 @@ export function MagicFill({ spec, onApplyFields }: MagicFillProps) {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-primary/5 p-5 shadow-soft backdrop-blur-xl">
+    <div className="relative overflow-hidden rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/12 via-card/90 to-primary/5 p-5 sm:p-6 shadow-xs backdrop-blur-xl">
       {/* Background Ambient Glow */}
       <div className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-primary/15 blur-2xl" />
 
@@ -91,12 +153,12 @@ export function MagicFill({ spec, onApplyFields }: MagicFillProps) {
             <div>
               <h4 className="text-xs sm:text-sm font-bold font-display text-foreground flex items-center gap-2">
                 Importador Inteligente de Enunciados & PDFs
-                <span className="rounded-md bg-primary/20 px-2 py-0.5 text-[9px] font-mono font-bold text-primary">
+                <span className="rounded-md bg-primary/20 px-2 py-0.5 text-[9px] font-mono font-bold text-primary border border-primary/30">
                   1-CLIQUE IA
                 </span>
               </h4>
-              <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed max-w-lg">
-                Tens um guia ou PDF? Cola o texto aqui e a IA extrai o tema, docente e regras de imediato.
+              <p className="mt-0.5 text-xs text-muted-foreground/90 leading-relaxed max-w-lg">
+                {config.description}
               </p>
             </div>
           </div>
@@ -132,7 +194,7 @@ export function MagicFill({ spec, onApplyFields }: MagicFillProps) {
           <Textarea
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
-            placeholder="Ex.: Trabalho de Gestão de Sistemas sobre o Impacto da Digitalização na Banca. Docente: Prof. Doutor Silva. Universidade Eduardo Mondlane..."
+            placeholder={config.placeholder}
             className="min-h-28 text-xs rounded-2xl bg-background/90 border-border/70 p-3.5 focus-visible:ring-primary/40"
           />
 

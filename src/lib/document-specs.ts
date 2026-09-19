@@ -117,6 +117,7 @@ export type DocSpec = {
   label: string;
   description: string;
   category: DocCategoryId;
+  complexity?: "simple" | "standard" | "advanced";
   icon: string;
   keywords: string[];
   /** Base cost in credits when no page tier applies. */
@@ -221,6 +222,7 @@ const baseSpecs: DocSpec[] = [
     label: "Trabalho Académico",
     description: "Monografias e trabalhos universitários com estrutura formal completa.",
     category: "academico",
+    complexity: "advanced",
     icon: "GraduationCap",
     keywords: ["monografia", "universidade", "faculdade", "tcc", "pesquisa", "trabalho"],
     baseCredits: 5,
@@ -237,6 +239,7 @@ const baseSpecs: DocSpec[] = [
     label: "Trabalho Escolar",
     description: "Trabalhos do ensino básico e secundário, simples e bem organizados.",
     category: "academico",
+    complexity: "standard",
     icon: "BookOpen",
     keywords: ["escola", "secundário", "básico", "turma", "professor"],
     baseCredits: 4,
@@ -253,6 +256,7 @@ const baseSpecs: DocSpec[] = [
     label: "Relatório",
     description: "Relatórios de estágio, actividade ou projecto.",
     category: "academico",
+    complexity: "advanced",
     icon: "ClipboardList",
     keywords: ["estágio", "actividade", "projecto", "relatorio", "empresa"],
     baseCredits: 6,
@@ -323,6 +327,7 @@ const baseSpecs: DocSpec[] = [
     label: "Resumo / Síntese",
     description: "Resumos de textos, livros, artigos ou aulas.",
     category: "academico",
+    complexity: "standard",
     icon: "AlignLeft",
     keywords: ["resumo", "sintese", "livro", "artigo", "aula", "ficha de leitura"],
     baseCredits: 2,
@@ -367,6 +372,7 @@ const baseSpecs: DocSpec[] = [
     label: "Currículo (CV)",
     description: "CV profissional pronto a enviar, com modelo e layout à escolha.",
     category: "profissional",
+    complexity: "standard",
     icon: "IdCard",
     keywords: ["cv", "curriculo", "curriculum", "emprego", "candidatura"],
     baseCredits: 5,
@@ -445,6 +451,7 @@ const baseSpecs: DocSpec[] = [
     label: "Perfil LinkedIn",
     description: "Perfil otimizado para LinkedIn com headline, about, experiência e skills.",
     category: "profissional",
+    complexity: "standard",
     icon: "Linkedin",
     keywords: ["linkedin", "perfil", "rede", "networking", "headhunter", "recrutamento"],
     baseCredits: 4,
@@ -484,6 +491,7 @@ const baseSpecs: DocSpec[] = [
     label: "Carta de Apresentação",
     description: "Carta de candidatura ajustada à vaga e à empresa.",
     category: "profissional",
+    complexity: "standard",
     icon: "Mail",
     keywords: ["carta", "candidatura", "vaga", "emprego", "motivação"],
     baseCredits: 4,
@@ -518,6 +526,7 @@ const baseSpecs: DocSpec[] = [
     label: "Carta de Referência",
     description: "Carta de recomendação profissional ou académica para candidaturas.",
     category: "profissional",
+    complexity: "standard",
     icon: "PenSquare",
     keywords: ["referência", "recomendação", "carta", "emprego", "candidatura", "avaliação"],
     baseCredits: 3,
@@ -579,6 +588,7 @@ const baseSpecs: DocSpec[] = [
     label: "Requerimento",
     description: "Requerimentos formais com a linguagem administrativa correcta.",
     category: "administrativo",
+    complexity: "simple",
     icon: "FileSignature",
     keywords: ["requerimento", "pedido", "oficio", "administração", "formal"],
     baseCredits: 2,
@@ -613,6 +623,7 @@ const baseSpecs: DocSpec[] = [
     label: "Declaração",
     description: "Declarações, autorizações e termos de responsabilidade.",
     category: "administrativo",
+    complexity: "simple",
     icon: "ScrollText",
     keywords: ["declaração", "autorização", "termo", "responsabilidade"],
     baseCredits: 2,
@@ -656,6 +667,7 @@ const baseSpecs: DocSpec[] = [
     label: "Carta Formal / Ofício",
     description: "Comunicação oficial entre pessoas, empresas e instituições.",
     category: "comunicacao",
+    complexity: "simple",
     icon: "Send",
     keywords: ["carta", "ofício", "comunicação", "empresa", "instituição"],
     baseCredits: 2,
@@ -699,6 +711,7 @@ const baseSpecs: DocSpec[] = [
     label: "Outro Documento",
     description: "Descreve o que precisas e nós organizamos a estrutura.",
     category: "personalizado",
+    complexity: "standard",
     icon: "FilePlus2",
     keywords: ["outro", "personalizado", "livre"],
     baseCredits: 3,
@@ -829,6 +842,7 @@ export const DOC_SPECS: DocSpec[] = [
     id: "simple_cv",
     label: "Curriculum Vitae Simples",
     description: "Currículo limpo e simples para candidaturas rápidas.",
+    complexity: "standard",
   },
   {
     ...cvSpec,
