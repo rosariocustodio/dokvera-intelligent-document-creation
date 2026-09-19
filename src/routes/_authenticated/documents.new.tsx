@@ -787,31 +787,27 @@ function NewDocument() {
 
                   {/* FASE 1: PRESETS RÁPIDOS DE 1-CLIQUE */}
                   {availablePresets.length > 0 && (
-                    <section className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card p-5 shadow-soft space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Zap className="size-4 text-primary" />
-                          <h3 className="text-xs font-bold font-display text-foreground">
-                            Presets Rápidos de 1-Clique
-                          </h3>
-                        </div>
-                        <Badge variant="outline" className="text-[10px] font-mono border-primary/30 text-primary bg-primary/5">
-                          Atalhos IA
-                        </Badge>
+                    <section className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                        <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          <Zap className="size-3.5 text-primary" />
+                          Presets Rápidos
+                        </h3>
+                        <span className="text-[11px] text-muted-foreground font-mono">Atalhos</span>
                       </div>
 
-                      <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="grid gap-2.5 sm:grid-cols-2">
                         {availablePresets.map((preset) => (
                           <button
                             key={preset.id}
                             type="button"
                             onClick={() => applyPreset(preset)}
-                            className="group rounded-2xl border border-border/80 bg-background/80 p-3.5 text-left transition-all hover:border-primary hover:bg-primary/5 shadow-xs cursor-pointer"
+                            className="group rounded-xl border border-border/60 bg-card p-3 text-left transition-all hover:border-primary/50 cursor-pointer"
                           >
-                            <span className="block text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                            <span className="block text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
                               {preset.label}
                             </span>
-                            <span className="mt-1 block text-[11px] text-muted-foreground leading-relaxed">
+                            <span className="mt-0.5 block text-[11px] text-muted-foreground line-clamp-2">
                               {preset.description}
                             </span>
                           </button>

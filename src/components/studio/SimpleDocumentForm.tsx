@@ -93,7 +93,7 @@ export function SimpleDocumentForm({
         </Label>
 
         {field.type === "photo" ? (
-          <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 transition-colors hover:border-border">
+          <div className="rounded-xl border border-border/50 bg-background/50 p-3.5 transition-colors">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               {value ? (
                 <div className="relative size-20 rounded-2xl overflow-hidden border-2 border-primary shadow-xs shrink-0 bg-muted">
@@ -222,8 +222,8 @@ export function SimpleDocumentForm({
           </div>
 
           {/* Cost and Balance Summary Top Badge */}
-          <div className="flex items-center gap-3 bg-muted/40 p-2.5 rounded-2xl border border-border/60 self-start md:self-auto">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+          <div className="flex items-center gap-2.5 py-1 px-2.5 self-start md:self-auto">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
               <Coins className="size-4" />
             </div>
             <div>
@@ -234,9 +234,9 @@ export function SimpleDocumentForm({
                 </span>
               </div>
               <div className="text-[11px] text-muted-foreground flex items-center gap-2 mt-0.5">
-                <span>O teu saldo: {credits} créditos</span>
-                {saving === "saving" && <span className="text-[10px] text-primary animate-pulse">• A guardar rascunho...</span>}
-                {saving === "saved" && <span className="text-[10px] text-muted-foreground">• Rascunho guardado</span>}
+                <span>Saldo: {credits} cr</span>
+                {saving === "saving" && <span className="text-[10px] text-primary animate-pulse">• A guardar...</span>}
+                {saving === "saved" && <span className="text-[10px] text-muted-foreground">• Guardado</span>}
               </div>
             </div>
           </div>
