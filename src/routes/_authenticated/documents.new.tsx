@@ -365,29 +365,43 @@ function NewDocument() {
   };
 
   // Group fields by Step for Wizard Flow
-  const isCvSpec = spec?.id === "cv" || spec?.id === "simple_cv";
+  const isProSpec = spec?.category === "profissional";
 
   const step1Fields = useMemo(() => {
     if (!spec) return [];
-    if (isCvSpec) {
-      const contactIds = ["full_name", "headline", "photo_url", "email", "phone", "address", "linkedin"];
-      return spec.groups.flatMap((g) => g.fields).filter((f) => contactIds.includes(f.id));
+    if (isProSpec) {
+      if (spec.id === "cv" || spec.id === "simple_cv") {
+        const contactIds = ["full_name", "headline", "photo_url", "email", "phone", "address", "linkedin"];
+        return spec.groups.flatMap((g) => g.fields).filter((f) => contactIds.includes(f.id));
+      }
+      if (spec.id === "cover_letter") {
+        const contactIds = ["full_name", "position", "company", "recipient", "city", "letter_date"];
+        return spec.groups.flatMap((g) => g.fields).filter((f) => contactIds.includes(f.id));
+      }
+      if (spec.id === "reference_letter") {
+        const contactIds = ["referee_name", "referee_title", "referee_organization", "referee_email", "relationship", "candidate_name", "candidate_position"];
+        return spec.groups.flatMap((g) => g.fields).filter((f) => contactIds.includes(f.id));
+      }
+      if (spec.id === "linkedin_profile") {
+        const contactIds = ["full_name", "headline", "location"];
+        return spec.groups.flatMap((g) => g.fields).filter((f) => contactIds.includes(f.id));
+      }
     }
     const primaryId = spec.titleFieldId || "theme";
     return spec.groups.flatMap((g) => g.fields).filter((f) => f.id === primaryId || f.id === "subject");
-  }, [spec, isCvSpec]);
+  }, [spec, isProSpec]);
 
   const step2Fields = useMemo(() => {
-    if (!spec || isCvSpec) return [];
+    if (!spec || isProSpec) return [];
     const primaryId = spec.titleFieldId || "theme";
     return spec.groups.flatMap((g) => g.fields).filter((f) => f.id !== primaryId && f.id !== "subject" && f.type !== "select");
-  }, [spec, isCvSpec]);
+  }, [spec, isProSpec]);
 
   const step3Fields = useMemo(() => {
     if (!spec) return [];
-    if (isCvSpec) {
-      const contactIds = ["full_name", "headline", "photo_url", "email", "phone", "address", "linkedin"];
-      const contentFields = spec.groups.flatMap((g) => g.fields).filter((f) => !contactIds.includes(f.id));
+    if (isProSpec) {
+      const step1Ids = step1Fields.map((f) => f.id);
+      const contentFields = spec.groups.flatMap((g) => g.fields).filter((f) => !step1Ids.includes(f.id));
       return contentFields.filter((f) => {
         if (f.id === "profile") return structure.includes("profile");
         if (f.id === "experience") return structure.includes("experience");
@@ -396,11 +410,12 @@ function NewDocument() {
         if (f.id === "languages") return structure.includes("languages");
         if (f.id === "certifications") return structure.includes("certifications");
         if (f.id === "references_list") return structure.includes("references");
+        if (f.id === "about") return structure.includes("about");
         return true;
       });
     }
     return spec.groups.flatMap((g) => g.fields).filter((f) => f.type === "select");
-  }, [spec, isCvSpec, structure]);
+  }, [spec, isProSpec, step1Fields, structure]);
 
   const renderField = (field: FieldDef) => {
     const value = fields[field.id];
@@ -409,17 +424,10 @@ function NewDocument() {
 
     return (
       <div key={field.id} className={`space-y-1.5 ${wide ? "sm:col-span-2" : ""}`}>
-        <div className="flex items-center justify-between">
-          <Label htmlFor={field.id} className="text-xs font-semibold text-foreground">
-            {field.label}
-            {field.required && <span className="ml-1 text-destructive">*</span>}
-          </Label>
-          {field.type === "list" && (
-            <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
-              • 1 item por linha (Enter = Marcador)
-            </span>
-          )}
-        </div>
+        <Label htmlFor={field.id} className="text-xs font-semibold text-foreground tracking-tight">
+          {field.label}
+          {field.required && <span className="ml-1 text-destructive font-bold">*</span>}
+        </Label>
 
         {field.type === "photo" ? (
           <div className="rounded-2xl border border-border/80 bg-muted/20 p-4">
@@ -469,12 +477,6 @@ function NewDocument() {
                     }}
                   />
                 </label>
-                {value ? (
-                  <button
-                    type="button"
-                    onClick={() => setField(field.id, "")}
-                    className="block text-[11px] text-destructive hover:underline"
-                  >
                     Remover fotografia
                   </button>
                 ) : (
@@ -763,7 +765,7 @@ function NewDocument() {
           {/* STEP INDICATOR HEADER (PASSO 1 A 4) */}
           <div className="rounded-2xl border border-border/70 bg-card/90 backdrop-blur-xl p-2 sm:p-3 shadow-xs">
             <div className="grid grid-cols-4 gap-1 sm:gap-2 text-center">
-              {(isCvSpec
+              {(isProSpec
                 ? [
                     { step: 1, label: "1. Identificação", icon: Icons.User },
                     { step: 2, label: "2. Estrutura & Design", icon: Icons.LayoutTemplate },
@@ -854,10 +856,10 @@ function NewDocument() {
                   <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
                     <div className="border-b border-border/50 pb-3">
                       <h2 className="text-base font-bold font-display text-foreground">
-                        {isCvSpec ? "Identificação & Contactos Pessoais" : "Tema & Ideia Central"}
+                        {isProSpec ? "Identificação & Contactos Pessoais" : "Tema & Ideia Central"}
                       </h2>
                       <p className="text-xs text-muted-foreground">
-                        {isCvSpec
+                        {isProSpec
                           ? "Preencha o seu nome, cargo pretendido, fotografia e dados de contacto."
                           : "Define o assunto principal do documento."}
                       </p>
@@ -875,13 +877,13 @@ function NewDocument() {
               {/* PASSO 2: ESTRUTURA & DESIGN / MODELO VISUAL */}
               {wizardStep === 2 && (
                 <div className="space-y-6 animate-fade-in">
-                  {isCvSpec ? (
+                  {isProSpec ? (
                     <>
                       {/* Mobile 35/65 Split View Mini-Canvas Widget */}
                       <div className="lg:hidden rounded-2xl border border-border/70 bg-card p-3 shadow-xs flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="size-3 rounded-full bg-emerald-500" />
-                          <span className="text-xs font-bold">Preview Mini-Canvas CV</span>
+                          <span className="text-xs font-bold">Preview Mini-Canvas</span>
                         </div>
                         <Button
                           type="button"
@@ -894,13 +896,13 @@ function NewDocument() {
                         </Button>
                       </div>
 
-                      {/* Section 1: Structure Checklist (Secções do CV) */}
+                      {/* Section 1: Structure Checklist (Secções do Documento) */}
                       {spec.structure && spec.structure.length > 0 && (
                         <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
                           <div className="border-b border-border/50 pb-3">
                             <h2 className="text-base font-bold font-display text-foreground flex items-center gap-2">
                               <Layers className="size-4.5 text-primary" />
-                              Secções a Incluir no CV
+                              Secções a Incluir no Documento
                             </h2>
                             <p className="mt-0.5 text-xs text-muted-foreground">
                               Escolha as secções que deseja preencher. O formulário no Passo 3 irá adaptar-se às suas escolhas.
@@ -968,7 +970,7 @@ function NewDocument() {
               {/* PASSO 3: PERCURSO & CONTEÚDO */}
               {wizardStep === 3 && (
                 <div className="space-y-6 animate-fade-in">
-                  {isCvSpec ? (
+                  {isProSpec ? (
                     <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
                       <div className="border-b border-border/50 pb-3">
                         <h2 className="text-base font-bold font-display text-foreground">

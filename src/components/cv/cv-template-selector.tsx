@@ -1,6 +1,5 @@
-import React, { useState } from "react";
-import { Check, Sparkles, LayoutTemplate, Palette, ChevronLeft, ChevronRight, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React, { useRef, useState } from "react";
+import { Check, LayoutTemplate, Palette, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CV_ACCENT_COLORS, type CvAccentColor } from "./cv-document-sheet";
 
@@ -52,17 +51,20 @@ export function CvTemplateSelector({
   onSelectAccent,
 }: CvTemplateSelectorProps) {
   const currentAccent = CV_ACCENT_COLORS.find((c) => c.id === selectedAccent) ?? CV_ACCENT_COLORS[0];
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [activeSlide, setActiveSlide] = useState(() => {
     const idx = CV_TEMPLATES.findIndex((t) => t.id === selectedTemplate);
     return idx >= 0 ? idx : 0;
   });
 
-  const handlePrev = () => {
-    setActiveSlide((prev) => (prev > 0 ? prev - 1 : CV_TEMPLATES.length - 1));
-  };
-
-  const handleNext = () => {
-    setActiveSlide((prev) => (prev < CV_TEMPLATES.length - 1 ? prev + 1 : 0));
+  const scroll = (direction: "left" | "right") => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = scrollContainerRef.current.clientWidth * 0.75;
+      scrollContainerRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
   };
 
   return (
@@ -72,10 +74,10 @@ export function CvTemplateSelector({
         <div>
           <h3 className="flex items-center gap-2 font-display text-base sm:text-lg font-bold text-foreground">
             <LayoutTemplate className="size-5 text-primary" />
-            Escolha o Modelo Visual do CV
+            Modelo Visual & Paleta de Cores
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Deslize para comparar os modelos reais com pré-visualização A4.
+            Selecione o estilo visual e a cor de destaque do seu documento.
           </p>
         </div>
 
@@ -106,32 +108,35 @@ export function CvTemplateSelector({
         </div>
       </div>
 
-      {/* SLIDE CAROUSEL CONTAINER */}
-      <div className="relative">
-        {/* Navigation Arrows */}
+      {/* EXECUTIVE STUDIO CAROUSEL TRACK */}
+      <div className="relative group/carousel">
+        {/* Left Scroll Button */}
         <button
           type="button"
-          onClick={handlePrev}
-          className="absolute -left-3 sm:-left-4 top-1/2 -translate-y-1/2 z-20 flex size-9 items-center justify-center rounded-full bg-background border border-border/80 shadow-md text-foreground hover:bg-muted transition-all cursor-pointer"
-          title="Modelo Anterior"
+          onClick={() => scroll("left")}
+          className="absolute -left-3 sm:-left-4 top-1/2 -translate-y-1/2 z-20 flex size-9 items-center justify-center rounded-full bg-background/95 border border-border shadow-md text-foreground hover:bg-muted transition-all cursor-pointer opacity-90 group-hover/carousel:opacity-100"
+          title="Ver modelo anterior"
         >
           <ChevronLeft className="size-5" />
         </button>
 
+        {/* Right Scroll Button */}
         <button
           type="button"
-          onClick={handleNext}
-          className="absolute -right-3 sm:-right-4 top-1/2 -translate-y-1/2 z-20 flex size-9 items-center justify-center rounded-full bg-background border border-border/80 shadow-md text-foreground hover:bg-muted transition-all cursor-pointer"
-          title="Modelo Seguinte"
+          onClick={() => scroll("right")}
+          className="absolute -right-3 sm:-right-4 top-1/2 -translate-y-1/2 z-20 flex size-9 items-center justify-center rounded-full bg-background/95 border border-border shadow-md text-foreground hover:bg-muted transition-all cursor-pointer opacity-90 group-hover/carousel:opacity-100"
+          title="Ver próximo modelo"
         >
           <ChevronRight className="size-5" />
         </button>
 
-        {/* Cards Carousel View */}
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Scroll Snap Slider Track */}
+        <div
+          ref={scrollContainerRef}
+          className="flex gap-4 overflow-x-auto scrollbar-none snap-x snap-mandatory py-2 px-1"
+        >
           {CV_TEMPLATES.map((tmpl, idx) => {
             const isSelected = selectedTemplate === tmpl.id;
-            const isCurrentSlide = idx === activeSlide;
 
             return (
               <button
@@ -142,18 +147,17 @@ export function CvTemplateSelector({
                   onSelectTemplate(tmpl.id);
                 }}
                 className={cn(
-                  "group relative flex flex-col text-left rounded-2xl border p-4 transition-all duration-300 cursor-pointer",
+                  "snap-start shrink-0 w-[240px] sm:w-[260px] relative flex flex-col text-left rounded-2xl border p-4 transition-all duration-300 cursor-pointer",
                   isSelected
-                    ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/40 scale-[1.02]"
-                    : "border-border/60 bg-background/60 hover:border-border hover:bg-muted/40",
-                  !isCurrentSlide && "hidden lg:flex" // Mobile shows active slide primarily, desktop shows grid
+                    ? "border-primary bg-primary/5 shadow-lg ring-2 ring-primary/40 scale-[1.01]"
+                    : "border-border/60 bg-background/70 hover:border-border hover:bg-card hover:shadow-md"
                 )}
               >
                 {/* Badge */}
                 {tmpl.badge && (
                   <span
                     className={cn(
-                      "absolute -top-2.5 right-4 rounded-full px-2.5 py-0.5 text-[9px] font-bold tracking-wide shadow-sm z-10",
+                      "absolute -top-2.5 right-4 rounded-full px-2.5 py-0.5 text-[9px] font-bold tracking-wide shadow-xs z-10",
                       tmpl.isPopular
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-muted-foreground border border-border"
@@ -163,11 +167,11 @@ export function CvTemplateSelector({
                   </span>
                 )}
 
-                {/* HIGH-FIDELITY REALISTIC MINI-A4 CANVAS MOCKUP */}
-                <div className="relative mb-3.5 aspect-[210/280] w-full overflow-hidden rounded-xl border border-border/70 bg-white shadow-inner p-2.5 text-[7px] text-slate-800 leading-tight">
+                {/* HIGH-FIDELITY REALISTIC A4 CANVAS MOCKUP (210/297) */}
+                <div className="relative mb-3.5 aspect-[210/297] w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md p-2.5 text-[7px] text-slate-800 leading-tight">
                   {/* Modern Template Preview */}
                   {tmpl.id === "modern" && (
-                    <div className="grid h-full grid-cols-12 rounded bg-slate-50 border border-slate-200/60 overflow-hidden">
+                    <div className="grid h-full grid-cols-12 rounded bg-slate-50 border border-slate-200/80 overflow-hidden shadow-xs">
                       {/* Sidebar */}
                       <div className="col-span-4 bg-slate-900 text-white p-2 flex flex-col justify-between">
                         <div className="space-y-2">
@@ -211,7 +215,7 @@ export function CvTemplateSelector({
 
                   {/* Classic ATS Preview */}
                   {tmpl.id === "classic" && (
-                    <div className="h-full rounded bg-slate-50 p-2.5 flex flex-col justify-between border border-slate-200/60">
+                    <div className="h-full rounded bg-slate-50 p-2.5 flex flex-col justify-between border border-slate-200/80 shadow-xs">
                       <div>
                         <div className="text-center pb-2 border-b border-slate-300">
                           <div className="font-bold text-[10px] text-slate-900" style={{ color: currentAccent.hex }}>Carlos Alberto Sitoe</div>
@@ -237,7 +241,7 @@ export function CvTemplateSelector({
 
                   {/* Minimal Clean Preview */}
                   {tmpl.id === "minimal" && (
-                    <div className="h-full rounded bg-slate-50 p-2.5 flex flex-col justify-between border border-slate-200/60">
+                    <div className="h-full rounded bg-slate-50 p-2.5 flex flex-col justify-between border border-slate-200/80 shadow-xs">
                       <div>
                         <div className="pb-2 border-b border-slate-900">
                           <div className="font-extrabold text-[11px] text-slate-900 tracking-tight">Carlos Sitoe</div>
@@ -259,7 +263,7 @@ export function CvTemplateSelector({
 
                   {/* Bold Creative Preview */}
                   {tmpl.id === "bold" && (
-                    <div className="h-full rounded bg-slate-50 flex flex-col border border-slate-200/60 overflow-hidden">
+                    <div className="h-full rounded bg-slate-50 flex flex-col border border-slate-200/80 overflow-hidden shadow-xs">
                       <div className="p-2 text-white shadow-xs" style={{ backgroundColor: currentAccent.hex }}>
                         <div className="font-bold text-[9.5px]">Carlos Sitoe</div>
                         <div className="text-[6px] opacity-90">Engenheiro de Software</div>
@@ -297,26 +301,9 @@ export function CvTemplateSelector({
             );
           })}
         </div>
-
-        {/* Slide Indicator Dots for Mobile / Tablet */}
-        <div className="flex items-center justify-center gap-1.5 mt-4 lg:hidden">
-          {CV_TEMPLATES.map((tmpl, idx) => (
-            <button
-              key={tmpl.id}
-              type="button"
-              onClick={() => {
-                setActiveSlide(idx);
-                onSelectTemplate(tmpl.id);
-              }}
-              className={cn(
-                "h-2 rounded-full transition-all duration-300 cursor-pointer",
-                idx === activeSlide ? "w-6 bg-primary" : "w-2 bg-muted-foreground/30"
-              )}
-            />
-          ))}
-        </div>
       </div>
     </div>
   );
 }
+
 
