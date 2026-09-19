@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Wand2, Upload, FileText, Loader2, Sparkles, Check } from "lucide-react";
+import { Wand2, Upload, FileText, Loader2, Sparkles, Check, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { type DocSpec } from "@/lib/document-specs";
+import { cn } from "@/lib/utils";
 
 interface MagicFillProps {
   spec: DocSpec;
@@ -77,22 +78,25 @@ export function MagicFill({ spec, onApplyFields }: MagicFillProps) {
   };
 
   return (
-    <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 via-background to-primary/5 p-4 shadow-xs">
+    <div className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-primary/5 p-5 shadow-soft backdrop-blur-xl">
+      {/* Background Ambient Glow */}
+      <div className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-primary/15 blur-2xl" />
+
       {!open ? (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs shrink-0">
-              <Wand2 className="size-4 animate-pulse" />
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-glow shrink-0">
+              <Wand2 className="size-5 animate-pulse" />
             </div>
             <div>
-              <h4 className="text-xs font-bold font-display text-foreground flex items-center gap-1.5">
-                Preenchimento Mágico IA
-                <span className="rounded-md bg-primary/20 px-1.5 py-0.5 text-[9px] font-mono font-semibold text-primary">
-                  NOVO
+              <h4 className="text-xs sm:text-sm font-bold font-display text-foreground flex items-center gap-2">
+                Importador Inteligente de Enunciados & PDFs
+                <span className="rounded-md bg-primary/20 px-2 py-0.5 text-[9px] font-mono font-bold text-primary">
+                  1-CLIQUE IA
                 </span>
               </h4>
-              <p className="text-[11px] text-muted-foreground">
-                Tens um enunciado ou guia em PDF? Deixa a IA extrair o tema, docentes e regras.
+              <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed max-w-lg">
+                Tens um guia ou PDF? Cola o texto aqui e a IA extrai o tema, docente e regras de imediato.
               </p>
             </div>
           </div>
@@ -101,25 +105,25 @@ export function MagicFill({ spec, onApplyFields }: MagicFillProps) {
             type="button"
             size="sm"
             onClick={() => setOpen(true)}
-            className="rounded-xl text-xs font-semibold gap-1.5 shrink-0"
+            className="h-10 rounded-xl px-4 text-xs font-bold gap-2 shrink-0 shadow-glow cursor-pointer"
           >
             <Sparkles className="size-3.5" />
             Usar Preenchimento Mágico
           </Button>
         </div>
       ) : (
-        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center justify-between border-b border-border/50 pb-2">
-            <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-              <Wand2 className="size-3.5 text-primary" />
-              Cola aqui o Enunciado, Edital ou Rascunho
+        <div className="relative z-10 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between border-b border-border/50 pb-3">
+            <h4 className="text-xs font-bold text-foreground flex items-center gap-2">
+              <Wand2 className="size-4 text-primary" />
+              Cola o Texto do Enunciado, Edital ou Rascunho
             </h4>
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => setOpen(false)}
-              className="h-7 px-2 text-xs"
+              className="h-8 px-3 text-xs font-semibold cursor-pointer"
             >
               Cancelar
             </Button>
@@ -128,14 +132,14 @@ export function MagicFill({ spec, onApplyFields }: MagicFillProps) {
           <Textarea
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
-            placeholder="Ex.: Trabalho de Gestão sobre Impacto da Digitalização na Banca. Docente: Prof. Silva. Universidade Eduardo Mondlane..."
-            className="min-h-24 text-xs rounded-xl bg-background"
+            placeholder="Ex.: Trabalho de Gestão de Sistemas sobre o Impacto da Digitalização na Banca. Docente: Prof. Doutor Silva. Universidade Eduardo Mondlane..."
+            className="min-h-28 text-xs rounded-2xl bg-background/90 border-border/70 p-3.5 focus-visible:ring-primary/40"
           />
 
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <label className="cursor-pointer text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1.5 border border-border/60 rounded-lg px-2.5 py-1.5 bg-background">
-              <Upload className="size-3.5 text-primary" />
-              <span>Ou carregar ficheiro (.txt)</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <label className="cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center gap-2 border border-border/70 rounded-xl px-3 py-2 bg-background/80 transition-colors shadow-xs">
+              <Upload className="size-4 text-primary" />
+              <span>Carregar ficheiro (.txt)</span>
               <input type="file" accept=".txt,.pdf" className="hidden" onChange={handleFileUpload} />
             </label>
 
@@ -144,14 +148,14 @@ export function MagicFill({ spec, onApplyFields }: MagicFillProps) {
               size="sm"
               onClick={handleProcessText}
               disabled={isProcessing || !rawText.trim()}
-              className="rounded-xl text-xs font-semibold gap-2"
+              className="h-10 rounded-xl px-5 text-xs font-bold gap-2 shadow-glow cursor-pointer"
             >
               {isProcessing ? (
-                <Loader2 className="size-3.5 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
               ) : (
-                <Check className="size-3.5" />
+                <Check className="size-4" />
               )}
-              Extrair e Preencher
+              Extrair e Preencher Campos
             </Button>
           </div>
         </div>
