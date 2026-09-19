@@ -108,51 +108,26 @@ export function CvTemplateSelector({
         </div>
       </div>
 
-      {/* EXECUTIVE STUDIO CAROUSEL TRACK */}
-      <div className="relative group/carousel">
-        {/* Left Scroll Button */}
-        <button
-          type="button"
-          onClick={() => scroll("left")}
-          className="absolute -left-3 sm:-left-4 top-1/2 -translate-y-1/2 z-20 flex size-9 items-center justify-center rounded-full bg-background/95 border border-border shadow-md text-foreground hover:bg-muted transition-all cursor-pointer opacity-90 group-hover/carousel:opacity-100"
-          title="Ver modelo anterior"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
+      {/* EXECUTIVE STUDIO RESPONSIVE TEMPLATE GRID */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 py-1">
+        {CV_TEMPLATES.map((tmpl, idx) => {
+          const isSelected = selectedTemplate === tmpl.id;
 
-        {/* Right Scroll Button */}
-        <button
-          type="button"
-          onClick={() => scroll("right")}
-          className="absolute -right-3 sm:-right-4 top-1/2 -translate-y-1/2 z-20 flex size-9 items-center justify-center rounded-full bg-background/95 border border-border shadow-md text-foreground hover:bg-muted transition-all cursor-pointer opacity-90 group-hover/carousel:opacity-100"
-          title="Ver próximo modelo"
-        >
-          <ChevronRight className="size-5" />
-        </button>
-
-        {/* Scroll Snap Slider Track */}
-        <div
-          ref={scrollContainerRef}
-          className="flex gap-4 overflow-x-auto scrollbar-none snap-x snap-mandatory py-2 px-1"
-        >
-          {CV_TEMPLATES.map((tmpl, idx) => {
-            const isSelected = selectedTemplate === tmpl.id;
-
-            return (
-              <button
-                key={tmpl.id}
-                type="button"
-                onClick={() => {
-                  setActiveSlide(idx);
-                  onSelectTemplate(tmpl.id);
-                }}
-                className={cn(
-                  "snap-start shrink-0 w-[240px] sm:w-[260px] relative flex flex-col text-left rounded-2xl border p-4 transition-all duration-300 cursor-pointer",
-                  isSelected
-                    ? "border-primary bg-primary/5 shadow-lg ring-2 ring-primary/40 scale-[1.01]"
-                    : "border-border/60 bg-background/70 hover:border-border hover:bg-card hover:shadow-md"
-                )}
-              >
+          return (
+            <button
+              key={tmpl.id}
+              type="button"
+              onClick={() => {
+                setActiveSlide(idx);
+                onSelectTemplate(tmpl.id);
+              }}
+              className={cn(
+                "relative flex flex-col text-left rounded-2xl border p-3.5 transition-all duration-300 cursor-pointer w-full",
+                isSelected
+                  ? "border-primary bg-primary/5 shadow-lg ring-2 ring-primary/40 scale-[1.01]"
+                  : "border-border/60 bg-background/70 hover:border-border hover:bg-card hover:shadow-md"
+              )}
+            >
                 {/* Badge */}
                 {tmpl.badge && (
                   <span
@@ -301,7 +276,6 @@ export function CvTemplateSelector({
             );
           })}
         </div>
-      </div>
     </div>
   );
 }

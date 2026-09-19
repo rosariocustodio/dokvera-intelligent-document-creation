@@ -267,7 +267,13 @@ export function CvLivePreview({
         ref={containerRef}
         className="relative flex-1 overflow-auto bg-slate-900/10 dark:bg-slate-950/60 p-4 sm:p-6 flex justify-center items-start min-h-[520px] max-h-[780px]"
       >
-        <div className="relative transition-all duration-300 shrink-0 shadow-2xl rounded-sm border border-slate-300/80 bg-white overflow-hidden">
+        <div
+          className="relative transition-all duration-300 shrink-0 shadow-2xl rounded-sm border border-slate-300/80 bg-white overflow-hidden"
+          style={{
+            width: `${210 * scale}mm`,
+            height: `${297 * scale}mm`,
+          }}
+        >
           <CvDocumentSheet
             data={data}
             template={template}
