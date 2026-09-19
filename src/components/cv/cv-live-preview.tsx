@@ -204,13 +204,7 @@ export function CvLivePreview({
                 </div>
               </DialogHeader>
               <div className="flex-1 overflow-auto bg-slate-900/10 dark:bg-slate-950 p-6 flex justify-center items-start min-h-[600px]">
-                <div
-                  style={{
-                    width: `${210 * modalScale}mm`,
-                    height: `${297 * modalScale}mm`,
-                  }}
-                  className="transition-all duration-200"
-                >
+                <div className="relative transition-all duration-300 shrink-0 shadow-2xl rounded-sm border border-slate-300/80 bg-white overflow-hidden">
                   <CvDocumentSheet
                     data={data}
                     template={template}
@@ -271,15 +265,9 @@ export function CvLivePreview({
       {/* Área da Folha A4 com Scroll Suave e Background Texturizado */}
       <div
         ref={containerRef}
-        className="relative flex-1 overflow-auto bg-slate-900/5 dark:bg-slate-950/40 p-4 sm:p-6 flex justify-center items-start min-h-[520px] max-h-[780px]"
+        className="relative flex-1 overflow-auto bg-slate-900/10 dark:bg-slate-950/60 p-4 sm:p-6 flex justify-center items-start min-h-[520px] max-h-[780px]"
       >
-        <div
-          style={{
-            width: `${210 * scale}mm`,
-            height: `${297 * scale}mm`,
-          }}
-          className="relative transition-all duration-200 shrink-0"
-        >
+        <div className="relative transition-all duration-300 shrink-0 shadow-2xl rounded-sm border border-slate-300/80 bg-white overflow-hidden">
           <CvDocumentSheet
             data={data}
             template={template}
