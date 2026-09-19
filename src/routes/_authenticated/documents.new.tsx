@@ -477,13 +477,9 @@ function NewDocument() {
                     }}
                   />
                 </label>
-                    Remover fotografia
-                  </button>
-                ) : (
-                  <p className="text-[11px] text-muted-foreground">
-                    Formatos JPG, PNG ou WEBP.
-                  </p>
-                )}
+                <p className="text-[11px] text-muted-foreground">
+                  Formatos JPG, PNG ou WEBP (máx. 4MB).
+                </p>
               </div>
             </div>
           </div>
