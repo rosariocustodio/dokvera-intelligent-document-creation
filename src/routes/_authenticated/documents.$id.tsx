@@ -218,13 +218,15 @@ function DocumentView() {
       const accentColor = (doc.metadata?.accentColor as string) || (doc.options?.accentColor as string) || (doc.options?.cvAccent as string) || "indigo";
       const fields = (doc.options?.fields as Record<string, unknown>) || (doc.metadata?.fields as Record<string, unknown>);
 
-      exportToPdf(doc.title, doc.content || "", `Dokvera — ${doc.title}`, {
+      exportToPdf(doc.title, doc.content || "", {
+        footer: `Dokvera — ${doc.title}`,
         docType: doc.doc_type,
         templateId,
         accentColor,
         fields,
         country,
       });
+
       toast.success("PDF descarregado com sucesso!");
     } catch (err) {
       toast.error("Erro ao gerar o PDF.");
@@ -239,13 +241,15 @@ function DocumentView() {
       const accentColor = (doc.metadata?.accentColor as string) || (doc.options?.accentColor as string) || (doc.options?.cvAccent as string) || "indigo";
       const fields = (doc.options?.fields as Record<string, unknown>) || (doc.metadata?.fields as Record<string, unknown>);
 
-      await exportToDocx(doc.title, doc.content || "", `Dokvera — ${doc.title}`, {
+      await exportToDocx(doc.title, doc.content || "", {
+        footer: `Dokvera — ${doc.title}`,
         docType: doc.doc_type,
         templateId,
         accentColor,
         fields,
         country,
       });
+
       toast.success("Documento Word descarregado com sucesso!");
     } catch (err) {
       toast.error("Erro ao gerar o documento Word.");

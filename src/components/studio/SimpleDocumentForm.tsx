@@ -37,11 +37,10 @@ interface SimpleDocumentFormProps {
   instructions: string;
   setInstructions: (val: string) => void;
   cost: {
-    baseCredits: number;
-    extraCredits: number;
     totalCredits: number;
-    lines: { label: string; amount: number }[];
+    lines: { label: string; credits: number }[];
   } | null;
+
   credits: number;
   check: AffordabilityResult;
   missingRequired: string[];
@@ -205,18 +204,19 @@ export function SimpleDocumentForm({
                 <span className="text-[10px] text-muted-foreground/80 font-medium">Tratamento rápido:</span>
                 {FORMAL_SALUTATIONS.map((salutation) => (
                   <button
-                    key={salutation}
+                    key={salutation.value}
                     type="button"
                     onClick={() => {
                       const current = String(fields[field.id] || "");
-                      if (current.startsWith(salutation)) return;
-                      setField(field.id, `${salutation} ${current}`.trim());
+                      if (current.startsWith(salutation.value)) return;
+                      setField(field.id, `${salutation.value} ${current}`.trim());
                     }}
                     className="rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-semibold px-2 py-0.5 transition-colors border border-primary/20 cursor-pointer"
                   >
-                    + {salutation}
+                    + {salutation.label}
                   </button>
                 ))}
+
               </div>
             )}
           </div>

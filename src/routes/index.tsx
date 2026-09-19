@@ -32,7 +32,7 @@ function LandingPage() {
   const value = {
     language,
     setLanguage,
-    t: TRANSLATIONS[language],
+    t: TRANSLATIONS[language] as typeof TRANSLATIONS.PT,
   };
 
   return (

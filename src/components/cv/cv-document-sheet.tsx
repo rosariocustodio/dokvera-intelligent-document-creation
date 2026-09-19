@@ -209,7 +209,8 @@ export function CvDocumentSheet({
                     className="flex size-20 items-center justify-center rounded-2xl text-2xl font-bold tracking-tight text-white shadow-lg"
                     style={{ backgroundColor: accent.hex }}
                   >
-                    {data.fullName
+                    {(data.fullName ?? "")
+
                       .split(" ")
                       .filter(Boolean)
                       .slice(0, 2)

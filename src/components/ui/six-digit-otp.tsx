@@ -58,7 +58,10 @@ export function SixDigitOtp({ value, onChange, onComplete, disabled }: SixDigitO
       {Array.from({ length: 6 }).map((_, index) => (
         <input
           key={index}
-          ref={(el) => (inputsRef.current[index] = el)}
+          ref={(el) => {
+            inputsRef.current[index] = el;
+          }}
+
           type="text"
           inputMode="text"
           maxLength={1}
