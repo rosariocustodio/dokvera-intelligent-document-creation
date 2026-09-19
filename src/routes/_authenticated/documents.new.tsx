@@ -1101,7 +1101,7 @@ function NewDocument() {
             country={country}
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
