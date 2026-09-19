@@ -479,7 +479,7 @@ function NewDocument() {
                 placeholder="Nome completo do autor"
                 className="h-10 rounded-xl text-xs"
               />
-              <Button type="button" variant="secondary" className="h-10 rounded-xl px-4 text-xs font-semibold" onClick={addStudent}>
+              <Button type="button" variant="secondary" className="h-10 rounded-xl px-4 text-xs font-semibold cursor-pointer" onClick={addStudent}>
                 Adicionar
               </Button>
             </div>
@@ -491,7 +491,7 @@ function NewDocument() {
                     <button
                       type="button"
                       aria-label={`Remover ${name}`}
-                      className="flex size-4 items-center justify-center rounded-full text-muted-foreground hover:bg-muted-foreground/20"
+                      className="flex size-4 items-center justify-center rounded-full text-muted-foreground hover:bg-muted-foreground/20 cursor-pointer"
                       onClick={() => setField("students", students.filter((_, i) => i !== index))}
                     >
                       <X className="size-3" />
@@ -519,7 +519,7 @@ function NewDocument() {
           />
         ) : field.type === "select" ? (
           <div className="space-y-2">
-            {/* Clickable Pills instead of plain select for modern feel */}
+            {/* Clickable Pills (32px Micro-Chips) */}
             <div className="flex flex-wrap gap-2">
               {field.options?.map((option) => {
                 const selected = asString(value) === option.value;
@@ -529,7 +529,7 @@ function NewDocument() {
                     type="button"
                     onClick={() => setField(field.id, option.value)}
                     className={cn(
-                      "rounded-xl px-3.5 py-2 text-xs font-semibold transition-all border cursor-pointer",
+                      "h-8 rounded-xl px-3.5 text-xs font-semibold transition-all border cursor-pointer",
                       selected
                         ? "border-primary bg-primary/10 text-primary shadow-xs font-bold"
                         : "border-border/70 bg-background text-muted-foreground hover:border-border hover:text-foreground"
@@ -562,7 +562,7 @@ function NewDocument() {
                     key={preset}
                     type="button"
                     onClick={() => setField("institution", preset)}
-                    className="rounded-lg bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+                    className="h-7 rounded-lg bg-muted/60 px-2 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
                   >
                     {preset.split(" ")[0]}
                   </button>
@@ -581,7 +581,7 @@ function NewDocument() {
                     key={salutation.label}
                     type="button"
                     onClick={() => setField(field.id, salutation.value)}
-                    className="rounded-lg border border-primary/20 bg-primary/5 px-2 py-0.5 text-[10px] font-semibold text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                    className="h-7 rounded-lg border border-primary/20 bg-primary/5 px-2 text-[10px] font-semibold text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                   >
                     {salutation.label}
                   </button>
@@ -597,7 +597,7 @@ function NewDocument() {
   };
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-28">
       <PageHeader
         title={spec ? `Estúdio: ${spec.label}` : "Estúdio de Engenharia Documental"}
         subtitle={
@@ -632,7 +632,7 @@ function NewDocument() {
                 key={cat.id}
                 type="button"
                 onClick={() => setCategory(cat.id)}
-                className={`rounded-xl px-4 py-2 text-xs font-semibold transition-colors ${
+                className={`rounded-xl px-4 py-2 text-xs font-semibold transition-colors cursor-pointer ${
                   category === cat.id
                     ? "bg-background text-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground"
@@ -655,7 +655,7 @@ function NewDocument() {
                     setFields({});
                     setInstructions("");
                   }}
-                  className="group flex flex-col rounded-2xl border border-border/70 bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg"
+                  className="group flex flex-col rounded-2xl border border-border/70 bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg cursor-pointer"
                 >
                   <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <TypeIcon name={item.icon} />
@@ -691,7 +691,7 @@ function NewDocument() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 rounded-xl px-3 text-xs font-semibold"
+              className="h-9 rounded-xl px-3 text-xs font-semibold cursor-pointer"
               onClick={() => {
                 setSpecId(null);
                 setFields({});
@@ -700,21 +700,21 @@ function NewDocument() {
               <ArrowLeft className="mr-2 size-4" /> Mudar tipo de documento
             </Button>
 
-            {/* Mobile A4 Preview Drawer Trigger */}
+            {/* Mobile A4 Preview Trigger Button (36px Compact Height) */}
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setMobileSheetOpen(true)}
-              className="lg:hidden rounded-xl text-xs font-semibold gap-1.5 h-9"
+              className="lg:hidden rounded-xl text-xs font-semibold gap-1.5 h-9 border-primary/30 text-primary hover:bg-primary/5 cursor-pointer"
             >
-              <Eye className="size-3.5 text-primary" />
+              <Eye className="size-3.5" />
               Ver Folha A4
             </Button>
           </div>
 
           {/* STEP INDICATOR HEADER (PASSO 1 A 4) */}
-          <div className="rounded-2xl border border-border/70 bg-card p-2 sm:p-3 shadow-xs">
+          <div className="rounded-2xl border border-border/70 bg-card/90 backdrop-blur-xl p-2 sm:p-3 shadow-xs">
             <div className="grid grid-cols-4 gap-1 sm:gap-2 text-center">
               {[
                 { step: 1, label: "1. Conceito", icon: Wand2 },
@@ -800,7 +800,7 @@ function NewDocument() {
                     </section>
                   )}
 
-                  <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                  <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
                     <div className="border-b border-border/50 pb-3">
                       <h2 className="text-base font-bold font-display text-foreground">Tema & Ideia Central</h2>
                       <p className="text-xs text-muted-foreground">Define o assunto principal do documento.</p>
@@ -819,15 +819,34 @@ function NewDocument() {
               {wizardStep === 2 && (
                 <div className="space-y-6 animate-fade-in">
                   {spec.id === "cv" && (
-                    <CvTemplateSelector
-                      selectedTemplate={templateId || "modern"}
-                      onSelectTemplate={(t) => setTemplateId(t)}
-                      selectedAccent={cvAccent}
-                      onSelectAccent={(c) => setCvAccent(c)}
-                    />
+                    <div className="space-y-4">
+                      {/* Mobile 35/65 Split View Mini-Canvas Widget */}
+                      <div className="lg:hidden rounded-2xl border border-border/70 bg-card p-3 shadow-xs flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="size-3 rounded-full bg-emerald-500" />
+                          <span className="text-xs font-bold">Preview Mini-Canvas CV</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setMobileSheetOpen(true)}
+                          className="h-7 text-[11px] font-semibold text-primary"
+                        >
+                          Ver PDF Completo
+                        </Button>
+                      </div>
+
+                      <CvTemplateSelector
+                        selectedTemplate={templateId || "modern"}
+                        onSelectTemplate={(t) => setTemplateId(t)}
+                        selectedAccent={cvAccent}
+                        onSelectAccent={(c) => setCvAccent(c)}
+                      />
+                    </div>
                   )}
 
-                  <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                  <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
                     <div className="border-b border-border/50 pb-3">
                       <h2 className="text-base font-bold font-display text-foreground">Identificação & Contexto</h2>
                       <p className="text-xs text-muted-foreground">Instituição, docentes e dados de apresentação.</p>
@@ -847,7 +866,7 @@ function NewDocument() {
                 <div className="space-y-6 animate-fade-in">
                   {/* Page Extension Tiers */}
                   {spec.pageTiers && spec.pageTiers.length > 0 && (
-                    <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                    <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
                       <div>
                         <h2 className="text-base font-bold font-display text-foreground">Extensão do Documento</h2>
                         <p className="mt-0.5 text-xs text-muted-foreground">Escolha o tamanho aproximado em páginas.</p>
@@ -875,7 +894,7 @@ function NewDocument() {
 
                   {/* Citation Norms */}
                   {step3Fields.length > 0 && (
-                    <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                    <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
                       <div className="border-b border-border/50 pb-3">
                         <h2 className="text-base font-bold font-display text-foreground">Normas & Estilos</h2>
                       </div>
@@ -885,7 +904,7 @@ function NewDocument() {
 
                   {/* Document Structure Checklist */}
                   {spec.structure && spec.structure.length > 0 && (
-                    <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                    <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
                       <div>
                         <h2 className="text-base font-bold font-display text-foreground">Secções do Documento</h2>
                         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -931,7 +950,7 @@ function NewDocument() {
               {/* PASSO 4: SÍNTESE & GERAÇÃO */}
               {wizardStep === 4 && (
                 <div className="space-y-6 animate-fade-in">
-                  <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                  <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
                     <div>
                       <Label htmlFor="instructions" className="text-base font-bold font-display text-foreground">
                         Instruções Especiais para a IA
@@ -950,15 +969,15 @@ function NewDocument() {
                   </section>
 
                   {/* Summary Block */}
-                  <div className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-3">
-                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  <div className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-3">
+                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-mono">
                       Resumo da Configuração
                     </h3>
                     <div className="text-xs space-y-1.5">
                       <p><span className="font-semibold text-muted-foreground">Documento:</span> {spec.label}</p>
                       <p><span className="font-semibold text-muted-foreground">Título:</span> {title}</p>
                       {pageTierId && (
-                        <p><span className="font-semibold text-muted-foreground">Extension:</span> {spec.pageTiers?.find((t) => t.id === pageTierId)?.label}</p>
+                        <p><span className="font-semibold text-muted-foreground">Extensão:</span> {spec.pageTiers?.find((t) => t.id === pageTierId)?.label}</p>
                       )}
                     </div>
                   </div>
@@ -992,12 +1011,12 @@ function NewDocument() {
             </div>
           </div>
 
-          {/* STICKY GLASSMORPHISM BOTTOM ACTION BAR (FIXA NO FUNDO EM DESKTOP E MOBILE) */}
-          <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border/80 bg-background/90 backdrop-blur-xl px-4 py-3 shadow-2xl">
+          {/* STICKY GLASSMORPHISM BOTTOM ACTION BAR (FIXA NO FUNDO EM DESKTOP E MOBILE NA THUMB ZONE) */}
+          <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border/80 bg-background/95 backdrop-blur-2xl px-4 py-3 shadow-2xl">
             <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
               {/* Left: Step Info */}
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="rounded-xl border-primary/30 text-primary text-[11px] font-bold px-2.5 py-1 bg-primary/5">
+                <Badge variant="outline" className="rounded-xl border-primary/30 text-primary text-[11px] font-bold px-2.5 py-1 bg-primary/5 font-mono">
                   Passo {wizardStep} de 4
                 </Badge>
                 <div className="hidden sm:block text-xs font-semibold text-foreground font-display">
@@ -1005,14 +1024,14 @@ function NewDocument() {
                 </div>
               </div>
 
-              {/* Right: Action Buttons with Gold-Standard Proportions */}
+              {/* Right: Action Buttons with Gold-Standard Ergonomic Proportions */}
               <div className="flex items-center gap-2">
                 {wizardStep > 1 && (
                   <Button
                     type="button"
                     variant="ghost"
                     onClick={() => setWizardStep((s) => (s - 1) as 1 | 2 | 3 | 4)}
-                    className="h-10 px-3 sm:px-4 rounded-xl text-xs font-semibold gap-1 cursor-pointer"
+                    className="h-10 px-3.5 rounded-xl text-xs font-semibold gap-1 cursor-pointer"
                   >
                     <ChevronLeft className="size-4" />
                     Voltar

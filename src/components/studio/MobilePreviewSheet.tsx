@@ -5,6 +5,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from "@
 import { type DocSpec } from "@/lib/document-specs";
 import { DocumentSkeletonPreview } from "./DocumentSkeletonPreview";
 import { CvLivePreview, extractCvDataFromFields, type CvAccentColor } from "@/components/cv";
+import { cn } from "@/lib/utils";
 
 interface MobilePreviewSheetProps {
   open: boolean;
@@ -41,57 +42,51 @@ export function MobilePreviewSheet({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[92vh] h-[92vh] flex flex-col bg-background rounded-t-3xl border-t border-border/70">
-        {/* Sheet Header */}
-        <DrawerHeader className="border-b border-border/50 px-5 py-3.5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+      <DrawerContent className="max-h-[94vh] h-[94vh] flex flex-col bg-background rounded-t-[32px] border-t border-border/80 shadow-2xl">
+        {/* Drag Handle & Header */}
+        <DrawerHeader className="border-b border-border/60 px-5 py-3.5 flex items-center justify-between shrink-0 bg-card/60 backdrop-blur-md rounded-t-[32px]">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 items-center justify-center rounded-2xl bg-primary/10 text-primary shrink-0">
               <FileText className="size-4" />
             </span>
             <div>
-              <DrawerTitle className="text-xs font-bold font-display text-foreground">
-                Pré-visualização A4 em Tempo Real
+              <DrawerTitle className="text-xs font-bold font-display text-foreground text-left">
+                Folha A4 em Tempo Real
               </DrawerTitle>
-              <p className="text-[10px] text-muted-foreground">{spec.label}</p>
+              <p className="text-[10px] font-mono text-muted-foreground text-left">{spec.label}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            {/* Zoom Controls */}
-            <div className="flex items-center rounded-xl border border-border bg-muted/40 p-0.5">
-              <button
-                type="button"
-                onClick={() => setZoom((z) => Math.max(0.8, z - 0.1))}
-                className="p-1 text-muted-foreground hover:text-foreground rounded-lg"
-                title="Diminuir Zoom"
-              >
-                <ZoomOut className="size-3.5" />
-              </button>
-              <span className="text-[10px] font-mono px-1.5 text-muted-foreground">
-                {Math.round(zoom * 100)}%
-              </span>
-              <button
-                type="button"
-                onClick={() => setZoom((z) => Math.min(1.3, z + 0.1))}
-                className="p-1 text-muted-foreground hover:text-foreground rounded-lg"
-                title="Aumentar Zoom"
-              >
-                <ZoomIn className="size-3.5" />
-              </button>
+          <div className="flex items-center gap-2">
+            {/* Zoom Presets */}
+            <div className="flex items-center rounded-xl border border-border/80 bg-muted/50 p-1">
+              {[0.8, 1, 1.2].map((z) => (
+                <button
+                  key={z}
+                  type="button"
+                  onClick={() => setZoom(z)}
+                  className={cn(
+                    "px-2 py-0.5 text-[10px] font-mono font-bold rounded-lg transition-colors cursor-pointer",
+                    zoom === z ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {Math.round(z * 100)}%
+                </button>
+              ))}
             </div>
 
             <DrawerClose asChild>
-              <Button variant="ghost" size="icon" className="size-8 rounded-xl">
+              <Button variant="ghost" size="icon" className="size-8 rounded-xl cursor-pointer">
                 <X className="size-4" />
               </Button>
             </DrawerClose>
           </div>
         </DrawerHeader>
 
-        {/* Sheet Content Body with Scroll & Pinch Zoom Container */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-muted/20 flex flex-col items-center">
+        {/* Sheet Content Body with Scroll & Touch Container */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-muted/30 flex flex-col items-center">
           <div
-            className="w-full transition-transform duration-200 origin-top"
+            className="w-full transition-transform duration-200 origin-top flex justify-center"
             style={{ transform: `scale(${zoom})` }}
           >
             {spec.id === "cv" ? (
