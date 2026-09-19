@@ -600,10 +600,8 @@ const baseSpecs: DocSpec[] = [
         fields: [
           { id: "full_name", label: "Nome do requerente", type: "text", required: true },
           { id: "id_document", label: "Documento de identificação", type: "text", placeholder: "BI / DIRE n.º" },
-          { id: "recipient", label: "Dirigido a", type: "text", required: true, placeholder: "Ex.: Ex.mo Senhor Director da Faculdade..." },
-          { id: "purpose", label: "O que pretendes requerer", type: "textarea", required: true, placeholder: "Ex.: emissão de certificado de frequência" },
-          { id: "justification", label: "Justificação", type: "textarea" },
-          { id: "contact", label: "Contacto", type: "text" },
+          { id: "recipient", label: "Dirigido a", type: "text", required: true, placeholder: "Ex.: Exmo. Senhor Director da Faculdade..." },
+          { id: "purpose", label: "Texto do requerimento / pedido", type: "textarea", required: true, placeholder: "Ex.: requerer a emissão do certificado de frequência..." },
           { id: "city", label: "Local", type: "text" },
           { id: "letter_date", label: "Data", type: "date" },
         ],
@@ -635,19 +633,7 @@ const baseSpecs: DocSpec[] = [
         fields: [
           { id: "declarant", label: "Quem declara", type: "text", required: true },
           { id: "id_document", label: "Documento de identificação", type: "text" },
-          {
-            id: "declaration_type",
-            label: "Tipo",
-            type: "select",
-            options: [
-              { value: "generic", label: "Declaração simples" },
-              { value: "authorization", label: "Autorização" },
-              { value: "responsibility", label: "Termo de responsabilidade" },
-              { value: "residence", label: "Declaração de residência" },
-            ],
-          },
-          { id: "purpose", label: "Conteúdo a declarar", type: "textarea", required: true },
-          { id: "beneficiary", label: "Sobre quem / para quem", type: "text" },
+          { id: "purpose", label: "Texto da declaração", type: "textarea", required: true, placeholder: "Ex.: declara para os devidos efeitos que..." },
           { id: "city", label: "Local", type: "text" },
           { id: "letter_date", label: "Data", type: "date" },
         ],
