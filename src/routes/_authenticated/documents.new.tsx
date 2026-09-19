@@ -683,7 +683,7 @@ function NewDocument() {
             </p>
           )}
         </div>
-      )}
+      ) : null}
 
       {/* SIMPLE SINGLE-PAGE FORM LAYOUT FOR COMPLEXITY === 'SIMPLE' */}
       {spec && spec.complexity === "simple" ? (
