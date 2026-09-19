@@ -177,7 +177,7 @@ function CreditsPage() {
           <h2 className="font-display text-xl font-semibold">Pacotes de créditos populares</h2>
           <p className="text-sm text-muted-foreground">Escolha um pacote com bónus integrado para poupar.</p>
         </div>
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {CREDIT_PACKS.map((p) => (
             <div
               key={p.id}
