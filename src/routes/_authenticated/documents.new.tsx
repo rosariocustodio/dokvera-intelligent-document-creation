@@ -14,10 +14,12 @@ import {
   Users,
   X,
   FileText,
-  SlidersHorizontal,
   Wand2,
   Layers,
   LayoutTemplate,
+  Eye,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -28,7 +30,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/page-header";
 import { useSession } from "@/hooks/use-session";
 import { creditsQuery, documentQuery, profileQuery } from "@/lib/queries";
@@ -42,7 +43,7 @@ import {
   type DocSpec,
   type FieldDef,
 } from "@/lib/document-specs";
-import { checkBalance, computeCost, studentsExtra, type DocumentDraftValues } from "@/lib/pricing";
+import { checkBalance, computeCost, type DocumentDraftValues } from "@/lib/pricing";
 import {
   CvTemplateSelector,
   CvLivePreview,
@@ -51,6 +52,8 @@ import {
 } from "@/components/cv";
 import { DocumentSkeletonPreview } from "@/components/studio/DocumentSkeletonPreview";
 import { MagicFill } from "@/components/studio/MagicFill";
+import { MobilePreviewSheet } from "@/components/studio/MobilePreviewSheet";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/documents/new")({
   validateSearch: (search) =>
@@ -87,6 +90,17 @@ function asString(value: unknown): string {
   return String(value);
 }
 
+// Quick University Presets for Fast 1-Touch Input
+const UNIVERSITY_PRESETS = [
+  "Universidade Eduardo Mondlane (UEM)",
+  "Universidade Pedagógica (UP)",
+  "Universidade Católica de Moçambique (UCM)",
+  "ISCTEM",
+  "ISUTC",
+  "Universidade Agostinho Neto (UAN)",
+  "Universidade de Lisboa (ULisboa)",
+];
+
 function NewDocument() {
   const { user } = useSession();
   const userId = user?.id ?? "";
@@ -105,18 +119,20 @@ function NewDocument() {
   const [category, setCategory] = useState<string>("all");
   const [term, setTerm] = useState("");
 
+  // WIZARD STEPPER STATE (Passo 1 a 4)
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
+
   const [fields, setFields] = useState<Record<string, unknown>>({});
   const [structure, setStructure] = useState<string[]>([]);
   const [pageTierId, setPageTierId] = useState<string | undefined>(undefined);
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [layoutId, setLayoutId] = useState<string | undefined>(undefined);
   const [cvAccent, setCvAccent] = useState<CvAccentColor>("indigo");
-  const [mobileTab, setMobileTab] = useState<"studio" | "preview">("studio");
-  const [studioTab, setStudioTab] = useState<string>("dados");
   const [instructions, setInstructions] = useState("");
   const [studentInput, setStudentInput] = useState("");
   const [saving, setSaving] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [hydratedDraft, setHydratedDraft] = useState(false);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   const spec = specId ? getSpec(specId, country) ?? null : null;
 
@@ -134,7 +150,7 @@ function NewDocument() {
     setPageTierId(spec.pageTiers?.[0]?.id);
     setTemplateId(spec.templates?.[0]?.id);
     setLayoutId(spec.layouts?.[0]?.id);
-    setStudioTab("dados");
+    setWizardStep(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spec?.id]);
 
@@ -179,7 +195,7 @@ function NewDocument() {
       ...(cvAccent ? { cvAccent } : {}),
       ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
     }),
-    [fields, structure, pageTierId, templateId, layoutId, cvAccent, instructions, students.length, spec?.students],
+    [fields, structure, pageTierId, templateId, layoutId, cvAccent, instructions, students.length, spec?.students]
   );
 
   const cost = useMemo(() => (spec ? computeCost(spec, values) : null), [spec, values]);
@@ -328,36 +344,31 @@ function NewDocument() {
     setStructure((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
   };
 
-  const scrollToField = (label: string) => {
-    if (!spec) return;
-    if (mobileTab === "preview") setMobileTab("studio");
-    setStudioTab("dados");
-    for (const group of spec.groups) {
-      for (const f of group.fields) {
-        if (f.label === label) {
-          setTimeout(() => {
-            const el = document.getElementById(f.id);
-            if (el) {
-              el.scrollIntoView({ behavior: "smooth", block: "center" });
-              el.focus();
-              el.classList.add("ring-2", "ring-destructive", "animate-pulse");
-              setTimeout(() => {
-                el.classList.remove("ring-2", "ring-destructive", "animate-pulse");
-              }, 2500);
-            }
-          }, 60);
-          return;
-        }
-      }
-    }
-  };
+  // Group fields by Step for Wizard Flow
+  const step1Fields = useMemo(() => {
+    if (!spec) return [];
+    // Primary title/theme field
+    const primaryId = spec.titleFieldId || "theme";
+    return spec.groups.flatMap((g) => g.fields).filter((f) => f.id === primaryId || f.id === "subject");
+  }, [spec]);
+
+  const step2Fields = useMemo(() => {
+    if (!spec) return [];
+    const primaryId = spec.titleFieldId || "theme";
+    return spec.groups.flatMap((g) => g.fields).filter((f) => f.id !== primaryId && f.id !== "subject" && f.type !== "select");
+  }, [spec]);
+
+  const step3Fields = useMemo(() => {
+    if (!spec) return [];
+    return spec.groups.flatMap((g) => g.fields).filter((f) => f.type === "select");
+  }, [spec]);
 
   const renderField = (field: FieldDef) => {
     const value = fields[field.id];
     const wide = field.type === "textarea" || field.type === "list" || field.type === "students" || field.type === "photo";
 
     return (
-      <div key={field.id} className={`space-y-2 ${wide ? "sm:col-span-2" : ""}`}>
+      <div key={field.id} className={`space-y-1.5 ${wide ? "sm:col-span-2" : ""}`}>
         <Label htmlFor={field.id} className="text-xs font-semibold text-foreground">
           {field.label}
           {field.required && <span className="ml-1 text-destructive">*</span>}
@@ -464,10 +475,9 @@ function NewDocument() {
               </div>
             )}
             {spec?.students && (
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <Users className="size-3.5 text-primary" />
-                {spec.students.includedFree} incluídos · cada pessoa extra custa {spec.students.extraPerStudent} cr
-                (máx. {spec.students.max}).
+                {spec.students.includedFree} incluídos · cada pessoa extra custa {spec.students.extraPerStudent} cr.
               </p>
             )}
           </div>
@@ -482,30 +492,58 @@ function NewDocument() {
             className="min-h-24 rounded-xl text-xs"
           />
         ) : field.type === "select" ? (
-          <select
-            id={field.id}
-            value={asString(value)}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setField(field.id, e.target.value)}
-            className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">Selecionar…</option>
-            {field.options?.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-2">
+            {/* Clickable Pills instead of plain select for modern feel */}
+            <div className="flex flex-wrap gap-2">
+              {field.options?.map((option) => {
+                const selected = asString(value) === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setField(field.id, option.value)}
+                    className={cn(
+                      "rounded-xl px-3.5 py-2 text-xs font-semibold transition-all border cursor-pointer",
+                      selected
+                        ? "border-primary bg-primary/10 text-primary shadow-xs font-bold"
+                        : "border-border/70 bg-background text-muted-foreground hover:border-border hover:text-foreground"
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         ) : (
-          <Input
-            id={field.id}
-            type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
-            min={field.min}
-            max={field.max}
-            value={asString(value)}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setField(field.id, e.target.value)}
-            placeholder={field.placeholder}
-            className="h-10 rounded-xl text-xs"
-          />
+          <div className="space-y-1.5">
+            <Input
+              id={field.id}
+              type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
+              min={field.min}
+              max={field.max}
+              value={asString(value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setField(field.id, e.target.value)}
+              placeholder={field.placeholder}
+              className="h-10 rounded-xl text-xs"
+            />
+            {/* Quick Presets for Institution Field */}
+            {field.id === "institution" && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <span className="text-[10px] text-muted-foreground self-center mr-1">Sugestões:</span>
+                {UNIVERSITY_PRESETS.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setField("institution", preset)}
+                    className="rounded-lg bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    {preset.split(" ")[0]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {field.help && <p className="text-[11px] text-muted-foreground">{field.help}</p>}
@@ -514,12 +552,12 @@ function NewDocument() {
   };
 
   return (
-    <div className="space-y-6 pb-16">
+    <div className="space-y-6 pb-24">
       <PageHeader
         title={spec ? `Estúdio: ${spec.label}` : "Estúdio de Engenharia Documental"}
         subtitle={
           spec
-            ? "Configura a estrutura, o tom e os conteúdos. Acompanha a pré-visualização em tempo real."
+            ? "Configura a estrutura, o tom e os conteúdos em 4 passos simples."
             : "Escolhe o tipo de documento para abrir o estúdio de edição."
         }
         action={
@@ -600,15 +638,15 @@ function NewDocument() {
         </div>
       )}
 
-      {/* UNIFIED DOCUMENT ENGINEERING STUDIO (WHEN SPEC IS SELECTED) */}
+      {/* UNIFIED DOCUMENT WIZARD STUDIO (WHEN SPEC IS SELECTED) */}
       {spec && (
         <div className="space-y-6">
-          {/* Top Bar for Studio: Navigation & Mobile View Switcher */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
+          {/* Top Bar for Studio: Navigation */}
+          <div className="flex items-center justify-between gap-4 border-b border-border/60 pb-4">
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 w-fit rounded-xl px-3 text-xs font-semibold"
+              className="h-9 rounded-xl px-3 text-xs font-semibold"
               onClick={() => {
                 setSpecId(null);
                 setFields({});
@@ -617,60 +655,89 @@ function NewDocument() {
               <ArrowLeft className="mr-2 size-4" /> Mudar tipo de documento
             </Button>
 
-            {/* Mobile View Switcher */}
-            <div className="flex lg:hidden items-center justify-center gap-2 rounded-2xl bg-muted/70 p-1.5 border border-border/60">
-              <Button
-                type="button"
-                size="sm"
-                variant={mobileTab === "studio" ? "default" : "ghost"}
-                onClick={() => setMobileTab("studio")}
-                className="flex-1 rounded-xl text-xs font-semibold gap-1.5"
-              >
-                <SlidersHorizontal className="size-3.5" /> Estúdio de Edição
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={mobileTab === "preview" ? "default" : "ghost"}
-                onClick={() => setMobileTab("preview")}
-                className="flex-1 rounded-xl text-xs font-semibold gap-1.5"
-              >
-                <FileText className="size-3.5" /> Pré-visualização A4
-              </Button>
+            {/* Mobile A4 Preview Drawer Trigger */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setMobileSheetOpen(true)}
+              className="lg:hidden rounded-xl text-xs font-semibold gap-1.5 h-9"
+            >
+              <Eye className="size-3.5 text-primary" />
+              Ver Folha A4
+            </Button>
+          </div>
+
+          {/* STEP INDICATOR HEADER (PASSO 1 A 4) */}
+          <div className="rounded-2xl border border-border/70 bg-card p-2 sm:p-3 shadow-xs">
+            <div className="grid grid-cols-4 gap-1 sm:gap-2 text-center">
+              {[
+                { step: 1, label: "1. Conceito", icon: Wand2 },
+                { step: 2, label: "2. Contexto", icon: FileText },
+                { step: 3, label: "3. Estrutura", icon: Layers },
+                { step: 4, label: "4. Geração", icon: Sparkles },
+              ].map((item) => {
+                const isActive = wizardStep === item.step;
+                const isDone = wizardStep > item.step;
+                return (
+                  <button
+                    key={item.step}
+                    type="button"
+                    onClick={() => setWizardStep(item.step as 1 | 2 | 3 | 4)}
+                    className={cn(
+                      "flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 rounded-xl py-2 px-1 text-xs font-bold transition-all cursor-pointer",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-xs font-extrabold"
+                        : isDone
+                        ? "bg-primary/10 text-primary hover:bg-primary/20"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <item.icon className="size-3.5 shrink-0" />
+                    <span className="truncate text-[10px] sm:text-xs">{item.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* MAIN SPLIT-SCREEN LAYOUT */}
+          {/* MAIN WIZARD SPLIT-SCREEN LAYOUT */}
           <div className="grid gap-8 lg:grid-cols-12 items-start">
-            {/* LEFT PANEL (7/12): TABBED STUDIO CONTROLS */}
-            <div className={`space-y-6 lg:col-span-7 ${mobileTab === "preview" ? "hidden lg:block" : "block"}`}>
-              {/* Magic Fill Integration */}
-              <MagicFill
-                spec={spec}
-                onApplyFields={(extracted, suggestedInst) => {
-                  setFields((prev) => ({ ...prev, ...extracted }));
-                  if (suggestedInst) {
-                    setInstructions((prev) => (prev ? `${prev}\n${suggestedInst}` : suggestedInst));
-                  }
-                }}
-              />
+            {/* LEFT PANEL (7/12): WIZARD STEP CONTENT */}
+            <div className="space-y-6 lg:col-span-7">
+              {/* PASSO 1: A IDEIA & O CONCEITO */}
+              {wizardStep === 1 && (
+                <div className="space-y-6 animate-fade-in">
+                  {/* Super Banner IA */}
+                  <MagicFill
+                    spec={spec}
+                    onApplyFields={(extracted, suggestedInst) => {
+                      setFields((prev) => ({ ...prev, ...extracted }));
+                      if (suggestedInst) {
+                        setInstructions((prev) => (prev ? `${prev}\n${suggestedInst}` : suggestedInst));
+                      }
+                      setWizardStep(2);
+                    }}
+                  />
 
-              {/* Studio Tabs */}
-              <Tabs value={studioTab} onValueChange={setStudioTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 rounded-2xl bg-muted/60 p-1.5 h-11">
-                  <TabsTrigger value="dados" className="rounded-xl text-xs font-bold gap-1.5">
-                    <FileText className="size-3.5" /> Dados
-                  </TabsTrigger>
-                  <TabsTrigger value="estrutura" className="rounded-xl text-xs font-bold gap-1.5">
-                    <Layers className="size-3.5" /> Estrutura
-                  </TabsTrigger>
-                  <TabsTrigger value="parametros" className="rounded-xl text-xs font-bold gap-1.5">
-                    <Wand2 className="size-3.5" /> Parâmetros IA
-                  </TabsTrigger>
-                </TabsList>
+                  <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                    <div className="border-b border-border/50 pb-3">
+                      <h2 className="text-base font-bold font-display text-foreground">Tema & Ideia Central</h2>
+                      <p className="text-xs text-muted-foreground">Define o assunto principal do documento.</p>
+                    </div>
 
-                {/* TAB 1: DADOS E CAMPOS DO DOCUMENTO */}
-                <TabsContent value="dados" className="space-y-6 mt-6">
+                    <div className="space-y-4">
+                      {step1Fields.length > 0
+                        ? step1Fields.map(renderField)
+                        : spec.groups[0]?.fields.slice(0, 2).map(renderField)}
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {/* PASSO 2: CONTEXTO & IDENTIFICAÇÃO */}
+              {wizardStep === 2 && (
+                <div className="space-y-6 animate-fade-in">
                   {spec.id === "cv" && (
                     <CvTemplateSelector
                       selectedTemplate={templateId || "modern"}
@@ -680,25 +747,30 @@ function NewDocument() {
                     />
                   )}
 
-                  {spec.groups.map((group) => (
-                    <section key={group.id} className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
-                      <div className="border-b border-border/50 pb-3">
-                        <h2 className="text-base font-bold font-display text-foreground">{group.label}</h2>
-                        {group.description && <p className="mt-0.5 text-xs text-muted-foreground">{group.description}</p>}
-                      </div>
-                      <div className="grid gap-4 sm:grid-cols-2">{group.fields.map(renderField)}</div>
-                    </section>
-                  ))}
-                </TabsContent>
+                  <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                    <div className="border-b border-border/50 pb-3">
+                      <h2 className="text-base font-bold font-display text-foreground">Identificação & Contexto</h2>
+                      <p className="text-xs text-muted-foreground">Instituição, docentes e dados de apresentação.</p>
+                    </div>
 
-                {/* TAB 2: ESTRUTURA E ARQUITETURA DE PÁGINAS */}
-                <TabsContent value="estrutura" className="space-y-6 mt-6">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {step2Fields.length > 0
+                        ? step2Fields.map(renderField)
+                        : spec.groups.flatMap((g) => g.fields).map(renderField)}
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {/* PASSO 3: ESTRUTURA & NORMAS */}
+              {wizardStep === 3 && (
+                <div className="space-y-6 animate-fade-in">
                   {/* Page Extension Tiers */}
                   {spec.pageTiers && spec.pageTiers.length > 0 && (
                     <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
                       <div>
                         <h2 className="text-base font-bold font-display text-foreground">Extensão do Documento</h2>
-                        <p className="mt-0.5 text-xs text-muted-foreground">Define o número aproximado de páginas pretendidas.</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">Escolha o tamanho aproximado em páginas.</p>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
                         {spec.pageTiers.map((tier) => (
@@ -706,11 +778,12 @@ function NewDocument() {
                             key={tier.id}
                             type="button"
                             onClick={() => setPageTierId(tier.id)}
-                            className={`rounded-2xl border p-4 text-left transition-all ${
-                              pageTierId === tier.id ? "border-primary bg-primary/5 shadow-xs" : "border-border/70 hover:border-border"
-                            }`}
+                            className={cn(
+                              "rounded-2xl border p-4 text-left transition-all cursor-pointer",
+                              pageTierId === tier.id ? "border-primary bg-primary/5 shadow-xs font-bold" : "border-border/70 hover:border-border"
+                            )}
                           >
-                            <span className="block text-xs font-bold text-foreground">{tier.label}</span>
+                            <span className="block text-xs text-foreground">{tier.label}</span>
                             <span className="text-[11px] font-semibold text-primary">
                               {tier.credits} cr · {formatCurrency(creditsToCurrency(tier.credits, country), country)}
                             </span>
@@ -720,29 +793,13 @@ function NewDocument() {
                     </section>
                   )}
 
-                  {/* Templates and Layouts if available */}
-                  {(spec.templates || spec.layouts) && spec.id !== "cv" && (
-                    <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-6">
-                      {spec.templates && (
-                        <div>
-                          <h2 className="text-base font-bold font-display text-foreground">Estilo do Modelo</h2>
-                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                            {spec.templates.map((tpl) => (
-                              <button
-                                key={tpl.id}
-                                type="button"
-                                onClick={() => setTemplateId(tpl.id)}
-                                className={`rounded-2xl border p-4 text-left transition-all ${
-                                  templateId === tpl.id ? "border-primary bg-primary/5 shadow-xs" : "border-border/70 hover:border-border"
-                                }`}
-                              >
-                                <span className="block text-xs font-bold text-foreground">{tpl.label}</span>
-                                <span className="text-[11px] text-muted-foreground">{tpl.description}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                  {/* Citation Norms */}
+                  {step3Fields.length > 0 && (
+                    <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
+                      <div className="border-b border-border/50 pb-3">
+                        <h2 className="text-base font-bold font-display text-foreground">Normas & Estilos</h2>
+                      </div>
+                      <div className="space-y-4">{step3Fields.map(renderField)}</div>
                     </section>
                   )}
 
@@ -752,7 +809,7 @@ function NewDocument() {
                       <div>
                         <h2 className="text-base font-bold font-display text-foreground">Secções do Documento</h2>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          Ativa ou desativa elementos para personalizar o índice e corpo do documento.
+                          Ativa ou desativa elementos para personalizar a estrutura.
                         </p>
                       </div>
                       <div className="grid gap-2.5 sm:grid-cols-2">
@@ -761,9 +818,11 @@ function NewDocument() {
                           return (
                             <label
                               key={option.id}
-                              className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition-colors ${
-                                checked ? "border-primary/60 bg-primary/5" : "border-border/70 hover:border-border"
-                              } ${option.required ? "cursor-default opacity-90" : ""}`}
+                              className={cn(
+                                "flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition-colors",
+                                checked ? "border-primary/60 bg-primary/5" : "border-border/70 hover:border-border",
+                                option.required && "cursor-default opacity-90"
+                              )}
                             >
                               <Checkbox
                                 checked={checked}
@@ -786,17 +845,19 @@ function NewDocument() {
                       </div>
                     </section>
                   )}
-                </TabsContent>
+                </div>
+              )}
 
-                {/* TAB 3: PARÂMETROS IA & INSTRUÇÕES */}
-                <TabsContent value="parametros" className="space-y-6 mt-6">
+              {/* PASSO 4: SÍNTESE & GERAÇÃO */}
+              {wizardStep === 4 && (
+                <div className="space-y-6 animate-fade-in">
                   <section className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
                     <div>
                       <Label htmlFor="instructions" className="text-base font-bold font-display text-foreground">
                         Instruções Especiais para a IA
                       </Label>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        Explicite regras formais, tom de voz, exemplos moçambicanos ou exigências do docente.
+                        Explicite regras formais, tom de voz ou exigências do docente.
                       </p>
                     </div>
                     <Textarea
@@ -807,12 +868,26 @@ function NewDocument() {
                       className="min-h-32 rounded-xl text-xs"
                     />
                   </section>
-                </TabsContent>
-              </Tabs>
+
+                  {/* Summary Block */}
+                  <div className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-3">
+                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Resumo da Configuração
+                    </h3>
+                    <div className="text-xs space-y-1.5">
+                      <p><span className="font-semibold text-muted-foreground">Documento:</span> {spec.label}</p>
+                      <p><span className="font-semibold text-muted-foreground">Título:</span> {title}</p>
+                      {pageTierId && (
+                        <p><span className="font-semibold text-muted-foreground">Extensão:</span> {spec.pageTiers?.find((t) => t.id === pageTierId)?.label}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* RIGHT PANEL (5/12): STICKY LIVE A4 PREVIEW & PRICING */}
-            <div className={`space-y-6 lg:col-span-5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1 ${mobileTab === "studio" ? "hidden lg:block" : "block"}`}>
+            {/* RIGHT PANEL (5/12): STICKY LIVE A4 PREVIEW & PRICING (DESKTOP) */}
+            <div className="hidden lg:block space-y-6 lg:col-span-5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1">
               {/* Dynamic Live Preview Panel */}
               {spec.id === "cv" ? (
                 <CvLivePreview
@@ -834,107 +909,78 @@ function NewDocument() {
                   title={title}
                 />
               )}
+            </div>
+          </div>
 
-              {/* Pricing & Checkout Block */}
-              <div className="rounded-3xl border border-border/70 bg-card p-6 shadow-soft space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">Custo da Geração</p>
-                    <p className="font-display text-2xl font-bold text-primary">
-                      {cost?.totalCredits ?? 0} créditos
-                      <span className="ml-2 text-xs font-normal text-muted-foreground">
-                        ({formatCurrency(creditsToCurrency(cost?.totalCredits ?? 0, country), country)})
-                      </span>
-                    </p>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">Seu Saldo</p>
-                    <p className="font-display text-lg font-bold">
-                      {credits} créditos
-                    </p>
-                  </div>
+          {/* STICKY GLASSMORPHISM BOTTOM ACTION BAR (FIXA NO FUNDO EM DESKTOP E MOBILE) */}
+          <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border/80 bg-background/90 backdrop-blur-xl px-4 py-3 shadow-2xl">
+            <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+              {/* Left: Step Info */}
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="rounded-xl border-primary/30 text-primary text-[11px] font-bold px-2.5 py-1 bg-primary/5">
+                  Passo {wizardStep} de 4
+                </Badge>
+                <div className="hidden sm:block text-xs font-semibold text-foreground font-display">
+                  {cost?.totalCredits ?? 0} créditos ({formatCurrency(creditsToCurrency(cost?.totalCredits ?? 0, country), country)})
                 </div>
+              </div>
 
-                <div className="rounded-xl bg-muted/40 p-3 text-xs">
-                  {check.affordable ? (
-                    <p className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium">
-                      <Check className="size-4 shrink-0" /> Saldo suficiente para gerar este documento.
-                    </p>
-                  ) : (
-                    <p className="flex items-center gap-2 text-destructive font-medium">
-                      <AlertTriangle className="size-4 shrink-0" />
-                      Faltam {check.missingCredits} cr ({formatCurrency(check.missingMzn, country)}).
-                    </p>
-                  )}
-                </div>
-
-                {missingRequired.length > 0 && (
-                  <div className="space-y-1.5 rounded-2xl bg-amber-500/10 p-3.5 border border-amber-500/20">
-                    <p className="text-xs font-bold text-amber-700 dark:text-amber-300">
-                      ⚠️ Campos obrigatórios em falta:
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {missingRequired.map((label) => (
-                        <button
-                          key={label}
-                          type="button"
-                          onClick={() => scrollToField(label)}
-                          className="rounded-lg bg-background px-2.5 py-1 text-[11px] font-semibold text-amber-800 dark:text-amber-200 border border-amber-500/30 hover:bg-amber-500/20 transition-all shadow-xs flex items-center gap-1"
-                        >
-                          <span>{label}</span>
-                          <ArrowRight className="size-2.5" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+              {/* Right: Action Buttons with Gold-Standard Proportions */}
+              <div className="flex items-center gap-2">
+                {wizardStep > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setWizardStep((s) => (s - 1) as 1 | 2 | 3 | 4)}
+                    className="h-10 px-3 sm:px-4 rounded-xl text-xs font-semibold gap-1"
+                  >
+                    <ChevronLeft className="size-4" />
+                    Voltar
+                  </Button>
                 )}
 
-                {check.affordable ? (
+                {wizardStep < 4 ? (
                   <Button
-                    size="lg"
-                    className="h-12 w-full rounded-2xl font-semibold shadow-glow text-xs sm:text-sm"
-                    disabled={generate.isPending || missingRequired.length > 0}
-                    onClick={() => generate.mutate()}
+                    type="button"
+                    onClick={() => setWizardStep((s) => (s + 1) as 1 | 2 | 3 | 4)}
+                    className="h-10 px-5 rounded-xl font-bold text-xs shadow-glow gap-1.5"
                   >
-                    {generate.isPending ? (
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="mr-2 size-4" />
-                    )}
-                    Gerar Documento Oficial
+                    Continuar
+                    <ChevronRight className="size-4" />
                   </Button>
                 ) : (
-                  <div className="space-y-2.5">
-                    <Button
-                      size="lg"
-                      className="h-12 w-full rounded-2xl font-semibold text-xs sm:text-sm shadow-md gap-2"
-                      onClick={() => {
-                        toast.info("Pagamento Direto do Documento", {
-                          description: `A solicitar pagamento pontual de ${formatCurrency(check.missingMzn, country)} para gerar apenas este documento.`,
-                        });
-                      }}
-                    >
+                  <Button
+                    type="button"
+                    disabled={generate.isPending || missingRequired.length > 0 || !check.affordable}
+                    onClick={() => generate.mutate()}
+                    className="h-11 px-6 rounded-xl font-bold text-xs sm:text-sm shadow-glow gap-2"
+                  >
+                    {generate.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
                       <Sparkles className="size-4" />
-                      Pagar Apenas Este Documento ({formatCurrency(check.missingMzn, country)})
-                    </Button>
-                    <Button asChild variant="outline" size="lg" className="h-11 w-full rounded-2xl font-medium text-xs gap-2">
-                      <Link to="/credits">
-                        <Coins className="size-3.5 text-primary" />
-                        Carregar Pacote de Créditos (com Bónus)
-                      </Link>
-                    </Button>
-                  </div>
+                    )}
+                    ✦ Compilar e Gerar Documento
+                  </Button>
                 )}
-
-                <p className="text-center text-[11px] text-muted-foreground">
-                  {saving === "saving" && "A gravar rascunho automaticamente…"}
-                  {saving === "saved" && "✓ Rascunho salvo em segurança"}
-                  {saving === "error" && "Erro ao sincronizar rascunho"}
-                </p>
               </div>
             </div>
           </div>
+
+          {/* Mobile Sheet Modal Integration */}
+          <MobilePreviewSheet
+            open={mobileSheetOpen}
+            onOpenChange={setMobileSheetOpen}
+            spec={spec}
+            fields={fields}
+            structure={structure}
+            pageTierId={pageTierId}
+            templateId={templateId}
+            cvAccent={cvAccent}
+            instructions={instructions}
+            title={title}
+            country={country}
+          />
         </div>
       )}
     </div>
