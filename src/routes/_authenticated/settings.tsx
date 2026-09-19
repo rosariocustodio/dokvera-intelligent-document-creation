@@ -12,15 +12,14 @@ import {
   Building2,
   Phone,
   Mail,
-  Linkedin,
   MapPin,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/page-header";
@@ -33,10 +32,10 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
-      { title: "Definições — Dokvera" },
-      { name: "description", content: "Gerencie seu perfil executivo e preferências do Dokvera." },
-      { property: "og:title", content: "Definições — Dokvera" },
-      { property: "og:description", content: "Perfil e preferências da conta." },
+      { title: "Definicoes — Dokvera" },
+      { name: "description", content: "Gerencie a sua conta e preferencias no Dokvera." },
+      { property: "og:title", content: "Definicoes — Dokvera" },
+      { property: "og:description", content: "Perfil e preferencias da conta." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -60,7 +59,6 @@ export function SettingsPage() {
   const [linkedin, setLinkedin] = useState("");
   const [aiTone, setAiTone] = useState("executive");
   const [citationNorm, setCitationNorm] = useState("apa");
-  const [autoFitA4, setAutoFitA4] = useState(true);
 
   const countryConfig = getCountryConfig(country);
 
@@ -76,7 +74,6 @@ export function SettingsPage() {
       setLinkedin((meta.linkedin as string) ?? "");
       setAiTone((meta.aiTone as string) ?? "executive");
       setCitationNorm((meta.citationNorm as string) ?? "apa");
-      setAutoFitA4(meta.autoFitA4 !== false);
     }
   }, [profile]);
 
@@ -90,7 +87,6 @@ export function SettingsPage() {
         linkedin: linkedin.trim(),
         aiTone,
         citationNorm,
-        autoFitA4,
       };
 
       const { error } = await supabase
@@ -105,9 +101,9 @@ export function SettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      toast.success("Definições guardadas com sucesso!");
+      toast.success("Definicoes guardadas com sucesso!");
     },
-    onError: (e: Error) => toast.error(`Erro ao guardar definições: ${e.message}`),
+    onError: (e: Error) => toast.error(`Erro ao guardar definicoes: ${e.message}`),
   });
 
   async function signOut() {
@@ -120,62 +116,49 @@ export function SettingsPage() {
   const displayName = fullName.trim() || profile?.full_name || user?.email || "Utilizador";
 
   return (
-    <div className="space-y-8 pb-24">
+    <div className="max-w-5xl space-y-8 pb-20">
       <PageHeader
-        title="Definições do Estúdio"
-        subtitle="Gerencie o seu perfil executivo, preferências de IA e padrões da conta."
+        title="Definicoes da Conta"
+        subtitle="Gerencie as informacoes do seu perfil, pais e preferencias de IA."
       />
 
-      {/* HEADER CARD: PERFIL EXECUTIVO & RESUMO DA CONTA */}
-      <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <Avatar className="size-16 border-2 border-primary/20 shadow-md">
-              {profile?.avatar_url ? <AvatarImage src={profile.avatar_url} alt={displayName} /> : null}
-              <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg font-display">
-                {displayName.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-bold font-display text-foreground">{displayName}</h2>
-                <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-primary/10 text-primary">
-                  SaaS Pro
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
-                <Mail className="size-3.5 text-muted-foreground/70" />
-                {user?.email}
-              </p>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground border-border/60">
-                  {countryConfig.name} ({countryConfig.currencySymbol})
-                </Badge>
-                <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground border-border/60">
-                  {countryConfig.idDocumentShort} / {countryConfig.taxNumberShort}
-                </Badge>
-              </div>
-            </div>
+      {/* PAINEL SUPERIOR: RESUMO DO UTILIZADOR */}
+      <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+        <div className="flex items-center gap-4">
+          <Avatar className="size-14 border border-border shadow-xs">
+            {profile?.avatar_url ? <AvatarImage src={profile.avatar_url} alt={displayName} /> : null}
+            <AvatarFallback className="bg-primary/10 text-primary font-bold text-base font-display">
+              {displayName.slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h2 className="text-base font-bold font-display text-foreground">{displayName}</h2>
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+              <Mail className="size-3.5" /> {user?.email}
+            </p>
+            <p className="text-xs text-muted-foreground font-mono mt-1">
+              {countryConfig.name} ({countryConfig.currencySymbol})
+            </p>
           </div>
-
-          <Button
-            onClick={() => save.mutate()}
-            disabled={save.isPending}
-            className="h-11 px-6 rounded-xl font-bold text-xs shadow-glow gap-2 cursor-pointer self-stretch sm:self-auto"
-          >
-            {save.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-            Guardar Alterações
-          </Button>
         </div>
-      </section>
 
-      {/* EXECUTIVE TAB NAVIGATION (ESTILO LINEAR / STRIPE) */}
-      <div className="flex flex-wrap gap-2 rounded-2xl bg-muted/60 p-1.5 border border-border/50">
+        <Button
+          onClick={() => save.mutate()}
+          disabled={save.isPending}
+          className="h-10 px-5 rounded-xl font-semibold text-xs shadow-sm gap-2 cursor-pointer self-stretch sm:self-auto"
+        >
+          {save.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+          Guardar Alteracoes
+        </Button>
+      </div>
+
+      {/* NAVEGACAO POR SECTORES (STYLE CLEAN EXECUTIVE) */}
+      <div className="flex flex-wrap gap-1 border-b border-border/60 pb-1">
         {[
-          { id: "profile", label: "1. Perfil Executivo", icon: User },
-          { id: "defaults", label: "2. Dados Predefinidos", icon: Building2 },
-          { id: "ai", label: "3. Inteligência Artificial", icon: Sparkles },
-          { id: "security", label: "4. Preferências & Sessão", icon: Shield },
+          { id: "profile", label: "Perfil", icon: User },
+          { id: "defaults", label: "Dados Predefinidos", icon: Building2 },
+          { id: "ai", label: "Inteligencia Artificial", icon: Sparkles },
+          { id: "security", label: "Conta e Seguranca", icon: Shield },
         ].map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -184,60 +167,55 @@ export function SettingsPage() {
               type="button"
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
               className={cn(
-                "flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all cursor-pointer",
+                "flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all cursor-pointer border-b-2 -mb-1",
                 isActive
-                  ? "bg-background text-foreground shadow-xs font-bold"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "border-primary text-primary font-bold bg-primary/5"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
-              <tab.icon className={cn("size-3.5", isActive ? "text-primary" : "text-muted-foreground")} />
+              <tab.icon className="size-3.5" />
               <span>{tab.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* TAB 1: PERFIL EXECUTIVO */}
+      {/* SECTOR 1: PERFIL */}
       {activeTab === "profile" && (
-        <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-6 animate-fade-in">
-          <div className="border-b border-border/50 pb-3">
-            <h3 className="text-base font-bold font-display text-foreground flex items-center gap-2">
-              <User className="size-4.5 text-primary" />
-              Perfil & Identidade Profissional
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Os seus dados de identificação profissional e jurisdição oficial.
-            </p>
+        <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-xs space-y-6">
+          <div>
+            <h3 className="text-sm font-bold font-display text-foreground">Informacao do Perfil</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Identificacao pessoal e jurisdicao oficial.</p>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="full-name" className="text-xs font-semibold">Nome Completo</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="full-name" className="text-xs font-medium">Nome Completo</Label>
               <Input
                 id="full-name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Seu nome completo oficial"
-                className="h-11 rounded-xl text-xs"
+                placeholder="Seu nome completo"
+                className="h-10 rounded-lg text-xs"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="headline" className="text-xs font-semibold">Título Profissional (Headline)</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="headline" className="text-xs font-medium">Titulo Profissional</Label>
               <Input
                 id="headline"
                 value={headline}
                 onChange={(e) => setHeadline(e.target.value)}
-                placeholder="Ex.: Gestor de Projetos / Analista de Sistemas"
-                className="h-11 rounded-xl text-xs"
+                placeholder="Ex.: Gestor de Projetos"
+                className="h-10 rounded-lg text-xs"
               />
             </div>
 
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="country" className="text-xs font-semibold">País de Residência / Jurisdição</Label>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="country" className="text-xs font-medium">Pais e Moeda</Label>
               <Select value={country} onValueChange={(value) => setCountry(value as CountryCode)}>
-                <SelectTrigger id="country" className="h-11 rounded-xl text-xs">
-                  <SelectValue placeholder="Escolha o seu país" />
+                <SelectTrigger id="country" className="h-10 rounded-lg text-xs">
+                  <SelectValue placeholder="Escolha o pais" />
                 </SelectTrigger>
                 <SelectContent>
                   {listCountries().map((c) => (
@@ -247,145 +225,123 @@ export function SettingsPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
-                <Globe className="size-3 text-primary" />
-                Região ativa: <span className="font-semibold text-foreground">{countryConfig.name}</span>. Ajusta automaticamente a moeda local ({countryConfig.currencyCode}) e a terminologia oficial ({countryConfig.idDocumentShort} / {countryConfig.taxNumberShort}).
-              </p>
             </div>
           </div>
-        </section>
+        </div>
       )}
 
-      {/* TAB 2: DADOS PREDEFINIDOS DO CRIADOR */}
+      {/* SECTOR 2: DADOS PREDEFINIDOS */}
       {activeTab === "defaults" && (
-        <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-6 animate-fade-in">
-          <div className="border-b border-border/50 pb-3">
-            <h3 className="text-base font-bold font-display text-foreground flex items-center gap-2">
-              <Building2 className="size-4.5 text-primary" />
-              Preenchimento Automático do Criador
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Valores por omissão para acelerar a criação de novos documentos no estúdio.
-            </p>
+        <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-xs space-y-6">
+          <div>
+            <h3 className="text-sm font-bold font-display text-foreground">Preenchimento Automatico</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Valores por omissao para acelerar a criacao de documentos.</p>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-xs font-semibold flex items-center gap-1.5">
-                <Phone className="size-3.5 text-primary" /> Telefone Habitual
-              </Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="phone" className="text-xs font-medium">Telefone</Label>
               <Input
                 id="phone"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+258 8x xxx xxxx"
-                className="h-11 rounded-xl text-xs"
+                className="h-10 rounded-lg text-xs"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="city" className="text-xs font-semibold flex items-center gap-1.5">
-                <MapPin className="size-3.5 text-primary" /> Cidade / Província
-              </Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="city" className="text-xs font-medium">Cidade</Label>
               <Input
                 id="city"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                placeholder="Ex.: Maputo, Moçambique"
-                className="h-11 rounded-xl text-xs"
+                placeholder="Ex.: Maputo"
+                className="h-10 rounded-lg text-xs"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="institution" className="text-xs font-semibold flex items-center gap-1.5">
-                <Building2 className="size-3.5 text-primary" /> Instituição / Universidade Habitual
-              </Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="institution" className="text-xs font-medium">Instituicao / Empresa</Label>
               <Input
                 id="institution"
                 value={institution}
                 onChange={(e) => setInstitution(e.target.value)}
-                placeholder="Ex.: Universidade Eduardo Mondlane (UEM)"
-                className="h-11 rounded-xl text-xs"
+                placeholder="Ex.: UEM / Empresa Lda"
+                className="h-10 rounded-lg text-xs"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="linkedin" className="text-xs font-semibold flex items-center gap-1.5">
-                <Linkedin className="size-3.5 text-primary" /> Perfil LinkedIn / Portefólio
-              </Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="linkedin" className="text-xs font-medium">Perfil LinkedIn</Label>
               <Input
                 id="linkedin"
                 value={linkedin}
                 onChange={(e) => setLinkedin(e.target.value)}
-                placeholder="linkedin.com/in/seuperfil"
-                className="h-11 rounded-xl text-xs"
+                placeholder="linkedin.com/in/perfil"
+                className="h-10 rounded-lg text-xs"
               />
             </div>
           </div>
-        </section>
+        </div>
       )}
 
-      {/* TAB 3: PREFERÊNCIAS DE INTELIGÊNCIA ARTIFICIAL */}
+      {/* SECTOR 3: INTELIGENCIA ARTIFICIAL */}
       {activeTab === "ai" && (
-        <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-6 animate-fade-in">
-          <div className="border-b border-border/50 pb-3">
-            <h3 className="text-base font-bold font-display text-foreground flex items-center gap-2">
-              <Sparkles className="size-4.5 text-primary" />
-              Preferências do Motor de IA
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Personalize o tom de voz e as normas de compilação dos seus documentos.
-            </p>
+        <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-xs space-y-6">
+          <div>
+            <h3 className="text-sm font-bold font-display text-foreground">Preferencias de Redacao IA</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Defina o tom de voz e a norma de citacao padrao.</p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-5">
             {/* Tom de Voz Padrao */}
-            <div className="space-y-3">
-              <Label className="text-xs font-semibold text-foreground">Tom de Voz Padrão para Redação</Label>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-foreground">Tom de Voz</Label>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {[
-                  { id: "executive", label: "Liderança Executiva", desc: "Foco em impacto, metas e resultados mensuráveis." },
-                  { id: "technical", label: "Especialista Técnico", desc: "Linguagem precisa com vocabulário do setor." },
-                  { id: "formal", label: "Formal Corporativo", desc: "Sóbrio, respeitoso e ideal para instituições." },
-                  { id: "persuasive", label: "Persuasivo & Confiante", desc: "Envolvente, excelente para candidaturas." },
+                  { id: "executive", label: "Lideranca Executiva", desc: "Objetivo, focado em resultados." },
+                  { id: "technical", label: "Especialista Tecnico", desc: "Linguagem precisa e tecnica." },
+                  { id: "formal", label: "Formal Corporativo", desc: "Sobrio e institucional." },
+                  { id: "persuasive", label: "Persuasivo", desc: "Envolvente e direto." },
                 ].map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => setAiTone(item.id)}
                     className={cn(
-                      "rounded-2xl border p-4 text-left transition-all cursor-pointer",
+                      "rounded-xl border p-3 text-left transition-all cursor-pointer",
                       aiTone === item.id
-                        ? "border-primary bg-primary/5 shadow-xs font-bold ring-1 ring-primary/30"
-                        : "border-border/70 bg-card hover:border-border"
+                        ? "border-primary bg-primary/5 font-semibold text-primary shadow-xs"
+                        : "border-border/60 bg-card hover:border-border text-muted-foreground"
                     )}
                   >
-                    <span className="block text-xs font-bold text-foreground">{item.label}</span>
-                    <span className="mt-1 block text-[11px] text-muted-foreground leading-relaxed">{item.desc}</span>
+                    <span className="block text-xs font-bold">{item.label}</span>
+                    <span className="mt-0.5 block text-[11px] text-muted-foreground">{item.desc}</span>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Norma de Citacao */}
-            <div className="space-y-3 pt-2 border-t border-border/40">
-              <Label className="text-xs font-semibold text-foreground">Norma de Citação Preferida</Label>
+            <div className="space-y-2 pt-3 border-t border-border/40">
+              <Label className="text-xs font-medium text-foreground">Norma de Citacao Padrao</Label>
               <div className="flex flex-wrap gap-2">
                 {[
                   { id: "apa", label: "Norma APA" },
                   { id: "abnt", label: "Norma ABNT" },
                   { id: "iso690", label: "Norma ISO 690" },
-                  { id: "none", label: "Sem norma específica" },
+                  { id: "none", label: "Nenhuma" },
                 ].map((norm) => (
                   <button
                     key={norm.id}
                     type="button"
                     onClick={() => setCitationNorm(norm.id)}
                     className={cn(
-                      "h-9 rounded-xl px-4 text-xs font-semibold border transition-all cursor-pointer",
+                      "h-8 rounded-lg px-3.5 text-xs font-medium border transition-all cursor-pointer",
                       citationNorm === norm.id
-                        ? "border-primary bg-primary/10 text-primary shadow-xs font-bold"
-                        : "border-border/70 bg-background text-muted-foreground hover:text-foreground"
+                        ? "border-primary bg-primary/10 text-primary font-bold"
+                        : "border-border/60 bg-background text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {norm.label}
@@ -393,69 +349,39 @@ export function SettingsPage() {
                 ))}
               </div>
             </div>
-
-            {/* Auto-Fit A4 Toggle */}
-            <div className="flex items-center justify-between border-t border-border/40 pt-4">
-              <div>
-                <Label className="text-xs font-bold text-foreground">Motor Auto-Fit A4 Ativo</Label>
-                <p className="text-[11px] text-muted-foreground">
-                  Ajusta automaticamente respiros e tipografia para garantir 1 página A4 perfeita.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAutoFitA4(!autoFitA4)}
-                className={cn(
-                  "h-7 w-12 rounded-full p-1 transition-colors cursor-pointer",
-                  autoFitA4 ? "bg-primary" : "bg-muted"
-                )}
-              >
-                <div
-                  className={cn(
-                    "size-5 rounded-full bg-white transition-transform shadow-sm",
-                    autoFitA4 ? "translate-x-5" : "translate-x-0"
-                  )}
-                />
-              </button>
-            </div>
           </div>
-        </section>
+        </div>
       )}
 
-      {/* TAB 4: PREFERÊNCIAS & SESSÃO */}
+      {/* SECTOR 4: CONTA E SEGURANCA */}
       {activeTab === "security" && (
-        <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-6 animate-fade-in">
-          <div className="border-b border-border/50 pb-3">
-            <h3 className="text-base font-bold font-display text-foreground flex items-center gap-2">
-              <Shield className="size-4.5 text-primary" />
-              Aparência & Sessão Ativa
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Gerencie a interface visual e a segurança do seu acesso.
-            </p>
+        <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-xs space-y-6">
+          <div>
+            <h3 className="text-sm font-bold font-display text-foreground">Conta e Tema</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Aparencia visual e encerramento de sessao.</p>
           </div>
 
-          <div className="space-y-6">
-            <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/60 bg-muted/20 p-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/20 p-4">
               <div>
-                <p className="text-xs font-bold text-foreground">Aparência do Estúdio</p>
-                <p className="text-[11px] text-muted-foreground">Alterne entre o Modo Claro e o Modo Escuro.</p>
+                <p className="text-xs font-bold text-foreground">Tema da Interface</p>
+                <p className="text-[11px] text-muted-foreground">Alterne entre o modo claro e o modo escuro.</p>
               </div>
               <ThemeToggle />
             </div>
 
-            <div className="flex items-center justify-between gap-4 rounded-2xl border border-destructive/30 bg-card p-4">
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-destructive/20 bg-card p-4">
               <div>
-                <p className="text-xs font-bold text-destructive">Encerrar Sessão</p>
-                <p className="text-[11px] text-muted-foreground">Sair da sua conta Dokvera neste dispositivo.</p>
+                <p className="text-xs font-bold text-destructive">Encerrar Sessao</p>
+                <p className="text-[11px] text-muted-foreground">Sair da sua conta neste dispositivo.</p>
               </div>
-              <Button variant="outline" size="sm" className="h-9 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 cursor-pointer" onClick={signOut}>
-                <LogOut className="mr-1.5 size-4" />
-                Sair da Conta
+              <Button variant="outline" size="sm" className="h-9 rounded-lg border-destructive/30 text-destructive hover:bg-destructive/10 cursor-pointer" onClick={signOut}>
+                <LogOut className="mr-1.5 size-3.5" />
+                Sair
               </Button>
             </div>
           </div>
-        </section>
+        </div>
       )}
     </div>
   );
