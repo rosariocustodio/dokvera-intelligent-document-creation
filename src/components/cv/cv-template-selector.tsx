@@ -1,5 +1,6 @@
-import React from "react";
-import { Check, Sparkles, LayoutTemplate, Palette } from "lucide-react";
+import React, { useState } from "react";
+import { Check, Sparkles, LayoutTemplate, Palette, ChevronLeft, ChevronRight, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CV_ACCENT_COLORS, type CvAccentColor } from "./cv-document-sheet";
 
@@ -51,25 +52,38 @@ export function CvTemplateSelector({
   onSelectAccent,
 }: CvTemplateSelectorProps) {
   const currentAccent = CV_ACCENT_COLORS.find((c) => c.id === selectedAccent) ?? CV_ACCENT_COLORS[0];
+  const [activeSlide, setActiveSlide] = useState(() => {
+    const idx = CV_TEMPLATES.findIndex((t) => t.id === selectedTemplate);
+    return idx >= 0 ? idx : 0;
+  });
+
+  const handlePrev = () => {
+    setActiveSlide((prev) => (prev > 0 ? prev - 1 : CV_TEMPLATES.length - 1));
+  };
+
+  const handleNext = () => {
+    setActiveSlide((prev) => (prev < CV_TEMPLATES.length - 1 ? prev + 1 : 0));
+  };
 
   return (
-    <div className="space-y-5 rounded-3xl border border-border/70 bg-card p-6 shadow-soft">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="space-y-6 rounded-3xl border border-border/80 bg-card/90 p-5 sm:p-7 shadow-soft backdrop-blur-xl">
+      {/* Header & Color Picker */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/50 pb-4">
         <div>
-          <h3 className="flex items-center gap-2 font-display text-base font-bold text-foreground">
-            <LayoutTemplate className="size-4.5 text-primary" />
+          <h3 className="flex items-center gap-2 font-display text-base sm:text-lg font-bold text-foreground">
+            <LayoutTemplate className="size-5 text-primary" />
             Escolha o Modelo Visual do CV
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Modelos profissionais com pré-visualização instantânea na folha.
+            Deslize para comparar os modelos reais com pré-visualização A4.
           </p>
         </div>
 
         {/* Seletor de Cores de Destaque */}
-        <div className="flex items-center gap-2 bg-muted/40 p-1.5 rounded-2xl border border-border/50">
-          <Palette className="size-3.5 text-muted-foreground ml-1" />
-          <span className="text-[11px] font-medium text-muted-foreground hidden sm:inline">Cor:</span>
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2 bg-muted/40 p-2 rounded-2xl border border-border/50 self-start sm:self-auto">
+          <Palette className="size-4 text-muted-foreground ml-1" />
+          <span className="text-xs font-semibold text-muted-foreground mr-1">Cor:</span>
+          <div className="flex items-center gap-2">
             {CV_ACCENT_COLORS.map((c) => {
               const isSelected = c.id === selectedAccent;
               return (
@@ -79,12 +93,12 @@ export function CvTemplateSelector({
                   title={c.label}
                   onClick={() => onSelectAccent(c.id)}
                   className={cn(
-                    "size-5.5 rounded-full transition-all duration-200 relative flex items-center justify-center",
+                    "size-6 rounded-full transition-all duration-200 relative flex items-center justify-center cursor-pointer",
                     c.bg,
                     isSelected ? "ring-2 ring-primary ring-offset-2 scale-110 shadow-sm" : "hover:scale-105 opacity-80"
                   )}
                 >
-                  {isSelected && <Check className="size-3 text-white stroke-[3]" />}
+                  {isSelected && <Check className="size-3.5 text-white stroke-[3]" />}
                 </button>
               );
             })}
@@ -92,145 +106,217 @@ export function CvTemplateSelector({
         </div>
       </div>
 
-      {/* Grelha de Modelos com Miniaturas Reais */}
-      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-        {CV_TEMPLATES.map((tmpl) => {
-          const isSelected = selectedTemplate === tmpl.id;
-          return (
+      {/* SLIDE CAROUSEL CONTAINER */}
+      <div className="relative">
+        {/* Navigation Arrows */}
+        <button
+          type="button"
+          onClick={handlePrev}
+          className="absolute -left-3 sm:-left-4 top-1/2 -translate-y-1/2 z-20 flex size-9 items-center justify-center rounded-full bg-background border border-border/80 shadow-md text-foreground hover:bg-muted transition-all cursor-pointer"
+          title="Modelo Anterior"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleNext}
+          className="absolute -right-3 sm:-right-4 top-1/2 -translate-y-1/2 z-20 flex size-9 items-center justify-center rounded-full bg-background border border-border/80 shadow-md text-foreground hover:bg-muted transition-all cursor-pointer"
+          title="Modelo Seguinte"
+        >
+          <ChevronRight className="size-5" />
+        </button>
+
+        {/* Cards Carousel View */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          {CV_TEMPLATES.map((tmpl, idx) => {
+            const isSelected = selectedTemplate === tmpl.id;
+            const isCurrentSlide = idx === activeSlide;
+
+            return (
+              <button
+                key={tmpl.id}
+                type="button"
+                onClick={() => {
+                  setActiveSlide(idx);
+                  onSelectTemplate(tmpl.id);
+                }}
+                className={cn(
+                  "group relative flex flex-col text-left rounded-2xl border p-4 transition-all duration-300 cursor-pointer",
+                  isSelected
+                    ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/40 scale-[1.02]"
+                    : "border-border/60 bg-background/60 hover:border-border hover:bg-muted/40",
+                  !isCurrentSlide && "hidden lg:flex" // Mobile shows active slide primarily, desktop shows grid
+                )}
+              >
+                {/* Badge */}
+                {tmpl.badge && (
+                  <span
+                    className={cn(
+                      "absolute -top-2.5 right-4 rounded-full px-2.5 py-0.5 text-[9px] font-bold tracking-wide shadow-sm z-10",
+                      tmpl.isPopular
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground border border-border"
+                    )}
+                  >
+                    {tmpl.badge}
+                  </span>
+                )}
+
+                {/* HIGH-FIDELITY REALISTIC MINI-A4 CANVAS MOCKUP */}
+                <div className="relative mb-3.5 aspect-[210/280] w-full overflow-hidden rounded-xl border border-border/70 bg-white shadow-inner p-2.5 text-[7px] text-slate-800 leading-tight">
+                  {/* Modern Template Preview */}
+                  {tmpl.id === "modern" && (
+                    <div className="grid h-full grid-cols-12 rounded bg-slate-50 border border-slate-200/60 overflow-hidden">
+                      {/* Sidebar */}
+                      <div className="col-span-4 bg-slate-900 text-white p-2 flex flex-col justify-between">
+                        <div className="space-y-2">
+                          <div className="size-7 rounded-full bg-slate-700 mx-auto border border-white/20 flex items-center justify-center">
+                            <User className="size-3.5 opacity-60" />
+                          </div>
+                          <div className="text-center">
+                            <div className="font-bold text-[8px] truncate">Carlos Sitoe</div>
+                            <div className="text-[6px] opacity-75 truncate" style={{ color: currentAccent.hex }}>Gestor de TI</div>
+                          </div>
+                          <div className="pt-1 border-t border-slate-800 space-y-1 text-[6px]">
+                            <div className="font-bold uppercase tracking-wider text-slate-400">Contactos</div>
+                            <div className="opacity-80 truncate">Maputo, MZ</div>
+                            <div className="opacity-80 truncate">carlos@email.com</div>
+                          </div>
+                          <div className="pt-1 border-t border-slate-800 space-y-1 text-[6px]">
+                            <div className="font-bold uppercase tracking-wider text-slate-400">Skills</div>
+                            <div className="bg-slate-800 px-1 py-0.5 rounded text-[5.5px]">Gestão de Projetos</div>
+                            <div className="bg-slate-800 px-1 py-0.5 rounded text-[5.5px]">Liderança Técnica</div>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Main Column */}
+                      <div className="col-span-8 p-2.5 flex flex-col justify-between">
+                        <div className="space-y-2">
+                          <div>
+                            <div className="font-bold text-[9px] text-slate-900" style={{ color: currentAccent.hex }}>Experiência Profissional</div>
+                            <div className="text-[6.5px] font-semibold text-slate-800 mt-0.5">Gestor Sénior — Empresa X</div>
+                            <div className="text-[5.5px] text-slate-500">2021 – Presente</div>
+                            <div className="text-[5.5px] text-slate-600 mt-0.5 line-clamp-2">Liderança de equipas multidisciplinares e gestão de infraestruturas.</div>
+                          </div>
+                          <div className="pt-1 border-t border-slate-200">
+                            <div className="font-bold text-[8.5px] text-slate-900" style={{ color: currentAccent.hex }}>Formação Académica</div>
+                            <div className="text-[6.5px] font-semibold text-slate-800 mt-0.5">Licenciatura em Engenharia</div>
+                            <div className="text-[5.5px] text-slate-500">UEM — 2020</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Classic ATS Preview */}
+                  {tmpl.id === "classic" && (
+                    <div className="h-full rounded bg-slate-50 p-2.5 flex flex-col justify-between border border-slate-200/60">
+                      <div>
+                        <div className="text-center pb-2 border-b border-slate-300">
+                          <div className="font-bold text-[10px] text-slate-900" style={{ color: currentAccent.hex }}>Carlos Alberto Sitoe</div>
+                          <div className="text-[6.5px] text-slate-600 font-semibold">Diretor Financeiro & Auditor</div>
+                          <div className="text-[5.5px] text-slate-500 mt-0.5">Maputo | +258 84 123 4567 | carlos@email.com</div>
+                        </div>
+                        <div className="mt-2 space-y-1.5">
+                          <div className="font-bold text-[8px] uppercase tracking-wider border-b border-slate-200 pb-0.5" style={{ color: currentAccent.hex }}>
+                            Resumo Profissional
+                          </div>
+                          <div className="text-[5.5px] text-slate-700 leading-relaxed line-clamp-2">
+                            Profissional com mais de 8 anos de experiência em gestão financeira e auditoria bancária...
+                          </div>
+                          <div className="font-bold text-[8px] uppercase tracking-wider border-b border-slate-200 pb-0.5 pt-1" style={{ color: currentAccent.hex }}>
+                            Experiência Profissional
+                          </div>
+                          <div className="text-[6.5px] font-semibold text-slate-800">Diretor de Contabilidade — Banco Y</div>
+                          <div className="text-[5.5px] text-slate-500">2019 – 2024</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Minimal Clean Preview */}
+                  {tmpl.id === "minimal" && (
+                    <div className="h-full rounded bg-slate-50 p-2.5 flex flex-col justify-between border border-slate-200/60">
+                      <div>
+                        <div className="pb-2 border-b border-slate-900">
+                          <div className="font-extrabold text-[11px] text-slate-900 tracking-tight">Carlos Sitoe</div>
+                          <div className="text-[6.5px] text-slate-500">Consultor de Estratégia</div>
+                        </div>
+                        <div className="mt-2 space-y-2">
+                          <div className="grid grid-cols-12 gap-1 text-[6px]">
+                            <div className="col-span-4 font-bold text-slate-400 uppercase">Perfil</div>
+                            <div className="col-span-8 text-slate-700 line-clamp-2">Especialista em transformação digital e otimização de processos...</div>
+                          </div>
+                          <div className="grid grid-cols-12 gap-1 text-[6px] border-t border-slate-200 pt-1.5">
+                            <div className="col-span-4 font-bold text-slate-400 uppercase">Carreira</div>
+                            <div className="col-span-8 text-slate-800 font-semibold">Consultor Sénior — Empresa Z</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bold Creative Preview */}
+                  {tmpl.id === "bold" && (
+                    <div className="h-full rounded bg-slate-50 flex flex-col border border-slate-200/60 overflow-hidden">
+                      <div className="p-2 text-white shadow-xs" style={{ backgroundColor: currentAccent.hex }}>
+                        <div className="font-bold text-[9.5px]">Carlos Sitoe</div>
+                        <div className="text-[6px] opacity-90">Engenheiro de Software</div>
+                      </div>
+                      <div className="p-2 space-y-1.5 flex-1 text-[6px]">
+                        <div className="font-bold text-[8px] text-slate-900">Resumo das Qualificações</div>
+                        <div className="text-[5.5px] text-slate-600 line-clamp-2">Desenvolvimento full-stack, arquitetura de sistemas escaláveis e cloud...</div>
+                        <div className="font-bold text-[8px] text-slate-900 pt-1">Experiência Recente</div>
+                        <div className="bg-slate-100 p-1 rounded border border-slate-200 text-[5.5px] font-semibold text-slate-800">
+                          Tech Lead — Startup Tech (2022-2025)
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer Selection Info */}
+                <div className="flex items-center justify-between mt-1">
+                  <span className="font-display text-xs font-bold text-foreground">
+                    {tmpl.label}
+                  </span>
+                  <div
+                    className={cn(
+                      "flex size-4.5 items-center justify-center rounded-full border transition-all",
+                      isSelected ? "border-primary bg-primary text-primary-foreground shadow-xs" : "border-muted-foreground/40"
+                    )}
+                  >
+                    {isSelected && <Check className="size-3 stroke-[3]" />}
+                  </div>
+                </div>
+                <p className="mt-1 text-[11px] leading-snug text-muted-foreground line-clamp-2">
+                  {tmpl.description}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Slide Indicator Dots for Mobile / Tablet */}
+        <div className="flex items-center justify-center gap-1.5 mt-4 lg:hidden">
+          {CV_TEMPLATES.map((tmpl, idx) => (
             <button
               key={tmpl.id}
               type="button"
-              onClick={() => onSelectTemplate(tmpl.id)}
+              onClick={() => {
+                setActiveSlide(idx);
+                onSelectTemplate(tmpl.id);
+              }}
               className={cn(
-                "group relative flex flex-col text-left rounded-2xl border p-3.5 transition-all duration-200",
-                isSelected
-                  ? "border-primary bg-primary/5 shadow-soft ring-2 ring-primary/30"
-                  : "border-border/60 bg-background/50 hover:border-border hover:bg-muted/30"
+                "h-2 rounded-full transition-all duration-300 cursor-pointer",
+                idx === activeSlide ? "w-6 bg-primary" : "w-2 bg-muted-foreground/30"
               )}
-            >
-              {/* Badge de Destaque */}
-              {tmpl.badge && (
-                <span
-                  className={cn(
-                    "absolute -top-2 right-3 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide shadow-sm",
-                    tmpl.isPopular
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground border border-border"
-                  )}
-                >
-                  {tmpl.badge}
-                </span>
-              )}
-
-              {/* Miniatura Gráfica do Layout da Folha */}
-              <div className="relative mb-3 aspect-[210/260] w-full overflow-hidden rounded-xl border border-border/80 bg-white p-2 shadow-inner">
-                {/* Modern Template Mockup */}
-                {tmpl.id === "modern" && (
-                  <div className="grid h-full grid-cols-12 gap-1 rounded bg-slate-50">
-                    <div className="col-span-4 rounded-l bg-slate-900 p-1 space-y-1">
-                      <div className="size-3 rounded-full mx-auto" style={{ backgroundColor: currentAccent.hex }} />
-                      <div className="h-1 w-full bg-slate-700 rounded" />
-                      <div className="h-1 w-3/4 bg-slate-700 rounded" />
-                      <div className="my-1 border-t border-slate-800" />
-                      <div className="h-1 w-full bg-slate-800 rounded" />
-                      <div className="h-1 w-2/3 bg-slate-800 rounded" />
-                    </div>
-                    <div className="col-span-8 p-1 space-y-1">
-                      <div className="h-2 w-3/4 rounded" style={{ backgroundColor: currentAccent.hex }} />
-                      <div className="h-1 w-1/2 bg-slate-300 rounded" />
-                      <div className="my-1 border-t border-slate-200" />
-                      <div className="h-1 w-full bg-slate-200 rounded" />
-                      <div className="h-1 w-full bg-slate-200 rounded" />
-                      <div className="h-1 w-5/6 bg-slate-200 rounded" />
-                      <div className="h-1.5 w-1/3 bg-slate-300 rounded mt-2" />
-                      <div className="h-1 w-full bg-slate-200 rounded" />
-                    </div>
-                  </div>
-                )}
-
-                {/* Classic Template Mockup */}
-                {tmpl.id === "classic" && (
-                  <div className="h-full rounded bg-slate-50 p-2 space-y-1.5 flex flex-col justify-between">
-                    <div className="space-y-1 text-center">
-                      <div className="h-2 w-2/3 mx-auto rounded" style={{ backgroundColor: currentAccent.hex }} />
-                      <div className="h-1 w-1/3 mx-auto bg-slate-400 rounded" />
-                      <div className="h-0.5 w-full bg-slate-300 my-1" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="h-1 w-1/4 rounded font-bold" style={{ backgroundColor: currentAccent.hex }} />
-                      <div className="h-1 w-full bg-slate-200 rounded" />
-                      <div className="h-1 w-4/5 bg-slate-200 rounded" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="h-1 w-1/4 rounded font-bold" style={{ backgroundColor: currentAccent.hex }} />
-                      <div className="h-1 w-full bg-slate-200 rounded" />
-                      <div className="h-1 w-3/4 bg-slate-200 rounded" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-1 pt-1">
-                      <div className="h-1 bg-slate-200 rounded" />
-                      <div className="h-1 bg-slate-200 rounded" />
-                    </div>
-                  </div>
-                )}
-
-                {/* Minimal Template Mockup */}
-                {tmpl.id === "minimal" && (
-                  <div className="h-full rounded bg-slate-50 p-2 space-y-2">
-                    <div className="h-2.5 w-1/2 rounded bg-slate-900" />
-                    <div className="h-1 w-1/3 bg-slate-400 rounded" />
-                    <div className="grid grid-cols-12 gap-1 pt-2 border-t border-slate-200">
-                      <div className="col-span-4 h-1 bg-slate-400 rounded" />
-                      <div className="col-span-8 h-1 bg-slate-200 rounded" />
-                    </div>
-                    <div className="grid grid-cols-12 gap-1 pt-2 border-t border-slate-200">
-                      <div className="col-span-4 h-1 bg-slate-400 rounded" />
-                      <div className="col-span-8 space-y-1">
-                        <div className="h-1 w-full bg-slate-200 rounded" />
-                        <div className="h-1 w-3/4 bg-slate-200 rounded" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Bold Template Mockup */}
-                {tmpl.id === "bold" && (
-                  <div className="h-full rounded bg-slate-50 flex flex-col">
-                    <div className="h-6 w-full rounded-t p-1" style={{ backgroundColor: currentAccent.hex }}>
-                      <div className="h-1.5 w-1/2 bg-white/90 rounded" />
-                      <div className="h-1 w-1/3 bg-white/60 rounded mt-0.5" />
-                    </div>
-                    <div className="p-1.5 space-y-1.5 flex-1">
-                      <div className="h-1 w-1/3 rounded" style={{ backgroundColor: currentAccent.hex }} />
-                      <div className="h-1 w-full bg-slate-200 rounded" />
-                      <div className="h-1 w-4/5 bg-slate-200 rounded" />
-                      <div className="h-1 w-1/3 rounded mt-2" style={{ backgroundColor: currentAccent.hex }} />
-                      <div className="h-2 w-full bg-slate-100 border border-slate-200 rounded" />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Informação do Template */}
-              <div className="flex items-center justify-between">
-                <span className="font-display text-xs font-bold text-foreground">
-                  {tmpl.label}
-                </span>
-                <div
-                  className={cn(
-                    "flex size-4 items-center justify-center rounded-full border transition-all",
-                    isSelected ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"
-                  )}
-                >
-                  {isSelected && <Check className="size-2.5 stroke-[3]" />}
-                </div>
-              </div>
-              <p className="mt-1 text-[11px] leading-snug text-muted-foreground line-clamp-2">
-                {tmpl.description}
-              </p>
-            </button>
-          );
-        })}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
 }
+

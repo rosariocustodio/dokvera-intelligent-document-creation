@@ -365,22 +365,42 @@ function NewDocument() {
   };
 
   // Group fields by Step for Wizard Flow
+  const isCvSpec = spec?.id === "cv" || spec?.id === "simple_cv";
+
   const step1Fields = useMemo(() => {
     if (!spec) return [];
+    if (isCvSpec) {
+      const contactIds = ["full_name", "headline", "photo_url", "email", "phone", "address", "linkedin"];
+      return spec.groups.flatMap((g) => g.fields).filter((f) => contactIds.includes(f.id));
+    }
     const primaryId = spec.titleFieldId || "theme";
     return spec.groups.flatMap((g) => g.fields).filter((f) => f.id === primaryId || f.id === "subject");
-  }, [spec]);
+  }, [spec, isCvSpec]);
 
   const step2Fields = useMemo(() => {
-    if (!spec) return [];
+    if (!spec || isCvSpec) return [];
     const primaryId = spec.titleFieldId || "theme";
     return spec.groups.flatMap((g) => g.fields).filter((f) => f.id !== primaryId && f.id !== "subject" && f.type !== "select");
-  }, [spec]);
+  }, [spec, isCvSpec]);
 
   const step3Fields = useMemo(() => {
     if (!spec) return [];
+    if (isCvSpec) {
+      const contactIds = ["full_name", "headline", "photo_url", "email", "phone", "address", "linkedin"];
+      const contentFields = spec.groups.flatMap((g) => g.fields).filter((f) => !contactIds.includes(f.id));
+      return contentFields.filter((f) => {
+        if (f.id === "profile") return structure.includes("profile");
+        if (f.id === "experience") return structure.includes("experience");
+        if (f.id === "education") return structure.includes("education");
+        if (f.id === "skills") return structure.includes("skills");
+        if (f.id === "languages") return structure.includes("languages");
+        if (f.id === "certifications") return structure.includes("certifications");
+        if (f.id === "references_list") return structure.includes("references");
+        return true;
+      });
+    }
     return spec.groups.flatMap((g) => g.fields).filter((f) => f.type === "select");
-  }, [spec]);
+  }, [spec, isCvSpec, structure]);
 
   const renderField = (field: FieldDef) => {
     const value = fields[field.id];
@@ -389,10 +409,17 @@ function NewDocument() {
 
     return (
       <div key={field.id} className={`space-y-1.5 ${wide ? "sm:col-span-2" : ""}`}>
-        <Label htmlFor={field.id} className="text-xs font-semibold text-foreground">
-          {field.label}
-          {field.required && <span className="ml-1 text-destructive">*</span>}
-        </Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor={field.id} className="text-xs font-semibold text-foreground">
+            {field.label}
+            {field.required && <span className="ml-1 text-destructive">*</span>}
+          </Label>
+          {field.type === "list" && (
+            <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
+              • 1 item por linha (Enter = Marcador)
+            </span>
+          )}
+        </div>
 
         {field.type === "photo" ? (
           <div className="rounded-2xl border border-border/80 bg-muted/20 p-4">
@@ -736,12 +763,20 @@ function NewDocument() {
           {/* STEP INDICATOR HEADER (PASSO 1 A 4) */}
           <div className="rounded-2xl border border-border/70 bg-card/90 backdrop-blur-xl p-2 sm:p-3 shadow-xs">
             <div className="grid grid-cols-4 gap-1 sm:gap-2 text-center">
-              {[
-                { step: 1, label: "1. Conceito", icon: Wand2 },
-                { step: 2, label: "2. Contexto", icon: FileText },
-                { step: 3, label: "3. Estrutura", icon: Layers },
-                { step: 4, label: "4. Geração", icon: Sparkles },
-              ].map((item) => {
+              {(isCvSpec
+                ? [
+                    { step: 1, label: "1. Identificação", icon: Icons.User },
+                    { step: 2, label: "2. Estrutura & Design", icon: Icons.LayoutTemplate },
+                    { step: 3, label: "3. Percurso", icon: FileText },
+                    { step: 4, label: "4. Emissão", icon: Sparkles },
+                  ]
+                : [
+                    { step: 1, label: "1. Conceito", icon: Wand2 },
+                    { step: 2, label: "2. Contexto", icon: FileText },
+                    { step: 3, label: "3. Estrutura", icon: Layers },
+                    { step: 4, label: "4. Geração", icon: Sparkles },
+                  ]
+              ).map((item) => {
                 const isActive = wizardStep === item.step;
                 const isDone = wizardStep > item.step;
                 return (
@@ -770,7 +805,7 @@ function NewDocument() {
           <div className="grid gap-8 lg:grid-cols-12 items-start">
             {/* LEFT PANEL (7/12): WIZARD STEP CONTENT */}
             <div className="space-y-6 lg:col-span-7">
-              {/* PASSO 1: A IDEIA & O CONCEITO */}
+              {/* PASSO 1: IDENTIFICAÇÃO & CONTACTOS */}
               {wizardStep === 1 && (
                 <div className="space-y-6 animate-fade-in">
                   {/* Super Banner IA */}
@@ -785,7 +820,7 @@ function NewDocument() {
                     }}
                   />
 
-                  {/* FASE 1: PRESETS RÁPIDOS DE 1-CLIQUE */}
+                  {/* PRESETS RÁPIDOS DE 1-CLIQUE */}
                   {availablePresets.length > 0 && (
                     <section className="space-y-3 pt-2">
                       <div className="flex items-center justify-between border-b border-border/40 pb-2">
@@ -819,16 +854,16 @@ function NewDocument() {
                   <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
                     <div className="border-b border-border/50 pb-3">
                       <h2 className="text-base font-bold font-display text-foreground">
-                        {spec.id === "cv" || spec.id === "simple_cv" ? "Identificação & Cargo Pretendido" : "Tema & Ideia Central"}
+                        {isCvSpec ? "Identificação & Contactos Pessoais" : "Tema & Ideia Central"}
                       </h2>
                       <p className="text-xs text-muted-foreground">
-                        {spec.id === "cv" || spec.id === "simple_cv"
-                          ? "Indique o seu nome completo e a posição profissional pretendida."
+                        {isCvSpec
+                          ? "Preencha o seu nome, cargo pretendido, fotografia e dados de contacto."
                           : "Define o assunto principal do documento."}
                       </p>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
                       {step1Fields.length > 0
                         ? step1Fields.map(renderField)
                         : spec.groups[0]?.fields.slice(0, 2).map(renderField)}
@@ -837,11 +872,11 @@ function NewDocument() {
                 </div>
               )}
 
-              {/* PASSO 2: CONTEXTO & IDENTIFICAÇÃO */}
+              {/* PASSO 2: ESTRUTURA & DESIGN / MODELO VISUAL */}
               {wizardStep === 2 && (
                 <div className="space-y-6 animate-fade-in">
-                  {spec.id === "cv" && (
-                    <div className="space-y-4">
+                  {isCvSpec ? (
+                    <>
                       {/* Mobile 35/65 Split View Mini-Canvas Widget */}
                       <div className="lg:hidden rounded-2xl border border-border/70 bg-card p-3 shadow-xs flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -859,112 +894,184 @@ function NewDocument() {
                         </Button>
                       </div>
 
+                      {/* Section 1: Structure Checklist (Secções do CV) */}
+                      {spec.structure && spec.structure.length > 0 && (
+                        <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
+                          <div className="border-b border-border/50 pb-3">
+                            <h2 className="text-base font-bold font-display text-foreground flex items-center gap-2">
+                              <Layers className="size-4.5 text-primary" />
+                              Secções a Incluir no CV
+                            </h2>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              Escolha as secções que deseja preencher. O formulário no Passo 3 irá adaptar-se às suas escolhas.
+                            </p>
+                          </div>
+                          <div className="grid gap-2.5 sm:grid-cols-2">
+                            {spec.structure.map((option) => {
+                              const checked = structure.includes(option.id) || Boolean(option.required);
+                              return (
+                                <label
+                                  key={option.id}
+                                  className={cn(
+                                    "flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition-colors",
+                                    checked ? "border-primary/60 bg-primary/5 shadow-2xs" : "border-border/70 hover:border-border",
+                                    option.required && "cursor-default opacity-90"
+                                  )}
+                                >
+                                  <Checkbox
+                                    checked={checked}
+                                    disabled={Boolean(option.required)}
+                                    onCheckedChange={() => !option.required && toggleStructure(option.id)}
+                                    className="mt-0.5"
+                                  />
+                                  <span className="min-w-0">
+                                    <span className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+                                      {option.label}
+                                      {option.required && <Badge variant="secondary" className="text-[9px]">obrigatório</Badge>}
+                                      {option.extraCredits ? (
+                                        <Badge variant="outline" className="text-[9px]">+{option.extraCredits} cr</Badge>
+                                      ) : null}
+                                    </span>
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </section>
+                      )}
+
+                      {/* Section 2: CvTemplateSelector Slide Carousel */}
                       <CvTemplateSelector
                         selectedTemplate={templateId || "modern"}
                         onSelectTemplate={(t) => setTemplateId(t)}
                         selectedAccent={cvAccent}
                         onSelectAccent={(c) => setCvAccent(c)}
                       />
-                    </div>
+                    </>
+                  ) : (
+                    <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
+                      <div className="border-b border-border/50 pb-3">
+                        <h2 className="text-base font-bold font-display text-foreground">Identificação & Contexto</h2>
+                        <p className="text-xs text-muted-foreground">Instituição, docentes e dados de apresentação.</p>
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {step2Fields.length > 0
+                          ? step2Fields.map(renderField)
+                          : spec.groups.flatMap((g) => g.fields).map(renderField)}
+                      </div>
+                    </section>
                   )}
-
-                  <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
-                    <div className="border-b border-border/50 pb-3">
-                      <h2 className="text-base font-bold font-display text-foreground">Identificação & Contexto</h2>
-                      <p className="text-xs text-muted-foreground">Instituição, docentes e dados de apresentação.</p>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {step2Fields.length > 0
-                        ? step2Fields.map(renderField)
-                        : spec.groups.flatMap((g) => g.fields).map(renderField)}
-                    </div>
-                  </section>
                 </div>
               )}
 
-              {/* PASSO 3: ESTRUTURA & NORMAS */}
+              {/* PASSO 3: PERCURSO & CONTEÚDO */}
               {wizardStep === 3 && (
                 <div className="space-y-6 animate-fade-in">
-                  {/* Page Extension Tiers */}
-                  {spec.pageTiers && spec.pageTiers.length > 0 && (
-                    <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
-                      <div>
-                        <h2 className="text-base font-bold font-display text-foreground">Extensão do Documento</h2>
-                        <p className="mt-0.5 text-xs text-muted-foreground">Escolha o tamanho aproximado em páginas.</p>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {spec.pageTiers.map((tier) => (
-                          <button
-                            key={tier.id}
-                            type="button"
-                            onClick={() => setPageTierId(tier.id)}
-                            className={cn(
-                              "rounded-2xl border p-4 text-left transition-all cursor-pointer",
-                              pageTierId === tier.id ? "border-primary bg-primary/5 shadow-xs font-bold" : "border-border/70 hover:border-border"
-                            )}
-                          >
-                            <span className="block text-xs text-foreground">{tier.label}</span>
-                            <span className="text-[11px] font-semibold text-primary">
-                              {tier.credits} cr · {formatCurrency(creditsToCurrency(tier.credits, country), country)}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-
-                  {/* Citation Norms */}
-                  {step3Fields.length > 0 && (
+                  {isCvSpec ? (
                     <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
                       <div className="border-b border-border/50 pb-3">
-                        <h2 className="text-base font-bold font-display text-foreground">Normas & Estilos</h2>
-                      </div>
-                      <div className="space-y-4">{step3Fields.map(renderField)}</div>
-                    </section>
-                  )}
-
-                  {/* Document Structure Checklist */}
-                  {spec.structure && spec.structure.length > 0 && (
-                    <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
-                      <div>
-                        <h2 className="text-base font-bold font-display text-foreground">Secções do Documento</h2>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          Ativa ou desativa elementos para personalizar a estrutura.
+                        <h2 className="text-base font-bold font-display text-foreground">
+                          Percurso Profissional & Académico
+                        </h2>
+                        <p className="text-xs text-muted-foreground">
+                          Preencha as informações para as secções selecionadas no Passo 2.
                         </p>
                       </div>
-                      <div className="grid gap-2.5 sm:grid-cols-2">
-                        {spec.structure.map((option) => {
-                          const checked = structure.includes(option.id) || Boolean(option.required);
-                          return (
-                            <label
-                              key={option.id}
-                              className={cn(
-                                "flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition-colors",
-                                checked ? "border-primary/60 bg-primary/5" : "border-border/70 hover:border-border",
-                                option.required && "cursor-default opacity-90"
-                              )}
-                            >
-                              <Checkbox
-                                checked={checked}
-                                disabled={Boolean(option.required)}
-                                onCheckedChange={() => !option.required && toggleStructure(option.id)}
-                                className="mt-0.5"
-                              />
-                              <span className="min-w-0">
-                                <span className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
-                                  {option.label}
-                                  {option.required && <Badge variant="secondary" className="text-[9px]">obrigatório</Badge>}
-                                  {option.extraCredits ? (
-                                    <Badge variant="outline" className="text-[9px]">+{option.extraCredits} cr</Badge>
-                                  ) : null}
-                                </span>
-                              </span>
-                            </label>
-                          );
-                        })}
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {step3Fields.length > 0 ? (
+                          step3Fields.map(renderField)
+                        ) : (
+                          <div className="sm:col-span-2 text-center py-6 text-xs text-muted-foreground">
+                            Nenhuma secção opcional ativada. Volte ao Passo 2 para ativar secções adicionais.
+                          </div>
+                        )}
                       </div>
                     </section>
+                  ) : (
+                    <>
+                      {/* Page Extension Tiers */}
+                      {spec.pageTiers && spec.pageTiers.length > 0 && (
+                        <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
+                          <div>
+                            <h2 className="text-base font-bold font-display text-foreground">Extensão do Documento</h2>
+                            <p className="mt-0.5 text-xs text-muted-foreground">Escolha o tamanho aproximado em páginas.</p>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {spec.pageTiers.map((tier) => (
+                              <button
+                                key={tier.id}
+                                type="button"
+                                onClick={() => setPageTierId(tier.id)}
+                                className={cn(
+                                  "rounded-2xl border p-4 text-left transition-all cursor-pointer",
+                                  pageTierId === tier.id ? "border-primary bg-primary/5 shadow-xs font-bold" : "border-border/70 hover:border-border"
+                                )}
+                              >
+                                <span className="block text-xs text-foreground">{tier.label}</span>
+                                <span className="text-[11px] font-semibold text-primary">
+                                  {tier.credits} cr · {formatCurrency(creditsToCurrency(tier.credits, country), country)}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
+                      {/* Citation Norms */}
+                      {step3Fields.length > 0 && (
+                        <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
+                          <div className="border-b border-border/50 pb-3">
+                            <h2 className="text-base font-bold font-display text-foreground">Normas & Estilos</h2>
+                          </div>
+                          <div className="space-y-4">{step3Fields.map(renderField)}</div>
+                        </section>
+                      )}
+
+                      {/* Document Structure Checklist */}
+                      {spec.structure && spec.structure.length > 0 && (
+                        <section className="rounded-3xl border border-border/70 bg-card/90 backdrop-blur-xl p-6 sm:p-7 shadow-soft space-y-4">
+                          <div>
+                            <h2 className="text-base font-bold font-display text-foreground">Secções do Documento</h2>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              Ativa ou desativa elementos para personalizar a estrutura.
+                            </p>
+                          </div>
+                          <div className="grid gap-2.5 sm:grid-cols-2">
+                            {spec.structure.map((option) => {
+                              const checked = structure.includes(option.id) || Boolean(option.required);
+                              return (
+                                <label
+                                  key={option.id}
+                                  className={cn(
+                                    "flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition-colors",
+                                    checked ? "border-primary/60 bg-primary/5" : "border-border/70 hover:border-border",
+                                    option.required && "cursor-default opacity-90"
+                                  )}
+                                >
+                                  <Checkbox
+                                    checked={checked}
+                                    disabled={Boolean(option.required)}
+                                    onCheckedChange={() => !option.required && toggleStructure(option.id)}
+                                    className="mt-0.5"
+                                  />
+                                  <span className="min-w-0">
+                                    <span className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+                                      {option.label}
+                                      {option.required && <Badge variant="secondary" className="text-[9px]">obrigatório</Badge>}
+                                      {option.extraCredits ? (
+                                        <Badge variant="outline" className="text-[9px]">+{option.extraCredits} cr</Badge>
+                                      ) : null}
+                                    </span>
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </section>
+                      )}
+                    </>
                   )}
                 </div>
               )}
