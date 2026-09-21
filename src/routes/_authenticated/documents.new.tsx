@@ -1558,7 +1558,6 @@ function NewDocument() {
                   </Button>
                 )}
 
-<<<<<<< HEAD
                 {wizardStep < 4 ? (
                   <Button
                     type="button"
@@ -1568,10 +1567,10 @@ function NewDocument() {
                     Continuar
                     <ChevronRight className="size-4" />
                   </Button>
-                ) : (
+                ) : check.affordable ? (
                   <Button
                     type="button"
-                    disabled={generate.isPending || missingRequired.length > 0 || !check.affordable}
+                    disabled={generate.isPending || missingRequired.length > 0}
                     onClick={() => generate.mutate()}
                     className="h-11 px-6 rounded-xl font-bold text-xs sm:text-sm shadow-glow gap-2 cursor-pointer"
                   >
@@ -1580,57 +1579,27 @@ function NewDocument() {
                     ) : (
                       <Sparkles className="size-4" />
                     )}
-                    ✦ Compilar e Gerar Documento
+                    Gerar Documento — {formatCurrency(cost.totalMzn, country)} ({cost.totalCredits} cr)
                   </Button>
-=======
-                {check.affordable ? (
-                  <div className="space-y-2">
-                    <Button
-                      size="lg"
-                      className="h-12 w-full rounded-2xl font-semibold shadow-glow text-xs sm:text-sm"
-                      disabled={generate.isPending || missingRequired.length > 0}
-                      onClick={() => generate.mutate()}
-                    >
-                      {generate.isPending ? (
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="mr-2 size-4" />
-                      )}
-                      Gerar Documento — {formatCurrency(cost.totalMzn, country)} ({cost.totalCredits} cr)
-                    </Button>
-                    <p className="text-center text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                      ✓ Edições e revisões incluídas sem custos extra por 24 horas
-                    </p>
-                  </div>
                 ) : (
-                  <div className="space-y-2.5">
-                    <Button
-                      size="lg"
-                      className="h-12 w-full rounded-2xl font-semibold text-xs sm:text-sm shadow-md gap-2"
-                      onClick={() => {
-                        toast.info("Pagamento Direto do Documento", {
-                          description: `A solicitar recarga de ${formatCurrency(check.missingMzn, country)} (${check.missingCredits} cr) para gerar este documento.`,
-                        });
-                        navigate({ to: "/credits" });
-                      }}
-                    >
-                      <Sparkles className="size-4" />
-                      Comprar Apenas Este Documento — {formatCurrency(check.missingMzn, country)}
-                    </Button>
-                    <Button asChild variant="outline" size="lg" className="h-11 w-full rounded-2xl font-medium text-xs gap-2">
-                      <Link to="/credits">
-                        <Coins className="size-3.5 text-primary" />
-                        Ver Pacotes com Desconto
-                      </Link>
-                    </Button>
-                  </div>
->>>>>>> 7e33f0c (feat(studio): add pay-per-document pricing, mobile sticky bar, quick edit, and quick credit chips)
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      toast.info("Pagamento Direto do Documento", {
+                        description: `A solicitar recarga de ${formatCurrency(check.missingMzn, country)} (${check.missingCredits} cr) para gerar este documento.`,
+                      });
+                      navigate({ to: "/credits" });
+                    }}
+                    className="h-11 px-5 rounded-xl font-bold text-xs shadow-md gap-2 cursor-pointer"
+                  >
+                    <Sparkles className="size-4" />
+                    Comprar Apenas Este Documento — {formatCurrency(check.missingMzn, country)}
+                  </Button>
                 )}
               </div>
             </div>
           </div>
 
-<<<<<<< HEAD
           {/* Mobile Sheet Modal Integration */}
           <MobilePreviewSheet
             open={mobileSheetOpen}
@@ -1645,7 +1614,7 @@ function NewDocument() {
             title={title}
             country={country}
           />
-=======
+
           {/* Sticky Bottom Bar for Mobile (Ergonomia & Alta Conversão) */}
           <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border p-3.5 shadow-2xl flex items-center justify-between gap-3 px-4">
             <div>
@@ -1676,7 +1645,6 @@ function NewDocument() {
               </Button>
             )}
           </div>
->>>>>>> 7e33f0c (feat(studio): add pay-per-document pricing, mobile sticky bar, quick edit, and quick credit chips)
         </div>
       ) : null}
     </div>

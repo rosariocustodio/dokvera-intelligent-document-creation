@@ -280,18 +280,59 @@ function Dashboard() {
           ) : documents && documents.length > 0 ? (
             documents.map((doc) => <DocumentCard key={doc.id} doc={doc} country={country} />)
           ) : (
-            <div className="shadow-soft col-span-full rounded-3xl border border-dashed border-border/80 bg-card p-10 text-center">
-              <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-3">
-                <FilePlus2 className="size-6" />
+            <div className="shadow-soft col-span-full rounded-3xl border border-dashed border-border/80 bg-card/80 p-8 sm:p-10 text-center space-y-6">
+              <div className="max-w-md mx-auto space-y-2">
+                <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-1">
+                  <Sparkles className="size-6" />
+                </div>
+                <h3 className="font-display text-lg font-bold text-foreground">Comece o seu primeiro documento</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Escolha um dos modelos mais utilizados ou abra o estúdio completo para criar qualquer documento profissional.
+                </p>
               </div>
-              <p className="font-display text-base font-bold text-foreground">Sem documentos recentes</p>
-              <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
-                Inicie o seu primeiro documento no nosso estúdio para visualizar aqui os seus rascunhos.
-              </p>
-              <Button asChild className="mt-5 rounded-xl h-10 px-5 text-xs font-semibold">
+
+              <div className="grid gap-4 sm:grid-cols-3 max-w-3xl mx-auto text-left">
+                <Link
+                  to="/documents/new"
+                  search={{ type: "cv" }}
+                  className="rounded-2xl border border-border/80 bg-background p-4 hover:border-primary/50 transition-all hover:-translate-y-0.5 shadow-xs space-y-2 group"
+                >
+                  <span className="inline-block rounded-lg bg-indigo-500/10 p-2 text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform">
+                    <Briefcase className="size-4" />
+                  </span>
+                  <h4 className="text-xs font-bold font-display text-foreground">Currículo Vitae (CV)</h4>
+                  <p className="text-[11px] text-muted-foreground leading-tight">Formatos modernos com exportação em PDF/Word.</p>
+                </Link>
+
+                <Link
+                  to="/documents/new"
+                  search={{ type: "cover_letter" }}
+                  className="rounded-2xl border border-border/80 bg-background p-4 hover:border-primary/50 transition-all hover:-translate-y-0.5 shadow-xs space-y-2 group"
+                >
+                  <span className="inline-block rounded-lg bg-blue-500/10 p-2 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform">
+                    <FileText className="size-4" />
+                  </span>
+                  <h4 className="text-xs font-bold font-display text-foreground">Carta de Apresentação</h4>
+                  <p className="text-[11px] text-muted-foreground leading-tight">Discurso persuasivo para candidaturas de emprego.</p>
+                </Link>
+
+                <Link
+                  to="/documents/new"
+                  search={{ type: "request" }}
+                  className="rounded-2xl border border-border/80 bg-background p-4 hover:border-primary/50 transition-all hover:-translate-y-0.5 shadow-xs space-y-2 group"
+                >
+                  <span className="inline-block rounded-lg bg-emerald-500/10 p-2 text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform">
+                    <FileSignature className="size-4" />
+                  </span>
+                  <h4 className="text-xs font-bold font-display text-foreground">Requerimento Oficial</h4>
+                  <p className="text-[11px] text-muted-foreground leading-tight">Pedidos formais para universidades e instituições.</p>
+                </Link>
+              </div>
+
+              <Button asChild className="rounded-xl h-11 px-6 text-xs font-bold shadow-soft">
                 <Link to="/documents/new">
-                  <FilePlus2 className="mr-2 size-3.5" />
-                  Criar Primeiro Documento
+                  <FilePlus2 className="mr-2 size-4" />
+                  Abrir Estúdio Completo de Documentos
                 </Link>
               </Button>
             </div>
