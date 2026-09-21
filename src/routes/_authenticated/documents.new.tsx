@@ -64,6 +64,7 @@ export const Route = createFileRoute("/_authenticated/documents/new")({
       .object({
         draftId: z.string().optional(),
         type: z.string().optional(),
+        category: z.string().optional(),
       })
       .parse(search),
   head: () => ({
@@ -109,7 +110,7 @@ function NewDocument() {
   const userId = user?.id ?? "";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { draftId, type: typeParam } = Route.useSearch();
+  const { draftId, type: typeParam, category: categoryParam } = Route.useSearch();
 
   const { data: balance } = useQuery({ ...creditsQuery(userId), enabled: Boolean(userId) });
   const { data: profile } = useQuery({ ...profileQuery(userId), enabled: Boolean(userId) });
@@ -119,7 +120,7 @@ function NewDocument() {
   const credits = balance ?? 0;
 
   const [specId, setSpecId] = useState<string | null>(typeParam ?? null);
-  const [category, setCategory] = useState<string>("all");
+  const [category, setCategory] = useState<string>(categoryParam ?? "all");
   const [term, setTerm] = useState("");
 
   // WIZARD STEPPER STATE (Passo 1 a 4)
@@ -1557,6 +1558,7 @@ function NewDocument() {
                   </Button>
                 )}
 
+<<<<<<< HEAD
                 {wizardStep < 4 ? (
                   <Button
                     type="button"
@@ -1580,11 +1582,55 @@ function NewDocument() {
                     )}
                     ✦ Compilar e Gerar Documento
                   </Button>
+=======
+                {check.affordable ? (
+                  <div className="space-y-2">
+                    <Button
+                      size="lg"
+                      className="h-12 w-full rounded-2xl font-semibold shadow-glow text-xs sm:text-sm"
+                      disabled={generate.isPending || missingRequired.length > 0}
+                      onClick={() => generate.mutate()}
+                    >
+                      {generate.isPending ? (
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="mr-2 size-4" />
+                      )}
+                      Gerar Documento — {formatCurrency(cost.totalMzn, country)} ({cost.totalCredits} cr)
+                    </Button>
+                    <p className="text-center text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      ✓ Edições e revisões incluídas sem custos extra por 24 horas
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    <Button
+                      size="lg"
+                      className="h-12 w-full rounded-2xl font-semibold text-xs sm:text-sm shadow-md gap-2"
+                      onClick={() => {
+                        toast.info("Pagamento Direto do Documento", {
+                          description: `A solicitar recarga de ${formatCurrency(check.missingMzn, country)} (${check.missingCredits} cr) para gerar este documento.`,
+                        });
+                        navigate({ to: "/credits" });
+                      }}
+                    >
+                      <Sparkles className="size-4" />
+                      Comprar Apenas Este Documento — {formatCurrency(check.missingMzn, country)}
+                    </Button>
+                    <Button asChild variant="outline" size="lg" className="h-11 w-full rounded-2xl font-medium text-xs gap-2">
+                      <Link to="/credits">
+                        <Coins className="size-3.5 text-primary" />
+                        Ver Pacotes com Desconto
+                      </Link>
+                    </Button>
+                  </div>
+>>>>>>> 7e33f0c (feat(studio): add pay-per-document pricing, mobile sticky bar, quick edit, and quick credit chips)
                 )}
               </div>
             </div>
           </div>
 
+<<<<<<< HEAD
           {/* Mobile Sheet Modal Integration */}
           <MobilePreviewSheet
             open={mobileSheetOpen}
@@ -1599,6 +1645,38 @@ function NewDocument() {
             title={title}
             country={country}
           />
+=======
+          {/* Sticky Bottom Bar for Mobile (Ergonomia & Alta Conversão) */}
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border p-3.5 shadow-2xl flex items-center justify-between gap-3 px-4">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Total a Pagar</p>
+              <p className="font-display text-base font-extrabold text-foreground">
+                {formatCurrency(cost.totalMzn, country)}
+                <span className="text-xs font-normal text-muted-foreground ml-1">({cost.totalCredits} cr)</span>
+              </p>
+            </div>
+            {check.affordable ? (
+              <Button
+                size="default"
+                disabled={generate.isPending || missingRequired.length > 0}
+                onClick={() => generate.mutate()}
+                className="rounded-xl font-bold shadow-glow text-xs h-11 px-5"
+              >
+                {generate.isPending ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <Sparkles className="mr-1.5 size-4" />}
+                Gerar Agora
+              </Button>
+            ) : (
+              <Button
+                size="default"
+                onClick={() => navigate({ to: "/credits" })}
+                className="rounded-xl font-bold text-xs h-11 px-4 gap-1.5"
+              >
+                <Sparkles className="size-3.5" />
+                Pagar {formatCurrency(check.missingMzn, country)}
+              </Button>
+            )}
+          </div>
+>>>>>>> 7e33f0c (feat(studio): add pay-per-document pricing, mobile sticky bar, quick edit, and quick credit chips)
         </div>
       ) : null}
     </div>

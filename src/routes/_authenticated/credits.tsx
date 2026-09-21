@@ -15,8 +15,8 @@ import {
   creditsToCurrency,
   formatCurrency,
   packPriceInCountry,
-  packTotalCredits,
 } from "@/lib/dokvera";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/credits")({
   head: () => ({
@@ -79,24 +79,47 @@ function CreditsPage() {
               Compre exatamente o que precisa, a partir de 1 crédito ({formatCurrency(countryConfig.creditPrice, country)} por unidade). Sem mensalidades obrigatórias.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-4 bg-muted/40 p-4 rounded-2xl border border-border/50">
-            <div className="flex items-center gap-3">
-              <label htmlFor="custom-credits" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Qtd:
-              </label>
-              <input
-                id="custom-credits"
-                type="number"
-                min={minCredits}
-                max={100}
-                value={customCredits}
-                onChange={(e) => setCustomCredits(Math.max(minCredits, parseInt(e.target.value) || minCredits))}
-                className="h-11 w-20 rounded-xl border border-border bg-background px-3 text-center font-display font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+          <div className="flex flex-col space-y-3 bg-muted/40 p-4 rounded-2xl border border-border/50">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mr-1">
+                Atalhos rápidos:
+              </span>
+              {[1, 3, 5, 10, 20].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setCustomCredits(val)}
+                  className={cn(
+                    "rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer border",
+                    customCredits === val
+                      ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                      : "bg-background text-foreground border-border hover:bg-muted"
+                  )}
+                >
+                  +{val} {val === 1 ? "crédito" : "créditos"}
+                </button>
+              ))}
             </div>
-            <div className="text-right sm:text-left min-w-[110px]">
-              <p className="text-xs text-muted-foreground">Total a pagar</p>
-              <p className="font-display text-lg font-bold text-primary">{formatCurrency(customPrice, country)}</p>
+
+            <div className="flex flex-col sm:flex-row items-center gap-4 pt-1">
+              <div className="flex items-center gap-3">
+                <label htmlFor="custom-credits" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Quantidade personalizada:
+                </label>
+                <input
+                  id="custom-credits"
+                  type="number"
+                  min={minCredits}
+                  max={100}
+                  value={customCredits}
+                  onChange={(e) => setCustomCredits(Math.max(minCredits, parseInt(e.target.value) || minCredits))}
+                  className="h-11 w-24 rounded-xl border border-border bg-background px-3 text-center font-display font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div className="text-right sm:text-left min-w-[110px]">
+                <p className="text-xs text-muted-foreground">Total a pagar</p>
+                <p className="font-display text-lg font-bold text-primary">{formatCurrency(customPrice, country)}</p>
+              </div>
             </div>
             <Button
               className="h-11 rounded-xl px-6 font-medium shadow-sm w-full sm:w-auto"

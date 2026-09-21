@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useState, type ReactElement } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, type ReactElement } from "react";
 import { 
   ArrowLeft, 
   Copy, 
@@ -11,7 +11,9 @@ import {
   FileWarning, 
   Calendar, 
   Coins,
-  Sparkles
+  Sparkles,
+  Pencil,
+  Save
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +21,7 @@ import { documentQuery, documentEventsQuery, profileQuery } from "@/lib/queries"
 import { useSession } from "@/hooks/use-session";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { exportToPdf, exportToDocx } from "@/services/export";
 import { formatDate, formatDateTime, documentTypeLabel, statusMeta } from "@/lib/dokvera";
 
@@ -180,7 +183,11 @@ function renderTextWithFormatting(text: string) {
 function DocumentView() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
   const { user } = useSession();
 
   const { data: profile } = useQuery({
@@ -193,6 +200,12 @@ function DocumentView() {
     ...documentQuery(id),
     enabled: Boolean(id),
   });
+
+  useEffect(() => {
+    if (doc?.content && !isEditing) {
+      setEditedContent(doc.content);
+    }
+  }, [doc?.content, isEditing]);
 
   const { data: events } = useQuery({
     ...documentEventsQuery(id),
@@ -341,6 +354,18 @@ function DocumentView() {
 
           {doc.status === "ready" && doc.content && (
             <>
+              <Button
+                onClick={() => {
+                  if (!isEditing) setEditedContent(doc.content || "");
+                  setIsEditing(!isEditing);
+                }}
+                variant={isEditing ? "default" : "outline"}
+                className="rounded-xl h-10 px-4 font-semibold shadow-xs"
+              >
+                <Pencil className="mr-1.5 size-4" />
+                {isEditing ? "Cancelar Edição" : "Editar Texto"}
+              </Button>
+
               <Button 
                 onClick={handleCopy} 
                 variant="outline" 
@@ -397,6 +422,43 @@ function DocumentView() {
             <p className="text-sm leading-relaxed max-w-sm">
               Este documento foi guardado como rascunho mas ainda não foi processado. Pode carregar em "Continuar Rascunho" acima para configurar e avançar.
             </p>
+          </div>
+        ) : isEditing ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                ✏️ Modo de Edição Rápida (Incluído)
+              </span>
+              <Button
+                size="sm"
+                disabled={savingEdit}
+                onClick={async () => {
+                  setSavingEdit(true);
+                  const { error: updateErr } = await supabase
+                    .from("documents")
+                    .update({ content: editedContent })
+                    .eq("id", doc.id);
+                  setSavingEdit(false);
+                  if (updateErr) {
+                    toast.error("Erro ao guardar edições.");
+                  } else {
+                    toast.success("Documento atualizado com sucesso!");
+                    setIsEditing(false);
+                    queryClient.invalidateQueries({ queryKey: ["document", doc.id] });
+                  }
+                }}
+                className="rounded-xl font-semibold shadow-xs"
+              >
+                {savingEdit ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <Save className="mr-1.5 size-3.5" />}
+                Guardar Alterações
+              </Button>
+            </div>
+            <Textarea
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+              rows={22}
+              className="font-mono text-sm leading-relaxed rounded-xl border-border bg-background p-4 focus:ring-2 focus:ring-primary"
+            />
           </div>
         ) : doc.content ? (
           <MarkdownView content={doc.content} />
