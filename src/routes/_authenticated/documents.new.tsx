@@ -55,6 +55,7 @@ import { DocumentSkeletonPreview } from "@/components/studio/DocumentSkeletonPre
 import { MagicFill } from "@/components/studio/MagicFill";
 import { MobilePreviewSheet } from "@/components/studio/MobilePreviewSheet";
 import { SimpleDocumentForm } from "@/components/studio/SimpleDocumentForm";
+import { AcademicStudio } from "@/components/studio/AcademicStudio";
 import { CATEGORY_PRESETS, FORMAL_SALUTATIONS, type CategoryPreset } from "@/lib/category-presets";
 import { cn } from "@/lib/utils";
 
@@ -733,8 +734,35 @@ function NewDocument() {
         </div>
       )}
 
-      {/* SIMPLE SINGLE-PAGE FORM LAYOUT FOR COMPLEXITY === 'SIMPLE' */}
-      {spec && spec.complexity === "simple" ? (
+      {/* EXCLUSIVE ACADEMIC STUDIO FOR SPEC.ID === 'ACADEMIC' */}
+      {spec && spec.id === "academic" ? (
+        <AcademicStudio
+          spec={spec}
+          fields={fields}
+          setField={setField}
+          setFields={setFields}
+          structure={structure}
+          toggleStructure={toggleStructure}
+          pageTierId={pageTierId}
+          setPageTierId={setPageTierId}
+          instructions={instructions}
+          setInstructions={setInstructions}
+          cost={cost}
+          credits={credits}
+          check={check}
+          missingRequired={missingRequired}
+          saving={saving}
+          isGenerating={generate.isPending}
+          onGenerate={() => generate.mutate()}
+          availablePresets={availablePresets}
+          onApplyPreset={applyPreset}
+          onSelectAnotherSpec={() => {
+            setSpecId(null);
+            setFields({});
+          }}
+          country={country}
+        />
+      ) : spec && spec.complexity === "simple" ? (
         <SimpleDocumentForm
           spec={spec}
           fields={fields}
