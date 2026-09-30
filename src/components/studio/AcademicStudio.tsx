@@ -1,16 +1,13 @@
 import React, { useState } from "react";
 import {
-  Wand2,
   FileText,
   Layers,
   Sparkles,
   ArrowRight,
   ArrowLeft,
   Check,
-  Zap,
-  Eye,
-  EyeOff,
-  BookOpen,
+  Plus,
+  Minus,
   Loader2,
   FileCheck2,
 } from "lucide-react";
@@ -66,63 +63,59 @@ export function AcademicStudio({
   saving,
   isGenerating,
   onGenerate,
-  onApplyPreset,
-  availablePresets,
   onSelectAnotherSpec,
   country = "MZ",
 }: AcademicStudioProps) {
-  // Stepper state for Academic Studio (1 to 4)
+  // Passos do Estudio: 1. Capa & Dados, 2. Parametros & Paginas, 3. Conteudo & Topicos, 4. Emissao
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
-  // IA Prompting state for Step 1
-  const [iaPrompt, setIaPrompt] = useState("");
-  const [isExtracting, setIsExtracting] = useState(false);
+  // Contador de Paginas: Minimo 8, Maximo 21
+  const [pageCount, setPageCount] = useState<number>(8);
 
-  // Helper string safe reader
   const asString = (val: unknown): string => (val == null ? "" : String(val));
 
-  // Heuristic IA Extractor for Step 1
-  const handleIaExtraction = () => {
-    if (!iaPrompt.trim()) {
-      toast.error("Introduza uma breve descricao do trabalho.");
+  // Atualizacao de paginas e mapeamento automatico do Tier de Preco
+  const handlePageChange = (delta: number) => {
+    const next = Math.max(8, Math.min(21, pageCount + delta));
+    setPageCount(next);
+
+    // Mapear numero de paginas para o PageTier correspondente
+    if (next <= 11) setPageTierId("6-11");
+    else if (next <= 15) setPageTierId("12-15");
+    else setPageTierId("16-21");
+  };
+
+  // Validacao estrita antes de permitir o avanco de Bloco
+  const canAdvanceFromStep1 = Boolean(asString(fields["theme"]).trim());
+  const canAdvanceFromStep2 = pageCount >= 8 && pageCount <= 21;
+
+  const handleNextStep1 = () => {
+    if (!canAdvanceFromStep1) {
+      toast.error("Preencha o Tema Central do trabalho para poder avançar.");
       return;
     }
-    setIsExtracting(true);
-    setTimeout(() => {
-      const text = iaPrompt;
-      const extracted: Record<string, unknown> = {};
+    setStep(2);
+  };
 
-      const themeMatch = text.match(/(?:tema|assunto|titulo|sobre)[:\s]+([^\n\.]+)/i);
-      if (themeMatch && themeMatch[1]) extracted["theme"] = themeMatch[1].trim();
-      else if (!fields["theme"]) extracted["theme"] = text.slice(0, 120);
-
-      const instMatch = text.match(/(?:universidade|faculdade|escola|instituicao)[:\s]+([^\n\.]+)/i);
-      if (instMatch && instMatch[1]) extracted["institution"] = instMatch[1].trim();
-
-      const teacherMatch = text.match(/(?:docente|professor|orientador)[:\s]+([^\n\.]+)/i);
-      if (teacherMatch && teacherMatch[1]) extracted["teacher"] = teacherMatch[1].trim();
-
-      const courseMatch = text.match(/(?:curso|licenciatura|mestrado)[:\s]+([^\n\.]+)/i);
-      if (courseMatch && courseMatch[1]) extracted["course"] = courseMatch[1].trim();
-
-      setFields((prev) => ({ ...prev, ...extracted }));
-      setInstructions((prev) => (prev ? `${prev}\nContexto: ${text}` : `Contexto: ${text}`));
-      setIsExtracting(false);
-      toast.success("Metadados extraidos pela Inteligencia Artificial com sucesso!");
-    }, 700);
+  const handleNextStep2 = () => {
+    if (!canAdvanceFromStep2) {
+      toast.error("Selecione um numero de paginas entre 8 e 21.");
+      return;
+    }
+    setStep(3);
   };
 
   const stepsInfo = [
-    { num: 1, title: "1. Ingestao & Dados", icon: Wand2 },
-    { num: 2, title: "2. Arvore Estrutural", icon: Layers },
-    { num: 3, title: "3. Direcao Editorial", icon: FileText },
-    { num: 4, title: "4. Estacao de Emissao", icon: Sparkles },
+    { num: 1, title: "1. Capa & Identificação", icon: FileText },
+    { num: 2, title: "2. Páginas & Estrutura", icon: Layers },
+    { num: 3, title: "3. Conteúdo & Tópicos", icon: Sparkles },
+    { num: 4, title: "4. Emissão Final", icon: FileCheck2 },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Top Header Bar for Academic Studio */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/50 pb-4">
+    <div className="mx-auto max-w-3xl space-y-6">
+      {/* Barra de Navegacao Superior */}
+      <div className="flex items-center justify-between border-b border-border/50 pb-4">
         <div className="flex items-center gap-3">
           <Button
             type="button"
@@ -131,11 +124,11 @@ export function AcademicStudio({
             onClick={onSelectAnotherSpec}
             className="h-9 rounded-xl px-3 text-xs font-semibold cursor-pointer"
           >
-            <ArrowLeft className="mr-1.5 size-4" /> Voltar aos tipos
+            <ArrowLeft className="mr-1.5 size-4" /> Mudar tipo de documento
           </Button>
           <div className="h-4 w-px bg-border/60" />
           <Badge variant="outline" className="rounded-lg px-2.5 py-0.5 text-[11px] font-mono font-semibold">
-            Modo Estudio Academico
+            Trabalho Académico
           </Badge>
         </div>
 
@@ -153,7 +146,7 @@ export function AcademicStudio({
         </div>
       </div>
 
-      {/* Stepper Tabs Bar */}
+      {/* Indicador de Passos Limpo */}
       <div className="rounded-2xl border border-border/60 bg-card p-1.5 shadow-xs">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
           {stepsInfo.map((s) => {
@@ -163,7 +156,21 @@ export function AcademicStudio({
               <button
                 key={s.num}
                 type="button"
-                onClick={() => setStep(s.num as 1 | 2 | 3 | 4)}
+                onClick={() => {
+                  if (s.num === 2 && !canAdvanceFromStep1) {
+                    toast.error("Preencha o Tema Central no Bloco 1 primeiro.");
+                    return;
+                  }
+                  if (s.num === 3 && (!canAdvanceFromStep1 || !canAdvanceFromStep2)) {
+                    toast.error("Preencha os dados dos blocos anteriores primeiro.");
+                    return;
+                  }
+                  if (s.num === 4 && (!canAdvanceFromStep1 || !canAdvanceFromStep2)) {
+                    toast.error("Preencha os dados dos blocos anteriores primeiro.");
+                    return;
+                  }
+                  setStep(s.num as 1 | 2 | 3 | 4);
+                }}
                 className={cn(
                   "flex items-center justify-center gap-2 rounded-xl py-2.5 px-2 text-xs transition-all cursor-pointer",
                   isActive
@@ -181,115 +188,44 @@ export function AcademicStudio({
         </div>
       </div>
 
-      {/* Main Studio Body (Split Screen Desktop) */}
-      <div className="grid gap-6 lg:grid-cols-12 items-start">
-        {/* Left Column: Interactive Wizard Step (7/12) */}
-        <div className="space-y-6 lg:col-span-7">
-          {/* ==================================================================== */}
-          {/* ETAPA 1: INGESTAO IA & METADADOS INICIAIS                            */}
-          {/* ==================================================================== */}
-          {step === 1 && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Central IA Prompt Bar */}
-              <div className="rounded-2xl border border-primary/20 bg-card p-5 shadow-xs space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Wand2 className="size-4" />
-                  </span>
-                  <div>
-                    <h3 className="text-xs font-bold text-foreground">Extracao Magica por IA</h3>
-                    <p className="text-[11px] text-muted-foreground">
-                      Descreva o trabalho num so texto para a IA preencher a instituicao, tema e docente.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-1">
-                  <Input
-                    value={iaPrompt}
-                    onChange={(e) => setIaPrompt(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleIaExtraction();
-                      }
-                    }}
-                    placeholder="Ex.: Monografia de Gestao de Empresas na UEM sobre Banca Digital para o Prof. Doutor Silva"
-                    className="h-10 rounded-xl text-xs flex-1"
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleIaExtraction}
-                    disabled={isExtracting || !iaPrompt.trim()}
-                    className="h-10 rounded-xl px-4 text-xs font-bold gap-1.5 shrink-0 cursor-pointer"
-                  >
-                    {isExtracting ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-                    Extrair
-                  </Button>
-                </div>
+      {/* CORPO DO FORMULÁRIO (COLUNA ÚNICA) */}
+      <div className="space-y-6">
+        {/* ==================================================================== */}
+        {/* BLOCO 1: DADOS DA CAPA & IDENTIFICAÇÃO                               */}
+        {/* ==================================================================== */}
+        {step === 1 && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-7 shadow-xs space-y-5">
+              <div className="border-b border-border/40 pb-3">
+                <h3 className="text-sm font-bold text-foreground">Informações para a Capa & Identificação</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Estes dados serão usados para montar a capa oficial e o cabeçalho do documento.
+                </p>
               </div>
 
-              {/* Quick Presets section */}
-              {availablePresets.length > 0 && (
-                <div className="space-y-2">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                    <Zap className="size-3 text-primary" /> Atalhos de Modelos Academicos:
-                  </span>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {availablePresets.map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => onApplyPreset(preset)}
-                        className="rounded-xl border border-border/60 bg-card p-3 text-left transition-all hover:border-primary/40 cursor-pointer"
-                      >
-                        <span className="block text-xs font-semibold text-foreground">{preset.label}</span>
-                        <span className="block text-[11px] text-muted-foreground line-clamp-1">{preset.description}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Core Identification Fields */}
-              <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6 shadow-xs space-y-4">
-                <div className="border-b border-border/40 pb-2.5">
-                  <h3 className="text-xs font-bold text-foreground">Identificacao do Trabalho</h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    Verifique os campos extraidos ou preencha manualmente.
-                  </p>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="theme" className="text-xs font-semibold">
+                    Tema Central / Título do Trabalho <span className="text-destructive font-bold">*</span>
+                  </Label>
+                  <Input
+                    id="theme"
+                    value={asString(fields["theme"])}
+                    onChange={(e) => setField("theme", e.target.value)}
+                    placeholder="Ex.: O Impacto da Digitalização na Banca em Moçambique"
+                    className="h-11 rounded-xl text-xs font-medium"
+                  />
+                  {!canAdvanceFromStep1 && (
+                    <p className="text-[11px] text-destructive font-medium">
+                      O Tema Central é obrigatório para poder avançar para o próximo bloco.
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label htmlFor="theme" className="text-xs font-semibold">
-                      Tema Central / Titulo do Trabalho <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="theme"
-                      value={asString(fields["theme"])}
-                      onChange={(e) => setField("theme", e.target.value)}
-                      placeholder="Ex.: O Impacto da Digitalizacao no Setor Bancario em Mocambique"
-                      className="h-10 rounded-xl text-xs font-medium"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="subject" className="text-xs font-semibold">
-                      Disciplina / Cadeira
-                    </Label>
-                    <Input
-                      id="subject"
-                      value={asString(fields["subject"])}
-                      onChange={(e) => setField("subject", e.target.value)}
-                      placeholder="Ex.: Gestao de Sistemas de Informacao"
-                      className="h-10 rounded-xl text-xs"
-                    />
-                  </div>
-
                   <div className="space-y-1.5">
                     <Label htmlFor="institution" className="text-xs font-semibold">
-                      Instituicao de Ensino
+                      Instituição de Ensino
                     </Label>
                     <Input
                       id="institution"
@@ -302,20 +238,33 @@ export function AcademicStudio({
 
                   <div className="space-y-1.5">
                     <Label htmlFor="course" className="text-xs font-semibold">
-                      Curso
+                      Curso / Faculdade
                     </Label>
                     <Input
                       id="course"
                       value={asString(fields["course"])}
                       onChange={(e) => setField("course", e.target.value)}
-                      placeholder="Ex.: Licenciatura em Informatica"
+                      placeholder="Ex.: Licenciatura em Gestão de Empresas"
+                      className="h-10 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="subject" className="text-xs font-semibold">
+                      Disciplina / Cadeira
+                    </Label>
+                    <Input
+                      id="subject"
+                      value={asString(fields["subject"])}
+                      onChange={(e) => setField("subject", e.target.value)}
+                      placeholder="Ex.: Gestão de Sistemas de Informação"
                       className="h-10 rounded-xl text-xs"
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <Label htmlFor="teacher" className="text-xs font-semibold">
-                      Docente / Supervisor
+                      Docente / Professor
                     </Label>
                     <Input
                       id="teacher"
@@ -327,382 +276,345 @@ export function AcademicStudio({
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Step Navigation */}
-              <div className="flex justify-end pt-2">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (!asString(fields["theme"]).trim()) {
-                      toast.error("Preencha o Tema Central para avancar.");
-                      return;
-                    }
-                    setStep(2);
-                  }}
-                  className="h-10 rounded-xl px-5 text-xs font-bold gap-2 cursor-pointer"
-                >
-                  Proximo: Arvore Estrutural <ArrowRight className="size-4" />
-                </Button>
+            {/* Navegação do Bloco 1 */}
+            <div className="flex justify-end pt-2">
+              <Button
+                type="button"
+                onClick={handleNextStep1}
+                disabled={!canAdvanceFromStep1}
+                className="h-11 rounded-xl px-6 text-xs font-bold gap-2 cursor-pointer"
+              >
+                Avançar para Páginas & Estrutura <ArrowRight className="size-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ==================================================================== */}
+        {/* BLOCO 2: PÁGINAS (+/-) & ESTRUTURA DO TRABALHO                       */}
+        {/* ==================================================================== */}
+        {step === 2 && (
+          <div className="space-y-6 animate-fade-in">
+            {/* Seletor Real de Páginas (+ e -) */}
+            <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-7 shadow-xs space-y-4">
+              <div className="border-b border-border/40 pb-3">
+                <h3 className="text-sm font-bold text-foreground">Número de Páginas do Trabalho</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Defina a extensão do trabalho entre 8 e 21 páginas.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between bg-muted/30 border border-border/60 rounded-2xl p-4">
+                <div>
+                  <span className="text-xs font-semibold text-muted-foreground">Extensão Selecionada:</span>
+                  <p className="text-2xl font-extrabold text-foreground font-mono mt-0.5">
+                    {pageCount} páginas
+                  </p>
+                  <span className="text-[11px] text-primary font-semibold">
+                    Custo estimado: {cost?.totalCredits ?? 21} créditos · {formatCurrency(creditsToCurrency(cost?.totalCredits ?? 21, country), country)}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handlePageChange(-1)}
+                    disabled={pageCount <= 8}
+                    className="size-11 rounded-xl border-border/80 hover:bg-muted cursor-pointer"
+                  >
+                    <Minus className="size-5" />
+                  </Button>
+
+                  <span className="w-8 text-center text-base font-bold font-mono">
+                    {pageCount}
+                  </span>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handlePageChange(1)}
+                    disabled={pageCount >= 21}
+                    className="size-11 rounded-xl border-border/80 hover:bg-muted cursor-pointer"
+                  >
+                    <Plus className="size-5" />
+                  </Button>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                * Mínimo permitido: 8 páginas. Máximo permitido: 21 páginas.
+              </p>
+            </div>
+
+            {/* Norma de Citação */}
+            <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-7 shadow-xs space-y-3">
+              <div className="border-b border-border/40 pb-2">
+                <h3 className="text-sm font-bold text-foreground">Norma de Citação Bibliográfica</h3>
+                <p className="text-xs text-muted-foreground">
+                  Selecione o padrão académico de formatação.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2.5">
+                {[
+                  { value: "apa", label: "Norma APA" },
+                  { value: "abnt", label: "Norma ABNT" },
+                  { value: "iso690", label: "Norma ISO 690" },
+                  { value: "none", label: "Sem norma específica" },
+                ].map((norm) => {
+                  const isSelected = (fields["citation_style"] || "apa") === norm.value;
+                  return (
+                    <button
+                      key={norm.value}
+                      type="button"
+                      onClick={() => setField("citation_style", norm.value)}
+                      className={cn(
+                        "h-10 rounded-xl px-4 text-xs font-semibold border transition-all cursor-pointer",
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
+                          : "border-border/60 bg-card text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {norm.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          )}
 
-          {/* ==================================================================== */}
-          {/* ETAPA 2: ARVORE ESTRUTURAL & NORMAS                                  */}
-          {/* ==================================================================== */}
-          {step === 2 && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Page Extension Tier Selector */}
-              {spec.pageTiers && spec.pageTiers.length > 0 && (
-                <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6 shadow-xs space-y-3">
-                  <div className="border-b border-border/40 pb-2">
-                    <h3 className="text-xs font-bold text-foreground">Extensao do Documento (Paginas)</h3>
-                    <p className="text-[11px] text-muted-foreground">
-                      Escolha a dimensao desejada para o trabalho.
+            {/* Estrutura do Documento */}
+            {spec.structure && spec.structure.length > 0 && (
+              <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-7 shadow-xs space-y-4">
+                <div className="border-b border-border/40 pb-3 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Secções do Trabalho</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Escolha quais partes devem fazer parte da estrutura final.
                     </p>
                   </div>
-                  <div className="grid gap-2.5 sm:grid-cols-2">
-                    {spec.pageTiers.map((tier) => {
-                      const isSelected = pageTierId === tier.id;
-                      return (
-                        <button
-                          key={tier.id}
-                          type="button"
-                          onClick={() => setPageTierId(tier.id)}
-                          className={cn(
-                            "rounded-xl border p-3.5 text-left transition-all cursor-pointer",
-                            isSelected
-                              ? "border-primary bg-primary/5 font-bold shadow-xs"
-                              : "border-border/60 hover:border-border bg-card"
-                          )}
-                        >
-                          <span className="block text-xs text-foreground">{tier.label}</span>
-                          <span className="text-[11px] font-semibold text-primary">
-                            {tier.credits} cr · {formatCurrency(creditsToCurrency(tier.credits, country), country)}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Tree View Outline Structure Checklist */}
-              {spec.structure && spec.structure.length > 0 && (
-                <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6 shadow-xs space-y-4">
-                  <div className="border-b border-border/40 pb-2.5 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                        <Layers className="size-4 text-primary" />
-                        Arvore Estrutural do Indice
-                      </h3>
-                      <p className="text-[11px] text-muted-foreground">
-                        Ative ou desative seccoes do trabalho academico.
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="text-[10px] font-mono">
-                      {structure.length} seccoes ativas
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-1.5 font-mono text-xs">
-                    {spec.structure.map((item, idx) => {
-                      const isChecked = structure.includes(item.id) || Boolean(item.required);
-                      return (
-                        <div
-                          key={item.id}
-                          onClick={() => !item.required && toggleStructure(item.id)}
-                          className={cn(
-                            "flex items-center justify-between rounded-xl border px-3.5 py-2.5 transition-all cursor-pointer selection:bg-none",
-                            isChecked
-                              ? "border-primary/40 bg-primary/5 text-foreground font-semibold"
-                              : "border-border/40 bg-card/60 text-muted-foreground hover:border-border"
-                          )}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-[10px] text-muted-foreground font-bold">{idx + 1}.</span>
-                            <span>{item.label}</span>
-                            {item.required && (
-                              <Badge variant="secondary" className="text-[9px] px-1.5 py-0">obrigatorio</Badge>
-                            )}
-                            {item.extraCredits ? (
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0">+{item.extraCredits} cr</Badge>
-                            ) : null}
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            {isChecked ? (
-                              <Eye className="size-3.5 text-primary" />
-                            ) : (
-                              <EyeOff className="size-3.5 text-muted-foreground/50" />
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Citation Standards */}
-              <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6 shadow-xs space-y-3">
-                <div className="border-b border-border/40 pb-2">
-                  <h3 className="text-xs font-bold text-foreground">Norma de Citacao Bibliografica</h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    Selecione o padrao de formatacao das referencias.
-                  </p>
+                  <Badge variant="outline" className="text-[11px] font-mono">
+                    {structure.length} secções ativas
+                  </Badge>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { value: "apa", label: "Norma APA (7.ª Edicao)" },
-                    { value: "abnt", label: "Norma ABNT" },
-                    { value: "iso690", label: "Norma ISO 690" },
-                    { value: "none", label: "Sem norma especifica" },
-                  ].map((norm) => {
-                    const isSelected = (fields["citation_style"] || "apa") === norm.value;
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {spec.structure.map((item) => {
+                    const isChecked = structure.includes(item.id) || Boolean(item.required);
                     return (
-                      <button
-                        key={norm.value}
-                        type="button"
-                        onClick={() => setField("citation_style", norm.value)}
+                      <label
+                        key={item.id}
+                        onClick={() => !item.required && toggleStructure(item.id)}
                         className={cn(
-                          "h-9 rounded-xl px-4 text-xs font-semibold border transition-all cursor-pointer",
-                          isSelected
-                            ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
-                            : "border-border/60 bg-card text-muted-foreground hover:text-foreground"
+                          "flex items-center justify-between rounded-xl border p-3 text-xs transition-all cursor-pointer",
+                          isChecked
+                            ? "border-primary/40 bg-primary/5 font-semibold text-foreground"
+                            : "border-border/60 text-muted-foreground hover:border-border"
                         )}
                       >
-                        {norm.label}
-                      </button>
+                        <span className="truncate">{item.label}</span>
+                        {item.required ? (
+                          <Badge variant="secondary" className="text-[9px] px-1.5 py-0">obrigatório</Badge>
+                        ) : (
+                          <div className={cn("size-4 rounded-md border flex items-center justify-center", isChecked ? "bg-primary border-primary text-white" : "border-border")}>
+                            {isChecked && <Check className="size-3" />}
+                          </div>
+                        )}
+                      </label>
                     );
                   })}
                 </div>
               </div>
+            )}
 
-              {/* Navigation */}
-              <div className="flex justify-between pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setStep(1)}
-                  className="h-10 rounded-xl px-4 text-xs font-semibold gap-1.5 cursor-pointer"
-                >
-                  <ArrowLeft className="size-4" /> Anterior
-                </Button>
+            {/* Navegação do Bloco 2 */}
+            <div className="flex justify-between pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStep(1)}
+                className="h-11 rounded-xl px-5 text-xs font-semibold gap-1.5 cursor-pointer"
+              >
+                <ArrowLeft className="size-4" /> Bloco Anterior
+              </Button>
 
-                <Button
-                  type="button"
-                  onClick={() => setStep(3)}
-                  className="h-10 rounded-xl px-5 text-xs font-bold gap-2 cursor-pointer"
-                >
-                  Proximo: Direcao Editorial <ArrowRight className="size-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* ==================================================================== */}
-          {/* ETAPA 3: DIRECAO EDITORIAL & CONTEUDO BRUTO                          */}
-          {/* ==================================================================== */}
-          {step === 3 && (
-            <div className="space-y-6 animate-fade-in">
-              <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6 shadow-xs space-y-4">
-                <div className="border-b border-border/40 pb-2.5">
-                  <h3 className="text-xs font-bold text-foreground">Pontos a Abordar no Desenvolvimento</h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    Escreva os subtopicos ou apontamentos chave (um por linha) que a IA deve desenvolver.
-                  </p>
-                </div>
-
-                <Textarea
-                  value={
-                    Array.isArray(fields["topics"])
-                      ? (fields["topics"] as string[]).join("\n")
-                      : asString(fields["topics"])
-                  }
-                  onChange={(e) => setField("topics", e.target.value.split("\n"))}
-                  placeholder={"Ex.:\n- Conceito e evolucao da banca digital\n- Principais desafios de ciberseguranca em Mocambique\n- Estudo de caso dos servicos de mobile money"}
-                  className="min-h-32 text-xs rounded-xl font-mono leading-relaxed"
-                />
-              </div>
-
-              {/* Special Editorial Instructions */}
-              <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6 shadow-xs space-y-4">
-                <div className="border-b border-border/40 pb-2.5">
-                  <h3 className="text-xs font-bold text-foreground">Instrucoes Especiais para a IA</h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    Explicite o tom, o nivel de rigor ou orientacoes especificas do docente.
-                  </p>
-                </div>
-
-                <Textarea
-                  value={instructions}
-                  onChange={(e) => setInstructions(e.target.value)}
-                  placeholder="Ex.: Usar linguagem cientifica rigorosa, incluir dados estatisticos recentes e citar autores moçambicanos no corpo do texto."
-                  className="min-h-24 text-xs rounded-xl leading-relaxed"
-                />
-              </div>
-
-              {/* Navigation */}
-              <div className="flex justify-between pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setStep(2)}
-                  className="h-10 rounded-xl px-4 text-xs font-semibold gap-1.5 cursor-pointer"
-                >
-                  <ArrowLeft className="size-4" /> Anterior
-                </Button>
-
-                <Button
-                  type="button"
-                  onClick={() => setStep(4)}
-                  className="h-10 rounded-xl px-5 text-xs font-bold gap-2 cursor-pointer"
-                >
-                  Proximo: Estacao de Emissao <ArrowRight className="size-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* ==================================================================== */}
-          {/* ETAPA 4: ESTACAO DE EMISSAO & DISPARO                                */}
-          {/* ==================================================================== */}
-          {step === 4 && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Executive Summary Card */}
-              <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6 shadow-xs space-y-4">
-                <div className="border-b border-border/40 pb-2.5 flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-foreground flex items-center gap-2">
-                    <FileCheck2 className="size-4 text-primary" />
-                    Resumo do Trabajo Academico
-                  </h3>
-                  <Badge variant="outline" className="text-[10px]">Pronto a Gerar</Badge>
-                </div>
-
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between py-1 border-b border-border/30">
-                    <span className="text-muted-foreground font-medium">Tema:</span>
-                    <span className="font-bold text-foreground text-right max-w-xs truncate">{asString(fields["theme"]) || "Nao especificado"}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-border/30">
-                    <span className="text-muted-foreground font-medium">Instituicao:</span>
-                    <span className="font-semibold text-foreground">{asString(fields["institution"]) || "Nao especificada"}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-border/30">
-                    <span className="text-muted-foreground font-medium">Norma:</span>
-                    <span className="font-semibold text-foreground uppercase">{asString(fields["citation_style"] || "apa")}</span>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-muted-foreground font-medium">Seccoes Ativas:</span>
-                    <span className="font-semibold text-foreground">{structure.length} seccoes</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Pricing & Credit Status */}
-              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 shadow-xs flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-primary">Custo do Documento</span>
-                  <p className="text-sm font-extrabold text-foreground">
-                    {cost?.totalCredits ?? spec.baseCredits} creditos · {formatCurrency(creditsToCurrency(cost?.totalCredits ?? spec.baseCredits, country), country)}
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <span className="text-[10px] font-mono text-muted-foreground">O teu saldo:</span>
-                  <p className="text-xs font-bold text-foreground">{credits} cr</p>
-                </div>
-              </div>
-
-              {/* Validation Warning */}
-              {missingRequired.length > 0 && (
-                <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3.5 text-xs text-destructive font-medium">
-                  Preencha os campos obrigatorios: {missingRequired.join(", ")}.
-                </div>
-              )}
-
-              {/* Final Generation Trigger Button */}
-              <div className="flex justify-between items-center pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setStep(3)}
-                  className="h-11 rounded-xl px-4 text-xs font-semibold gap-1.5 cursor-pointer"
-                >
-                  <ArrowLeft className="size-4" /> Anterior
-                </Button>
-
-                <Button
-                  type="button"
-                  disabled={isGenerating || missingRequired.length > 0 || !check?.affordable}
-                  onClick={onGenerate}
-                  size="lg"
-                  className="h-12 rounded-xl px-8 text-xs font-bold gap-2.5 shadow-glow cursor-pointer"
-                >
-                  {isGenerating ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="size-4" />
-                  )}
-                  Gerar Trabalho Academico Agora
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column: Live Skeleton Preview (5/12) Desktop Sticky */}
-        <div className="hidden lg:block lg:col-span-5 space-y-4 lg:sticky lg:top-6">
-          <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs space-y-3">
-            <div className="flex items-center justify-between border-b border-border/40 pb-2">
-              <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                <BookOpen className="size-3.5 text-primary" /> Pre-visualizacao A4
-              </span>
-              <Badge variant="outline" className="text-[9px] font-mono">Live Outline</Badge>
-            </div>
-
-            {/* Skeleton Sheet Preview */}
-            <div className="relative mx-auto w-full aspect-[1/1.41] bg-background border border-border/50 rounded-xl p-5 shadow-inner flex flex-col justify-between text-[10px] font-mono text-muted-foreground overflow-hidden">
-              <div className="space-y-4">
-                {/* Header */}
-                <div className="text-center border-b border-border/40 pb-3 space-y-1">
-                  <p className="font-bold text-foreground text-[11px]">{asString(fields["institution"]) || "[Nome da Instituicao]"}</p>
-                  <p className="text-[9px] text-muted-foreground">{asString(fields["course"]) || "[Curso]"}</p>
-                </div>
-
-                {/* Title */}
-                <div className="py-4 text-center space-y-1">
-                  <p className="font-extrabold text-foreground text-xs">{asString(fields["theme"]) || "[Tema Central do Trabalho]"}</p>
-                  <p className="text-[9px]">{asString(fields["subject"])}</p>
-                </div>
-
-                {/* Simulated Outline Tree */}
-                <div className="space-y-2 pt-2 border-t border-border/30">
-                  <p className="font-bold text-foreground text-[10px]">INDICE PREVISTO:</p>
-                  <ul className="space-y-1 text-[9px] pl-2">
-                    {structure.slice(0, 6).map((stId) => {
-                      const stObj = spec.structure?.find((s) => s.id === stId);
-                      return (
-                        <li key={stId} className="flex justify-between border-b border-dashed border-border/30 pb-0.5">
-                          <span>• {stObj?.label || stId}</span>
-                          <span className="opacity-50">pág. ...</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              </div>
-
-              {/* Footer Skeleton */}
-              <div className="border-t border-border/40 pt-2 flex justify-between text-[8px] text-muted-foreground">
-                <span>Docente: {asString(fields["teacher"]) || "N/A"}</span>
-                <span>Dokvera Academic Engine</span>
-              </div>
+              <Button
+                type="button"
+                onClick={handleNextStep2}
+                className="h-11 rounded-xl px-6 text-xs font-bold gap-2 cursor-pointer"
+              >
+                Avançar para Conteúdo <ArrowRight className="size-4" />
+              </Button>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* ==================================================================== */}
+        {/* BLOCO 3: CONTEÚDO & TÓPICOS DO DESENVOLVIMENTO                       */}
+        {/* ==================================================================== */}
+        {step === 3 && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-7 shadow-xs space-y-4">
+              <div className="border-b border-border/40 pb-3">
+                <h3 className="text-sm font-bold text-foreground">Tópicos para o Desenvolvimento</h3>
+                <p className="text-xs text-muted-foreground">
+                  Indique os pontos principais ou subtemas que a inteligência artificial deve desenvolver no corpo do trabalho.
+                </p>
+              </div>
+
+              <Textarea
+                value={
+                  Array.isArray(fields["topics"])
+                    ? (fields["topics"] as string[]).join("\n")
+                    : asString(fields["topics"])
+                }
+                onChange={(e) => setField("topics", e.target.value.split("\n"))}
+                placeholder={"Escreva um tópico por linha:\n- Conceito e enquadramento histórico\n- Desafios e dados recentes sobre a matéria\n- Estudo de caso ou análise prática"}
+                className="min-h-36 text-xs rounded-xl font-mono leading-relaxed"
+              />
+            </div>
+
+            <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-7 shadow-xs space-y-4">
+              <div className="border-b border-border/40 pb-3">
+                <h3 className="text-sm font-bold text-foreground">Orientações Específicas para a IA</h3>
+                <p className="text-xs text-muted-foreground">
+                  Escreva requisitos específicos de redação, tom ou foco que a IA deve respeitar ao gerar.
+                </p>
+              </div>
+
+              <Textarea
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                placeholder="Ex.: Usar tom académico rigoroso, citar dados de Moçambique e manter frases claras."
+                className="min-h-24 text-xs rounded-xl leading-relaxed"
+              />
+            </div>
+
+            {/* Navegação do Bloco 3 */}
+            <div className="flex justify-between pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStep(2)}
+                className="h-11 rounded-xl px-5 text-xs font-semibold gap-1.5 cursor-pointer"
+              >
+                <ArrowLeft className="size-4" /> Bloco Anterior
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => setStep(4)}
+                className="h-11 rounded-xl px-6 text-xs font-bold gap-2 cursor-pointer"
+              >
+                Avançar para Emissão Final <ArrowRight className="size-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ==================================================================== */}
+        {/* BLOCO 4: EMISSÃO FINAL & DISPARO DA IA                               */}
+        {/* ==================================================================== */}
+        {step === 4 && (
+          <div className="space-y-6 animate-fade-in">
+            {/* Resumo Final dos Dados */}
+            <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-7 shadow-xs space-y-4">
+              <div className="border-b border-border/40 pb-3">
+                <h3 className="text-sm font-bold text-foreground">Resumo Final do Trabalho Académico</h3>
+                <p className="text-xs text-muted-foreground">
+                  Confirme os dados preenchidos antes de disparar a geração por IA.
+                </p>
+              </div>
+
+              <div className="space-y-2.5 text-xs font-medium">
+                <div className="flex justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Tema Central:</span>
+                  <span className="font-bold text-foreground max-w-sm text-right truncate">
+                    {asString(fields["theme"]) || "Nao especificado"}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Instituição:</span>
+                  <span className="font-semibold text-foreground">
+                    {asString(fields["institution"]) || "Nao especificada"}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Curso / Cadeira:</span>
+                  <span className="font-semibold text-foreground">
+                    {asString(fields["course"])} {fields["subject"] ? `(${asString(fields["subject"])})` : ""}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Docente:</span>
+                  <span className="font-semibold text-foreground">
+                    {asString(fields["teacher"]) || "Nao especificado"}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Extensão de Páginas:</span>
+                  <span className="font-bold text-primary">{pageCount} páginas</span>
+                </div>
+                <div className="flex justify-between py-1.5">
+                  <span className="text-muted-foreground">Norma de Citação:</span>
+                  <span className="font-bold uppercase text-foreground">{asString(fields["citation_style"] || "apa")}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Extrato Financeiro & Saldo */}
+            <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-primary">Custo Final</span>
+                <p className="text-base font-extrabold text-foreground mt-0.5">
+                  {cost?.totalCredits ?? 21} créditos · {formatCurrency(creditsToCurrency(cost?.totalCredits ?? 21, country), country)}
+                </p>
+              </div>
+
+              <div className="text-right">
+                <span className="text-[10px] font-mono text-muted-foreground">Seu Saldo:</span>
+                <p className="text-xs font-bold text-foreground">{credits} cr</p>
+              </div>
+            </div>
+
+            {/* Mensagem de Erro de Validação se Houver */}
+            {missingRequired.length > 0 && (
+              <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3.5 text-xs text-destructive font-medium">
+                Por favor preencha os campos obrigatórios: {missingRequired.join(", ")}.
+              </div>
+            )}
+
+            {/* Disparo Final */}
+            <div className="flex justify-between items-center pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStep(3)}
+                className="h-11 rounded-xl px-5 text-xs font-semibold gap-1.5 cursor-pointer"
+              >
+                <ArrowLeft className="size-4" /> Bloco Anterior
+              </Button>
+
+              <Button
+                type="button"
+                disabled={isGenerating || !canAdvanceFromStep1 || !check?.affordable}
+                onClick={onGenerate}
+                size="lg"
+                className="h-12 rounded-xl px-8 text-xs font-bold gap-2.5 shadow-glow cursor-pointer"
+              >
+                {isGenerating ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Sparkles className="size-4" />
+                )}
+                Gerar Trabalho Académico Agora
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
