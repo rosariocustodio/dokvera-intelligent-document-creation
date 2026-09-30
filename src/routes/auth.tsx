@@ -198,16 +198,33 @@ function AuthPage() {
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const normalizedEmail = email.trim().toLowerCase();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
     setLoading(false);
     if (error) {
-      toast.error(
-        error.message.toLowerCase().includes("confirm")
-          ? (lang === "PT" ? "Confirme o seu email antes de entrar." : "Please confirm your email before signing in.")
-          : (lang === "PT" ? "Email ou palavra-passe incorretos." : "Incorrect email or password."),
-      );
+      if (error.message.toLowerCase().includes("confirm")) {
+        toast.error(
+          lang === "PT" ? "Confirme o seu email antes de entrar." : "Please confirm your email before signing in.",
+          {
+            description: lang === "PT" ? "Um link de confirmacao foi enviado para o seu email." : "A confirmation link was sent to your email.",
+          }
+        );
+      } else if (error.message.toLowerCase().includes("invalid")) {
+        toast.error(
+          lang === "PT" ? "Email ou palavra-passe incorretos." : "Incorrect email or password.",
+          {
+            description: lang === "PT" ? "Verifique maiusculas/minusculas ou recupere a sua palavra-passe." : "Check capitalization or reset your password.",
+          }
+        );
+      } else {
+        toast.error(error.message);
+      }
       return;
     }
+    toast.success(lang === "PT" ? "Sessao iniciada com sucesso!" : "Signed in successfully!");
     navigate({ to: "/dashboard", replace: true });
   }
 
@@ -215,8 +232,9 @@ function AuthPage() {
     e.preventDefault();
     if (!step2Valid) return;
     setLoading(true);
+    const normalizedEmail = signupEmail.trim().toLowerCase();
     const { data, error } = await supabase.auth.signUp({
-      email: signupEmail,
+      email: normalizedEmail,
       password: signupPassword,
       options: {
         emailRedirectTo: window.location.origin,
@@ -227,7 +245,7 @@ function AuthPage() {
     if (error) {
       toast.error(
         error.message.toLowerCase().includes("already")
-          ? (lang === "PT" ? "Já existe uma conta com este email. Entre em vez de criar." : "An account already exists with this email.")
+          ? (lang === "PT" ? "Ja existe uma conta com este email. Entre em vez de criar." : "An account already exists with this email.")
           : error.message,
       );
       return;
@@ -243,12 +261,13 @@ function AuthPage() {
   // Recovery Step 1: Send Reset OTP Code
   async function sendRecoveryCode(e?: React.FormEvent) {
     if (e) e.preventDefault();
-    if (!/^\S+@\S+\.\S+$/.test(recoveryEmail)) {
-      toast.error(lang === "PT" ? "Introduza um email válido." : "Please enter a valid email.");
+    const normalizedEmail = recoveryEmail.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      toast.error(lang === "PT" ? "Introduza um email valido." : "Please enter a valid email.");
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(recoveryEmail, {
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: `${window.location.origin}/auth`,
     });
     setLoading(false);
@@ -256,7 +275,7 @@ function AuthPage() {
       toast.error(error.message);
       return;
     }
-    toast.success(lang === "PT" ? "Código enviado para o seu email." : "Verification code sent to your email.");
+    toast.success(lang === "PT" ? "Codigo enviado para o seu email." : "Verification code sent to your email.");
     setRecoveryStep(2);
     setResendTimer(30);
   }
