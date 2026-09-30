@@ -49,7 +49,6 @@ export function AcademicStudio({
   spec,
   fields,
   setField,
-  setFields,
   structure,
   toggleStructure,
   pageTierId,
@@ -66,28 +65,26 @@ export function AcademicStudio({
   onSelectAnotherSpec,
   country = "MZ",
 }: AcademicStudioProps) {
-  // Passos do Estudio: 1. Capa & Dados, 2. Parametros & Paginas, 3. Conteudo & Topicos, 4. Emissao
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  // Passos do Estudio: 1. Capa & Identificacao, 2. Paginas & Estrutura, 3. Emissao & IA
+  const [step, setStep] = useState<1 | 2 | 3>(1);
 
-  // Contador de Paginas: Minimo 8, Maximo 21
+  // Contador de Paginas: Minimo 8, Maximo 21 (Padrao 8)
   const [pageCount, setPageCount] = useState<number>(8);
 
   const asString = (val: unknown): string => (val == null ? "" : String(val));
 
-  // Atualizacao de paginas e mapeamento automatico do Tier de Preco
+  // Gestao de paginas e mapeamento automatico do PageTier de custo
   const handlePageChange = (delta: number) => {
     const next = Math.max(8, Math.min(21, pageCount + delta));
     setPageCount(next);
 
-    // Mapear numero de paginas para o PageTier correspondente
     if (next <= 11) setPageTierId("6-11");
     else if (next <= 15) setPageTierId("12-15");
     else setPageTierId("16-21");
   };
 
-  // Validacao estrita antes de permitir o avanco de Bloco
+  // Validacao estrita: Tema Central e obrigatorio para avancar do Bloco 1
   const canAdvanceFromStep1 = Boolean(asString(fields["theme"]).trim());
-  const canAdvanceFromStep2 = pageCount >= 8 && pageCount <= 21;
 
   const handleNextStep1 = () => {
     if (!canAdvanceFromStep1) {
@@ -98,24 +95,19 @@ export function AcademicStudio({
   };
 
   const handleNextStep2 = () => {
-    if (!canAdvanceFromStep2) {
-      toast.error("Selecione um numero de paginas entre 8 e 21.");
-      return;
-    }
     setStep(3);
   };
 
   const stepsInfo = [
     { num: 1, title: "1. Capa & Identificação", icon: FileText },
     { num: 2, title: "2. Páginas & Estrutura", icon: Layers },
-    { num: 3, title: "3. Conteúdo & Tópicos", icon: Sparkles },
-    { num: 4, title: "4. Emissão Final", icon: FileCheck2 },
+    { num: 3, title: "3. Emissão & IA", icon: Sparkles },
   ];
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       {/* Barra de Navegacao Superior */}
-      <div className="flex items-center justify-between border-b border-border/50 pb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/50 pb-4">
         <div className="flex items-center gap-3">
           <Button
             type="button"
@@ -146,9 +138,9 @@ export function AcademicStudio({
         </div>
       </div>
 
-      {/* Indicador de Passos Limpo */}
+      {/* Indicador de Passos Limpo (3 Blocos Diretos) */}
       <div className="rounded-2xl border border-border/60 bg-card p-1.5 shadow-xs">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
+        <div className="grid grid-cols-3 gap-1">
           {stepsInfo.map((s) => {
             const isActive = step === s.num;
             const isDone = step > s.num;
@@ -157,19 +149,11 @@ export function AcademicStudio({
                 key={s.num}
                 type="button"
                 onClick={() => {
-                  if (s.num === 2 && !canAdvanceFromStep1) {
+                  if (s.num >= 2 && !canAdvanceFromStep1) {
                     toast.error("Preencha o Tema Central no Bloco 1 primeiro.");
                     return;
                   }
-                  if (s.num === 3 && (!canAdvanceFromStep1 || !canAdvanceFromStep2)) {
-                    toast.error("Preencha os dados dos blocos anteriores primeiro.");
-                    return;
-                  }
-                  if (s.num === 4 && (!canAdvanceFromStep1 || !canAdvanceFromStep2)) {
-                    toast.error("Preencha os dados dos blocos anteriores primeiro.");
-                    return;
-                  }
-                  setStep(s.num as 1 | 2 | 3 | 4);
+                  setStep(s.num as 1 | 2 | 3);
                 }}
                 className={cn(
                   "flex items-center justify-center gap-2 rounded-xl py-2.5 px-2 text-xs transition-all cursor-pointer",
@@ -446,87 +430,45 @@ export function AcademicStudio({
                 onClick={handleNextStep2}
                 className="h-11 rounded-xl px-6 text-xs font-bold gap-2 cursor-pointer"
               >
-                Avançar para Conteúdo <ArrowRight className="size-4" />
+                Avançar para Emissão & IA <ArrowRight className="size-4" />
               </Button>
             </div>
           </div>
         )}
 
         {/* ==================================================================== */}
-        {/* BLOCO 3: CONTEÚDO & TÓPICOS DO DESENVOLVIMENTO                       */}
+        {/* BLOCO 3: EMISSÃO FINAL & ORIENTAÇÕES DA IA                           */}
         {/* ==================================================================== */}
         {step === 3 && (
           <div className="space-y-6 animate-fade-in">
+            {/* Campo Opcional de Instruções Específicas do Docente */}
             <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-7 shadow-xs space-y-4">
               <div className="border-b border-border/40 pb-3">
-                <h3 className="text-sm font-bold text-foreground">Tópicos para o Desenvolvimento</h3>
-                <p className="text-xs text-muted-foreground">
-                  Indique os pontos principais ou subtemas que a inteligência artificial deve desenvolver no corpo do trabalho.
-                </p>
-              </div>
-
-              <Textarea
-                value={
-                  Array.isArray(fields["topics"])
-                    ? (fields["topics"] as string[]).join("\n")
-                    : asString(fields["topics"])
-                }
-                onChange={(e) => setField("topics", e.target.value.split("\n"))}
-                placeholder={"Escreva um tópico por linha:\n- Conceito e enquadramento histórico\n- Desafios e dados recentes sobre a matéria\n- Estudo de caso ou análise prática"}
-                className="min-h-36 text-xs rounded-xl font-mono leading-relaxed"
-              />
-            </div>
-
-            <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-7 shadow-xs space-y-4">
-              <div className="border-b border-border/40 pb-3">
-                <h3 className="text-sm font-bold text-foreground">Orientações Específicas para a IA</h3>
-                <p className="text-xs text-muted-foreground">
-                  Escreva requisitos específicos de redação, tom ou foco que a IA deve respeitar ao gerar.
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <Sparkles className="size-4 text-primary" />
+                  Instruções do Docente / Orientações para a IA (Opcional)
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Escreva aqui regras específicas que a Inteligência Artificial deve obedecer ao gerar o trabalho.
                 </p>
               </div>
 
               <Textarea
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
-                placeholder="Ex.: Usar tom académico rigoroso, citar dados de Moçambique e manter frases claras."
-                className="min-h-24 text-xs rounded-xl leading-relaxed"
+                placeholder="Ex.: O docente pediu para focar o estudo no caso do Banco X em Moçambique, citar dados de 2024 e manter tom rigoroso."
+                className="min-h-28 text-xs rounded-xl leading-relaxed"
               />
             </div>
 
-            {/* Navegação do Bloco 3 */}
-            <div className="flex justify-between pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setStep(2)}
-                className="h-11 rounded-xl px-5 text-xs font-semibold gap-1.5 cursor-pointer"
-              >
-                <ArrowLeft className="size-4" /> Bloco Anterior
-              </Button>
-
-              <Button
-                type="button"
-                onClick={() => setStep(4)}
-                className="h-11 rounded-xl px-6 text-xs font-bold gap-2 cursor-pointer"
-              >
-                Avançar para Emissão Final <ArrowRight className="size-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* ==================================================================== */}
-        {/* BLOCO 4: EMISSÃO FINAL & DISPARO DA IA                               */}
-        {/* ==================================================================== */}
-        {step === 4 && (
-          <div className="space-y-6 animate-fade-in">
             {/* Resumo Final dos Dados */}
             <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-7 shadow-xs space-y-4">
-              <div className="border-b border-border/40 pb-3">
-                <h3 className="text-sm font-bold text-foreground">Resumo Final do Trabalho Académico</h3>
-                <p className="text-xs text-muted-foreground">
-                  Confirme os dados preenchidos antes de disparar a geração por IA.
-                </p>
+              <div className="border-b border-border/40 pb-3 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <FileCheck2 className="size-4 text-primary" />
+                  Resumo do Trabalho Académico
+                </h3>
+                <Badge variant="outline" className="text-[10px]">Pronto a Gerar</Badge>
               </div>
 
               <div className="space-y-2.5 text-xs font-medium">
@@ -592,7 +534,7 @@ export function AcademicStudio({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setStep(3)}
+                onClick={() => setStep(2)}
                 className="h-11 rounded-xl px-5 text-xs font-semibold gap-1.5 cursor-pointer"
               >
                 <ArrowLeft className="size-4" /> Bloco Anterior
