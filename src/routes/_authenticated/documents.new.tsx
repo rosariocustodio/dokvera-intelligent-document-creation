@@ -1616,34 +1616,48 @@ function NewDocument() {
           />
 
           {/* Sticky Bottom Bar for Mobile (Ergonomia & Alta Conversão) */}
-          <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border p-3.5 shadow-2xl flex items-center justify-between gap-3 px-4">
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border/80 p-3 shadow-2xl flex items-center justify-between gap-2.5 px-4 pb-safe">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Total a Pagar</p>
-              <p className="font-display text-base font-extrabold text-foreground">
+              <p className="font-display text-sm font-extrabold text-foreground">
                 {formatCurrency(cost.totalMzn, country)}
-                <span className="text-xs font-normal text-muted-foreground ml-1">({cost.totalCredits} cr)</span>
+                <span className="text-[11px] font-normal text-muted-foreground ml-1">({cost.totalCredits} cr)</span>
               </p>
             </div>
-            {check.affordable ? (
+
+            <div className="flex items-center gap-2">
               <Button
-                size="default"
-                disabled={generate.isPending || missingRequired.length > 0}
-                onClick={() => generate.mutate()}
-                className="rounded-xl font-bold shadow-glow text-xs h-11 px-5"
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setMobileSheetOpen(true)}
+                className="h-10 px-3 rounded-xl text-xs font-semibold gap-1.5 border-border/80 bg-card cursor-pointer"
               >
-                {generate.isPending ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <Sparkles className="mr-1.5 size-4" />}
-                Gerar Agora
+                <Eye className="size-3.5 text-primary" />
+                <span>Ver A4</span>
               </Button>
-            ) : (
-              <Button
-                size="default"
-                onClick={() => navigate({ to: "/credits" })}
-                className="rounded-xl font-bold text-xs h-11 px-4 gap-1.5"
-              >
-                <Sparkles className="size-3.5" />
-                Pagar {formatCurrency(check.missingMzn, country)}
-              </Button>
-            )}
+
+              {check.affordable ? (
+                <Button
+                  size="default"
+                  disabled={generate.isPending || missingRequired.length > 0}
+                  onClick={() => generate.mutate()}
+                  className="rounded-xl font-bold shadow-glow text-xs h-10 px-4 cursor-pointer"
+                >
+                  {generate.isPending ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <Sparkles className="mr-1.5 size-3.5" />}
+                  Gerar
+                </Button>
+              ) : (
+                <Button
+                  size="default"
+                  onClick={() => navigate({ to: "/credits" })}
+                  className="rounded-xl font-bold text-xs h-10 px-3.5 gap-1 cursor-pointer"
+                >
+                  <Sparkles className="size-3.5" />
+                  Pagar
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       ) : null}

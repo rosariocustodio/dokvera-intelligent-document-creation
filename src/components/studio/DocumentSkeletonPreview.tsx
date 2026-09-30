@@ -1,7 +1,8 @@
-import React from "react";
-import { FileText, CheckCircle2, Layers, BookOpen, User, Hash, Sparkles, LayoutTemplate } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { FileText, CheckCircle2, Layers, BookOpen, User, Hash, Sparkles, LayoutTemplate, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { type DocSpec } from "@/lib/document-specs";
+import { cn } from "@/lib/utils";
 
 interface DocumentSkeletonPreviewProps {
   spec: DocSpec;
@@ -24,6 +25,15 @@ export function DocumentSkeletonPreview({
 }: DocumentSkeletonPreviewProps) {
   const selectedTier = spec.pageTiers?.find((t) => t.id === pageTierId);
   const activeSections = (spec.structure ?? []).filter((s) => structure.includes(s.id) || s.required);
+
+  const [shimmer, setShimmer] = useState(false);
+
+  // Trigger brief shimmer effect whenever fields/title change for interactive feedback
+  useEffect(() => {
+    setShimmer(true);
+    const timer = setTimeout(() => setShimmer(false), 800);
+    return () => clearTimeout(timer);
+  }, [fields, title, structure]);
 
   // Compute completion progress based on required & filled fields
   const totalFields = spec.groups.flatMap((g) => g.fields);
@@ -70,19 +80,27 @@ export function DocumentSkeletonPreview({
       </div>
 
       {/* Main A4 Paper Preview Sheet */}
-      <div className="relative mx-auto w-full max-w-[540px] aspect-[1/1.414] rounded-3xl border border-border/80 bg-background p-6 sm:p-8 shadow-2xl flex flex-col justify-between overflow-hidden group transition-all duration-300">
+      <div className={cn(
+        "relative mx-auto w-full max-w-[540px] aspect-[1/1.414] rounded-3xl border border-border/80 bg-background p-6 sm:p-8 shadow-2xl flex flex-col justify-between overflow-hidden group transition-all duration-300",
+        shimmer ? "ring-2 ring-primary/40 shadow-glow" : ""
+      )}>
+        {/* Shimmer Overlay on Edit */}
+        {shimmer && (
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent animate-pulse pointer-events-none" />
+        )}
+
         {/* Subtle Paper Texture & Watermark Grid */}
         <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:16px_16px] opacity-40 pointer-events-none" />
 
         {/* Paper Header */}
         <div className="relative z-10 space-y-4 border-b border-border/60 pb-5">
           <div className="flex items-center justify-between">
-            <Badge variant="outline" className="rounded-md border-primary/30 text-primary text-[9px] font-mono uppercase tracking-widest bg-primary/5">
-              Dokvera Studio Output
+            <Badge variant="outline" className="rounded-md border-primary/30 text-primary text-[9px] font-mono uppercase tracking-widest bg-primary/5 flex items-center gap-1">
+              <Sparkles className="size-2.5" /> Dokvera Studio Output
             </Badge>
             {selectedTier && (
               <span className="text-[11px] font-mono font-semibold text-muted-foreground">
-                Est. {selectedTier.minPages}–{selectedTier.maxPages} pág.
+                Est. {selectedTier.minPages}–{selectedTier.maxPages} pag.
               </span>
             )}
           </div>
@@ -104,7 +122,7 @@ export function DocumentSkeletonPreview({
         <div className="relative z-10 my-auto py-4 space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
-              Índice de Capítulos ({activeSections.length})
+              Indice de Capitulos ({activeSections.length})
             </span>
             <Badge variant="secondary" className="text-[10px] font-medium">
               Formato {fields["citation_style"] ? String(fields["citation_style"]).toUpperCase() : "Oficial"}
@@ -128,7 +146,7 @@ export function DocumentSkeletonPreview({
             ))}
             {activeSections.length > 6 && (
               <p className="text-center text-[10px] text-muted-foreground font-mono">
-                + {activeSections.length - 6} secções adicionais incluídas
+                + {activeSections.length - 6} seccoes adicionais incluidas
               </p>
             )}
           </div>
@@ -139,7 +157,7 @@ export function DocumentSkeletonPreview({
           <span className="font-semibold text-foreground">
             {fields["institution"] ? String(fields["institution"]) : "Dokvera Engineered Document"}
           </span>
-          <span className="font-mono">Página 1</span>
+          <span className="font-mono">Pagina 1</span>
         </div>
       </div>
     </div>
