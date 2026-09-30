@@ -12,6 +12,9 @@ import {
   User,
   Camera,
   FileSignature,
+  Building2,
+  GraduationCap,
+  Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,9 +26,20 @@ import { type DocSpec, type FieldDef } from "@/lib/document-specs";
 import { type AffordabilityResult, type CostBreakdown } from "@/lib/pricing";
 import { creditsToCurrency, formatCurrency } from "@/lib/dokvera";
 import { MagicFill } from "@/components/studio/MagicFill";
-import { type CategoryPreset } from "@/lib/category-presets";
+import { type CategoryPreset, FORMAL_SALUTATIONS } from "@/lib/category-presets";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+// Presets de Universidades para preenchimento com 1-Clique
+const UNIVERSITY_PRESETS = [
+  "Universidade Eduardo Mondlane (UEM)",
+  "Universidade Pedagogica (UP)",
+  "Universidade Catolica de Mocambique (UCM)",
+  "ISCTEM",
+  "ISUTC",
+  "Universidade Agostinho Neto (UAN)",
+  "Universidade de Lisboa (ULisboa)",
+];
 
 interface SimpleDocumentFormProps {
   spec: DocSpec;
@@ -72,7 +86,6 @@ export function SimpleDocumentForm({
   onSelectAnotherSpec,
   country,
 }: SimpleDocumentFormProps) {
-  // Paid structure options only (options with extraCredits > 0)
   const paidStructureOptions = (spec.structure ?? []).filter(
     (s) => (s.extraCredits ?? 0) > 0
   );
@@ -87,10 +100,53 @@ export function SimpleDocumentForm({
 
     return (
       <div key={field.id} className={`space-y-1.5 ${wide ? "sm:col-span-2" : ""}`}>
-        <Label htmlFor={field.id} className="text-[13px] font-semibold text-foreground/90 tracking-tight">
-          {field.label}
-          {field.required && <span className="ml-1 text-destructive font-bold">*</span>}
-        </Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor={field.id} className="text-[13px] font-semibold text-foreground/90 tracking-tight">
+            {field.label}
+            {field.required && <span className="ml-1 text-destructive font-bold">*</span>}
+          </Label>
+        </div>
+
+        {/* CHIPS DE PREENCHIMENTO RAPIDO PARA CAMPOS ESPECIFICOS */}
+        {field.id === "institution" && (
+          <div className="flex flex-wrap gap-1.5 pt-0.5 pb-1">
+            {UNIVERSITY_PRESETS.map((uni) => (
+              <button
+                key={uni}
+                type="button"
+                onClick={() => setField("institution", uni)}
+                className={cn(
+                  "rounded-full border px-2.5 py-0.5 text-[10px] font-semibold transition-all cursor-pointer",
+                  fields.institution === uni
+                    ? "border-primary bg-primary/10 text-primary font-bold"
+                    : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
+                )}
+              >
+                + {uni.split(" ")[0]}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {field.id === "recipient" && (
+          <div className="flex flex-wrap gap-1.5 pt-0.5 pb-1">
+            {FORMAL_SALUTATIONS.map((salutation) => (
+              <button
+                key={salutation.label}
+                type="button"
+                onClick={() => setField("recipient", salutation.value)}
+                className={cn(
+                  "rounded-full border px-2.5 py-0.5 text-[10px] font-semibold transition-all cursor-pointer",
+                  fields.recipient === salutation.value
+                    ? "border-primary bg-primary/10 text-primary font-bold"
+                    : "border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground"
+                )}
+              >
+                + {salutation.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {field.type === "photo" ? (
           <div className="rounded-xl border border-border/50 bg-background/50 p-3.5 transition-colors">
@@ -127,7 +183,7 @@ export function SimpleDocumentForm({
                       const file = e.target.files?.[0];
                       if (!file) return;
                       if (file.size > 4 * 1024 * 1024) {
-                        toast.error("A fotografia deve ter no máximo 4MB.");
+                        toast.error("A fotografia deve ter no maximo 4MB.");
                         return;
                       }
                       const reader = new FileReader();
@@ -141,7 +197,7 @@ export function SimpleDocumentForm({
                   />
                 </label>
                 <p className="text-[11px] text-muted-foreground/80 leading-normal">
-                  Formatos aceites: JPG ou PNG (máx. 4MB).
+                  Formatos aceites: JPG ou PNG (max. 4MB).
                 </p>
               </div>
             </div>
@@ -171,7 +227,7 @@ export function SimpleDocumentForm({
             onChange={(e) => setField(field.id, e.target.value)}
             className="w-full rounded-xl border border-border/70 bg-background/90 px-3.5 py-2.5 text-xs font-medium text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/30 transition-all"
           >
-            <option value="">Selecione uma opção...</option>
+            <option value="">Selecione uma opcao...</option>
             {field.options?.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -228,7 +284,7 @@ export function SimpleDocumentForm({
             </div>
             <div>
               <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                <span>Custo: {cost?.totalCredits ?? spec.baseCredits} créditos</span>
+                <span>Custo: {cost?.totalCredits ?? spec.baseCredits} creditos</span>
                 <span className="text-[11px] font-normal text-muted-foreground">
                   ({formatCurrency(creditsToCurrency(cost?.totalCredits ?? spec.baseCredits, country), country)})
                 </span>
@@ -242,6 +298,28 @@ export function SimpleDocumentForm({
           </div>
         </div>
 
+        {/* PRESETS RAPIDOS INTELIGENTES POR CATEGORIA (FASE 1 DO ROADMAP) */}
+        {availablePresets.length > 0 && (
+          <div className="pt-3.5">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="size-3.5 text-primary" />
+              <span className="text-xs font-bold text-foreground">Presets Rapidos de 1-Clique:</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {availablePresets.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => onApplyPreset(preset)}
+                  className="rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="size-3" />
+                  <span>{preset.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MagicFill AI Extractor */}
@@ -252,9 +330,9 @@ export function SimpleDocumentForm({
         <div className="border-b border-border/60 pb-3 flex items-center justify-between">
           <h2 className="text-xs sm:text-sm font-bold text-foreground flex items-center gap-2">
             <FileSignature className="size-4 text-primary" />
-            Formulário do Documento
+            Formulario do Documento
           </h2>
-          <span className="text-[11px] text-muted-foreground font-medium">Página única</span>
+          <span className="text-[11px] text-muted-foreground font-medium">Pagina unica</span>
         </div>
 
         {spec.groups.map((group) => (
@@ -274,12 +352,12 @@ export function SimpleDocumentForm({
           </div>
         ))}
 
-        {/* Paid Structure Options (Only shown if paid options with extraCredits > 0 exist) */}
+        {/* Paid Structure Options */}
         {paidStructureOptions.length > 0 && (
           <div className="space-y-3 pt-3.5 border-t border-border/60">
             <div className="border-b border-border/40 pb-1.5">
               <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider font-mono">
-                Opções Adicionais
+                Opcoes Adicionais
               </h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -320,11 +398,11 @@ export function SimpleDocumentForm({
           </div>
         )}
 
-        {/* AI Special Instructions (Only rendered for 'letter' which passes through AI generation) */}
+        {/* AI Special Instructions */}
         {spec.id === "letter" && (
           <div className="space-y-2 pt-3.5 border-t border-border/60">
             <Label htmlFor="simple_instructions" className="text-xs font-semibold text-foreground flex items-center gap-2">
-              <span>Instruções para a IA (Opcional)</span>
+              <span>Instrucoes para a IA (Opcional)</span>
               <Badge variant="secondary" className="text-[9px] font-bold bg-primary/10 text-primary border-primary/20">
                 <Sparkles className="size-2.5 mr-1" /> IA
               </Badge>
@@ -333,7 +411,7 @@ export function SimpleDocumentForm({
               id="simple_instructions"
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
-              placeholder="Ex.: tom firme mas cordial, referir prazo de resposta de 5 dias úteis e focar em termos contratuais..."
+              placeholder="Ex.: tom firme mas cordial, referir prazo de resposta de 5 dias uteis e focar em termos contratuais..."
               rows={2}
               className="text-xs rounded-xl bg-background/90 border-border/70 focus-visible:ring-primary/30 font-medium placeholder:text-muted-foreground/60 transition-all min-h-16"
             />
@@ -350,13 +428,13 @@ export function SimpleDocumentForm({
             </div>
             <div>
               <div className="text-xs font-bold text-foreground flex items-center gap-2">
-                <span>Total: {cost?.totalCredits ?? spec.baseCredits} Créditos</span>
+                <span>Total: {cost?.totalCredits ?? spec.baseCredits} Creditos</span>
                 <span className="text-[11px] font-normal text-muted-foreground">
                   ({formatCurrency(creditsToCurrency(cost?.totalCredits ?? spec.baseCredits, country), country)})
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Saldo disponível: {credits} créditos
+                Saldo disponivel: {credits} creditos
               </p>
             </div>
           </div>
@@ -365,7 +443,7 @@ export function SimpleDocumentForm({
             {!check.affordable && (
               <div className="text-xs text-destructive font-semibold flex items-center gap-1.5 bg-destructive/10 px-3 py-1.5 sm:py-2 rounded-xl border border-destructive/20">
                 <AlertTriangle className="size-4 shrink-0" />
-                <span>Faltam {check.missingCredits} créditos</span>
+                <span>Faltam {check.missingCredits} creditos</span>
               </div>
             )}
 
