@@ -10,6 +10,9 @@ import {
   Minus,
   Loader2,
   FileCheck2,
+  User,
+  Calendar,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { type DocSpec } from "@/lib/document-specs";
-import { formatCurrency, creditsToCurrency } from "@/lib/dokvera";
+import { formatCurrency, creditsToCurrency, formatDate } from "@/lib/dokvera";
 import { cn } from "@/lib/utils";
 
 export interface AcademicStudioProps {
@@ -65,7 +68,7 @@ export function AcademicStudio({
   onSelectAnotherSpec,
   country = "MZ",
 }: AcademicStudioProps) {
-  // Passos do Estudio: 1. Capa & Identificacao, 2. Paginas & Estrutura, 3. Emissao & IA
+  // Passos do Estudio: 1. Capa & Contracapa, 2. Paginas & Estrutura, 3. Emissao & IA
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Contador de Paginas: Minimo 8, Maximo 21 (Padrao 8)
@@ -99,7 +102,7 @@ export function AcademicStudio({
   };
 
   const stepsInfo = [
-    { num: 1, title: "1. Capa & Identificação", icon: FileText },
+    { num: 1, title: "1. Capa & Contracapa", icon: FileText },
     { num: 2, title: "2. Páginas & Estrutura", icon: Layers },
     { num: 3, title: "3. Emissão & IA", icon: Sparkles },
   ];
@@ -175,15 +178,19 @@ export function AcademicStudio({
       {/* CORPO DO FORMULÁRIO (COLUNA ÚNICA) */}
       <div className="space-y-6">
         {/* ==================================================================== */}
-        {/* BLOCO 1: DADOS DA CAPA & IDENTIFICAÇÃO                               */}
+        {/* BLOCO 1: DADOS DA CAPA & CONTRACAPA (FOLHA DE ROSTO)                 */}
         {/* ==================================================================== */}
         {step === 1 && (
           <div className="space-y-6 animate-fade-in">
+            {/* Sub-seccao 1: Identificacao do Trabalho e Instituicao */}
             <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-7 shadow-xs space-y-5">
               <div className="border-b border-border/40 pb-3">
-                <h3 className="text-sm font-bold text-foreground">Informações para a Capa & Identificação</h3>
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <FileText className="size-4 text-primary" />
+                  Identificação do Trabalho & Instituição
+                </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Estes dados serão usados para montar a capa oficial e o cabeçalho do documento.
+                  Dados formais sobre a obra e a instituicao de ensino.
                 </p>
               </div>
 
@@ -196,7 +203,7 @@ export function AcademicStudio({
                     id="theme"
                     value={asString(fields["theme"])}
                     onChange={(e) => setField("theme", e.target.value)}
-                    placeholder="Ex.: O Impacto da Digitalização na Banca em Moçambique"
+                    placeholder="Insira o título do trabalho"
                     className="h-11 rounded-xl text-xs font-medium"
                   />
                   {!canAdvanceFromStep1 && (
@@ -215,7 +222,7 @@ export function AcademicStudio({
                       id="institution"
                       value={asString(fields["institution"])}
                       onChange={(e) => setField("institution", e.target.value)}
-                      placeholder="Ex.: Universidade Eduardo Mondlane (UEM)"
+                      placeholder="Insira o nome da instituição"
                       className="h-10 rounded-xl text-xs"
                     />
                   </div>
@@ -228,7 +235,7 @@ export function AcademicStudio({
                       id="course"
                       value={asString(fields["course"])}
                       onChange={(e) => setField("course", e.target.value)}
-                      placeholder="Ex.: Licenciatura em Gestão de Empresas"
+                      placeholder="Insira o nome do curso"
                       className="h-10 rounded-xl text-xs"
                     />
                   </div>
@@ -241,20 +248,20 @@ export function AcademicStudio({
                       id="subject"
                       value={asString(fields["subject"])}
                       onChange={(e) => setField("subject", e.target.value)}
-                      placeholder="Ex.: Gestão de Sistemas de Informação"
+                      placeholder="Insira o nome da disciplina"
                       className="h-10 rounded-xl text-xs"
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <Label htmlFor="teacher" className="text-xs font-semibold">
-                      Docente / Professor
+                      Docente / Supervisor
                     </Label>
                     <Input
                       id="teacher"
                       value={asString(fields["teacher"])}
                       onChange={(e) => setField("teacher", e.target.value)}
-                      placeholder="Ex.: Prof. Doutor Manuel Silva"
+                      placeholder="Insira o nome do docente ou supervisor"
                       className="h-10 rounded-xl text-xs"
                     />
                   </div>
@@ -262,7 +269,90 @@ export function AcademicStudio({
               </div>
             </div>
 
-            {/* Navegação do Bloco 1 */}
+            {/* Sub-seccao 2: Autores e Apresentacao Formal (Para Capa e Contracapa) */}
+            <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-7 shadow-xs space-y-5">
+              <div className="border-b border-border/40 pb-3">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <User className="size-4 text-primary" />
+                  Autores & Apresentação Formal (Capa e Contracapa)
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Dados do estudante, turma, localizacao e data para a impressao formal.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="student_name" className="text-xs font-semibold">
+                    Nome do(s) Estudante(s) / Autor(es)
+                  </Label>
+                  <Input
+                    id="student_name"
+                    value={asString(fields["student_name"] ?? fields["full_name"])}
+                    onChange={(e) => {
+                      setField("student_name", e.target.value);
+                      setField("full_name", e.target.value);
+                    }}
+                    placeholder="Insira o nome do estudante"
+                    className="h-10 rounded-xl text-xs font-medium"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="shift" className="text-xs font-semibold">
+                    Turno
+                  </Label>
+                  <Input
+                    id="shift"
+                    value={asString(fields["shift"])}
+                    onChange={(e) => setField("shift", e.target.value)}
+                    placeholder="Insira o turno (ex.: Pós-Laboral / Laboral)"
+                    className="h-10 rounded-xl text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="class_name" className="text-xs font-semibold">
+                    Turma / Ano de Frequência
+                  </Label>
+                  <Input
+                    id="class_name"
+                    value={asString(fields["class_name"])}
+                    onChange={(e) => setField("class_name", e.target.value)}
+                    placeholder="Insira a turma ou ano (ex.: Turma B / 3.º Ano)"
+                    className="h-10 rounded-xl text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="city" className="text-xs font-semibold flex items-center gap-1">
+                    <MapPin className="size-3.5 text-muted-foreground" /> Cidade / Local
+                  </Label>
+                  <Input
+                    id="city"
+                    value={asString(fields["city"])}
+                    onChange={(e) => setField("city", e.target.value)}
+                    placeholder="Insira a cidade"
+                    className="h-10 rounded-xl text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="delivery_date" className="text-xs font-semibold flex items-center gap-1">
+                    <Calendar className="size-3.5 text-muted-foreground" /> Data de Entrega
+                  </Label>
+                  <Input
+                    id="delivery_date"
+                    type="date"
+                    value={asString(fields["delivery_date"])}
+                    onChange={(e) => setField("delivery_date", e.target.value)}
+                    className="h-10 rounded-xl text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Navegacao do Bloco 1 */}
             <div className="flex justify-end pt-2">
               <Button
                 type="button"
@@ -449,14 +539,14 @@ export function AcademicStudio({
                   Instruções do Docente / Orientações para a IA (Opcional)
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Escreva aqui regras específicas que a Inteligência Artificial deve obedecer ao gerar o trabalho.
+                  Escreva aqui orientações ou regras específicas que a Inteligência Artificial deve respeitar ao gerar o trabalho.
                 </p>
               </div>
 
               <Textarea
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
-                placeholder="Ex.: O docente pediu para focar o estudo no caso do Banco X em Moçambique, citar dados de 2024 e manter tom rigoroso."
+                placeholder="Insira orientações ou regras específicas do docente (opcional)"
                 className="min-h-28 text-xs rounded-xl leading-relaxed"
               />
             </div>
@@ -471,7 +561,7 @@ export function AcademicStudio({
                 <Badge variant="outline" className="text-[10px]">Pronto a Gerar</Badge>
               </div>
 
-              <div className="space-y-2.5 text-xs font-medium">
+              <div className="space-y-2 text-xs font-medium">
                 <div className="flex justify-between py-1.5 border-b border-border/30">
                   <span className="text-muted-foreground">Tema Central:</span>
                   <span className="font-bold text-foreground max-w-sm text-right truncate">
@@ -479,21 +569,33 @@ export function AcademicStudio({
                   </span>
                 </div>
                 <div className="flex justify-between py-1.5 border-b border-border/30">
-                  <span className="text-muted-foreground">Instituição:</span>
+                  <span className="text-muted-foreground">Estudante / Autor:</span>
                   <span className="font-semibold text-foreground">
-                    {asString(fields["institution"]) || "Nao especificada"}
+                    {asString(fields["student_name"] ?? fields["full_name"]) || "Nao especificado"}
                   </span>
                 </div>
                 <div className="flex justify-between py-1.5 border-b border-border/30">
-                  <span className="text-muted-foreground">Curso / Cadeira:</span>
+                  <span className="text-muted-foreground">Instituição / Curso:</span>
                   <span className="font-semibold text-foreground">
-                    {asString(fields["course"])} {fields["subject"] ? `(${asString(fields["subject"])})` : ""}
+                    {asString(fields["institution"])} {fields["course"] ? `(${asString(fields["course"])})` : ""}
                   </span>
                 </div>
                 <div className="flex justify-between py-1.5 border-b border-border/30">
-                  <span className="text-muted-foreground">Docente:</span>
+                  <span className="text-muted-foreground">Disciplina & Docente:</span>
                   <span className="font-semibold text-foreground">
-                    {asString(fields["teacher"]) || "Nao especificado"}
+                    {asString(fields["subject"])} {fields["teacher"] ? `- Docente: ${asString(fields["teacher"])}` : ""}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Turno & Turma:</span>
+                  <span className="font-semibold text-foreground">
+                    {asString(fields["shift"])} {fields["class_name"] ? `/ ${asString(fields["class_name"])}` : ""}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground">Cidade & Data:</span>
+                  <span className="font-semibold text-foreground">
+                    {asString(fields["city"])} {fields["delivery_date"] ? `- ${formatDate(asString(fields["delivery_date"]), country)}` : ""}
                   </span>
                 </div>
                 <div className="flex justify-between py-1.5 border-b border-border/30">
